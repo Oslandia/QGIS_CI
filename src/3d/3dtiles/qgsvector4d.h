@@ -1,9 +1,8 @@
 /***************************************************************************
-  qgsvector3d.h
+  qgsvector4d.h
   --------------------------------------
-  Date                 : November 2017
-  Copyright            : (C) 2017 by Martin Dobias
-  Email                : wonder dot sk at gmail dot com
+  Date                 : March 2021
+  Copyright            : (C) 2021 by Benoit De Mezzo
  ***************************************************************************
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
@@ -13,37 +12,41 @@
  *                                                                         *
  ***************************************************************************/
 
-#ifndef QGSVECTOR3D_H
-#define QGSVECTOR3D_H
+#ifndef QGSVECTOR4D_H
+#define QGSVECTOR4D_H
 
 #include "qgis_core.h"
-#include "qgis.h"
-
-#include <QVector3D>
+#include "qgsvector3d.h"
+#include <QVector4D>
+#include "qdebug.h"
 
 /**
- * \ingroup 3d
- * \brief Class for storage of 3D vectors similar to QVector3D, with the difference that it uses double precision
+ * \ingroup 4d
+ * \brief Class for storage of 4D vectors similar to QVector4D, with the difference that it uses double precision
  * instead of single precision floating point numbers.
  *
  * \since QGIS 3.0
  */
-class CORE_EXPORT QgsVector3D
+class CORE_EXPORT QgsVector4D
 {
   public:
     //! Constructs a null vector
-    QgsVector3D() = default;
+    QgsVector4D() = default;
 
     //! Constructs a vector from given coordinates
-    QgsVector3D( double x, double y, double z )
-      : mX( x ), mY( y ), mZ( z ) {}
+    QgsVector4D( double x, double y, double z, double w=0.0 )
+      : mX( x ), mY( y ), mZ( z ) , mW( w ) {}
 
-    //! Constructs a vector from single-precision QVector3D
-    QgsVector3D( const QVector3D &v )
-      : mX( v.x() ), mY( v.y() ), mZ( v.z() ) {}
+    //! Constructs a vector from given coordinates
+    QgsVector4D( const QgsVector3D & v, double w )
+        : mX( v.x() ), mY( v.y() ), mZ( v.z() ) , mW( w ) {}
+
+    //! Constructs a vector from single-precision QVector4D
+    QgsVector4D( const QVector4D &v )
+      : mX( v.x() ), mY( v.y() ), mZ( v.z() ) , mW( v.w() ) {}
 
     //! Returns TRUE if all three coordinates are zero
-    bool isNull() const { return mX == 0 && mY == 0 && mZ == 0; }
+    bool isNull() const { return mX == 0 && mY == 0 && mZ == 0 && mW == 0; }
 
     //! Returns X coordinate
     double x() const { return mX; }
@@ -51,13 +54,16 @@ class CORE_EXPORT QgsVector3D
     double y() const { return mY; }
     //! Returns Z coordinate
     double z() const { return mZ; }
+    //! Returns W coordinate
+    double w() const { return mW; }
 
     //! Sets vector coordinates
-    void set( double x, double y, double z )
+    void set( double x, double y, double z, double w )
     {
       mX = x;
       mY = y;
       mZ = z;
+      mW = w;
     }
 
     //! Sets vector coordinates
@@ -78,9 +84,15 @@ class CORE_EXPORT QgsVector3D
       mZ = z;
     }
 
+    //! Sets vector coordinates
+    void setW( double w )
+    {
+      mW = w;
+    }
+
     inline double &operator[](int i)
     {
-        Q_ASSERT(uint(i) < 3u);
+        Q_ASSERT(uint(i) < 4u);
         switch (i) {
             case 0:
                 return mX;
@@ -88,13 +100,15 @@ class CORE_EXPORT QgsVector3D
                 return mY;
             case 2:
                 return mZ;
+            case 3:
+                return mW;
         }
         return mX; // fake
     }
 
     inline double operator[](int i) const
     {
-        Q_ASSERT(uint(i) < 3u);
+        Q_ASSERT(uint(i) < 4u);
         switch (i) {
             case 0:
                 return mX;
@@ -102,127 +116,129 @@ class CORE_EXPORT QgsVector3D
                 return mY;
             case 2:
                 return mZ;
+            case 3:
+                return mW;
         }
         return 0.0;
     }
 
-    // TODO c++20 - replace with = default
-    bool operator==( const QgsVector3D &other ) const
+    bool operator==( const QgsVector4D &other ) const
     {
-      return mX == other.mX && mY == other.mY && mZ == other.mZ;
+      return mX == other.mX && mY == other.mY && mZ == other.mZ && mW == other.mW;
     }
-    bool operator!=( const QgsVector3D &other ) const
+    bool operator!=( const QgsVector4D &other ) const
     {
       return !operator==( other );
     }
 
     //! Returns sum of two vectors
-    QgsVector3D operator+( const QgsVector3D &other ) const
+    QgsVector4D operator+( const QgsVector4D &other ) const
     {
-      return QgsVector3D( mX + other.mX, mY + other.mY, mZ + other.mZ );
+      return QgsVector4D( mX + other.mX, mY + other.mY, mZ + other.mZ , mW + other.mW );
     }
 
     //! Returns difference of two vectors
-    QgsVector3D operator-( const QgsVector3D &other ) const
+    QgsVector4D operator-( const QgsVector4D &other ) const
     {
-      return QgsVector3D( mX - other.mX, mY - other.mY, mZ - other.mZ );
+      return QgsVector4D( mX - other.mX, mY - other.mY, mZ - other.mZ, mW - other.mW );
     }
 
     //! Returns a new vector multiplied by scalar
-    QgsVector3D operator *( const double factor ) const
+    QgsVector4D operator *( const double factor ) const
     {
 
-      return QgsVector3D( mX * factor, mY * factor, mZ * factor );
+      return QgsVector4D( mX * factor, mY * factor, mZ * factor, mW * factor );
     }
 
     //! Returns a new vector divided by scalar
-    QgsVector3D operator /( const double factor ) const
+    QgsVector4D operator /( const double factor ) const
     {
-      return QgsVector3D( mX / factor, mY / factor, mZ / factor );
+      return QgsVector4D( mX / factor, mY / factor, mZ / factor, mW / factor );
     }
 
     //! Returns the dot product of two vectors
-    static double dotProduct( const QgsVector3D &v1, const QgsVector3D &v2 )
+    static double dotProduct( const QgsVector4D &v1, const QgsVector4D &v2 )
     {
-      return v1.x() * v2.x() + v1.y() * v2.y() + v1.z() * v2.z();
+      return v1.x() * v2.x() + v1.y() * v2.y() + v1.z() * v2.z() + v1.w() * v2.w();
     }
 
-    //! Returns the cross product of two vectors
-    static QgsVector3D crossProduct( const QgsVector3D &v1, const QgsVector3D &v2 )
+    /*    //! Returns the cross product of two vectors
+    static QgsVector4D crossProduct( const QgsVector4D &v1, const QgsVector4D &v2 )
     {
-      return QgsVector3D( v1.y() * v2.z() - v1.z() * v2.y(),
+      return QgsVector4D( v1.y() * v2.z() - v1.z() * v2.y(),
                           v1.z() * v2.x() - v1.x() * v2.z(),
+                          v1.x() * v2.y() - v1.y() * v2.x(),
                           v1.x() * v2.y() - v1.y() * v2.x() );
-    }
+                          }*/
 
     //! Returns the length of the vector
     double length() const
     {
-      return sqrt( mX * mX + mY * mY + mZ * mZ );
+      return sqrt( mX * mX + mY * mY + mZ * mZ + mW * mW );
     }
 
     //! Normalizes the current vector in place.
     void normalize()
     {
-      const double len = length();
+      double len = length();
       if ( !qgsDoubleNear( len, 0.0 ) )
       {
         mX /= len;
         mY /= len;
         mZ /= len;
+        mW /= len;
       }
     }
 
     //! Returns the distance with the \a other QgsVector3
-    double distance( const QgsVector3D &other ) const
+    double distance( const QgsVector4D &other ) const
     {
       return std::sqrt( ( mX - other.x() ) * ( mX - other.x() ) +
                         ( mY - other.y() ) * ( mY - other.y() ) +
-                        ( mZ - other.z() ) * ( mZ - other.z() ) );
+                        ( mZ - other.z() ) * ( mZ - other.z() ) +
+                        ( mW - other.w() ) * ( mW - other.w() ) );
     }
 
     //! Returns the perpendicular point of vector \a vp from [\a v1 - \a v2]
-    static QgsVector3D perpendicularPoint( const QgsVector3D &v1, const QgsVector3D &v2, const QgsVector3D &vp )
+    static QgsVector4D perpendicularPoint( const QgsVector4D &v1, const QgsVector4D &v2, const QgsVector4D &vp )
     {
-      const QgsVector3D d = ( v2 - v1 ) / v2.distance( v1 );
-      const QgsVector3D v = vp - v2;
-      const double t = dotProduct( v, d );
-      QgsVector3D P = v2 + ( d * t );
+      QgsVector4D d = ( v2 - v1 ) / v2.distance( v1 );
+      QgsVector4D v = vp - v2;
+      double t = dotProduct( v, d );
+      QgsVector4D P = v2 + ( d * t );
       return P;
     }
 
     /**
-     * Returns a string representation of the 3D vector.
+     * Returns a string representation of the 4D vector.
      * Members will be truncated to the specified \a precision.
      */
     QString toString( int precision = 17 ) const
     {
-      QString str = "Vector3D (";
+      QString str = "Vector4D (";
       str += qgsDoubleToString( mX, precision );
       str += ", ";
       str += qgsDoubleToString( mY, precision );
       str += ", ";
       str += qgsDoubleToString( mZ, precision );
+      str += ", ";
+      str += qgsDoubleToString( mW, precision );
       str += ')';
       return str;
     }
 
-    /**
-     * Converts the current object to QVector3D
-     * \warning the conversion may decrease the accuracy (double to float values conversion)
-     * \since QGIS 3.24
-     */
-    QVector3D toVector3D() const { return QVector3D( mX, mY, mZ ); }
-
 #ifdef SIP_RUN
     SIP_PYOBJECT __repr__();
     % MethodCode
-    QString str = QStringLiteral( "<QgsVector3D: %1>" ).arg( sipCpp->toString() );
+    QString str = QStringLiteral( "<QgsVector4D: %1>" ).arg( sipCpp->toString() );
     sipRes = PyUnicode_FromString( str.toUtf8().constData() );
     % End
 #endif
   private:
-    double mX = 0, mY = 0, mZ = 0;
+    double mX = 0, mY = 0, mZ = 0, mW = 0;
 };
 
-#endif // QGSVECTOR3D_H
+Q_CORE_EXPORT QDebug &operator<<(QDebug &, const QgsVector4D &);
+Q_CORE_EXPORT QDebug &operator<<(QDebug &, const QgsVector3D &);
+
+#endif // QGSVECTOR4D_H

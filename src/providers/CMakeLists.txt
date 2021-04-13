@@ -19,6 +19,7 @@ if (POSTGRES_FOUND)
 endif()
 
 if (NOT FORCE_STATIC_LIBS)
+  add_subdirectory(3dtiles)
   add_subdirectory(geonode)
   add_subdirectory(mssql)
   add_subdirectory(gpx)

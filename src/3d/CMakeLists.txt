@@ -49,6 +49,13 @@ set(QGIS_3D_SRCS
   chunks/qgschunknode_p.cpp
   chunks/qgschunkqueuejob_p.cpp
 
+  3dtiles/qgsvector4d.cpp
+  3dtiles/qgsmatrix4x4.cpp
+  3dtiles/3dtiles.cpp
+  3dtiles/b3dm.cpp
+  3dtiles/qgs3dtileschunkloader.cpp
+
+
   materials/qgsabstractmaterialsettings.cpp
   materials/qgsgoochmaterialsettings.cpp
   materials/qgsmaterialregistry.cpp
@@ -153,6 +160,12 @@ set(QGIS_3D_HDRS
   chunks/qgschunkloader_p.h
   chunks/qgschunkqueuejob_p.h
 
+  3dtiles/qgsvector4d.h
+  3dtiles/qgsmatrix4x4.h
+  3dtiles/3dtiles.h
+  3dtiles/b3dm.h
+  3dtiles/qgs3dtileschunkloader.h
+
   mesh/qgsmeshterraingenerator.h
 )
 
@@ -214,6 +227,7 @@ target_include_directories(qgis_3d PUBLIC
   ${CMAKE_CURRENT_SOURCE_DIR}/shaders
   ${CMAKE_CURRENT_SOURCE_DIR}/symbols
   ${CMAKE_CURRENT_SOURCE_DIR}/terrain
+  ${CMAKE_CURRENT_SOURCE_DIR}/3dtiles
 
   ${CMAKE_BINARY_DIR}/src/3d
   ${CMAKE_SOURCE_DIR}/external/delaunator-cpp
