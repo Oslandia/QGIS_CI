@@ -54,6 +54,8 @@ set(QGIS_3D_SRCS
   3dtiles/3dtiles.cpp
   3dtiles/b3dm.cpp
   3dtiles/qgs3dtileschunkloader.cpp
+  3dtiles/qgs3dtileslayer.cpp
+  3dtiles/qgs3dtileslayer3drenderer.cpp
 
 
   materials/qgsabstractmaterialsettings.cpp
@@ -165,6 +167,8 @@ set(QGIS_3D_HDRS
   3dtiles/3dtiles.h
   3dtiles/b3dm.h
   3dtiles/qgs3dtileschunkloader.h
+  3dtiles/qgs3dtileslayer.h
+  3dtiles/qgs3dtileslayer3drenderer.h
 
   mesh/qgsmeshterraingenerator.h
 )

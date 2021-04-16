@@ -143,7 +143,7 @@ class QgsChunkNode
     //! Returns number of children of the node (returns -1 if the node has not yet been populated with populateChildren())
     int childCount() const { return mChildCount; }
     //! Returns array of the four children. Children may be NULLPTR if they were not created yet
-    QgsChunkNode *const *children() const { return mChildren; }
+    QgsChunkNode *const *children() const { return mChildren.data(); }
     //! Returns current state of the node
     State state() const { return mState; }
 
@@ -222,7 +222,7 @@ class QgsChunkNode
     QgsChunkNodeId mNodeId;  //!< Chunk coordinates (for use with a tiling scheme)
 
     QgsChunkNode *mParent;        //!< TODO: should be shared pointer
-    QgsChunkNode *mChildren[8];   //!< TODO: should be weak pointers. May be nullptr if not created yet or removed already
+    QVector<QgsChunkNode *> mChildren;   //!< TODO: should be weak pointers. May be nullptr if not created yet or removed already
     int mChildCount = -1;         //! Number of children (-1 == not yet populated)
 
     State mState;  //!< State of the node

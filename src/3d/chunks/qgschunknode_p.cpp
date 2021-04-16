@@ -36,8 +36,8 @@ QgsChunkNode::QgsChunkNode( const QgsChunkNodeId &nodeId, const QgsAABB &bbox, f
   , mUpdater( nullptr )
 {
   // TODO: still using a fixed size array. Use QVector instead?
-  for ( int i = 0; i < 8; ++i )
-    mChildren[i] = nullptr;
+  /*for ( int i = 0; i < 8; ++i )
+    mChildren.replace(i, nullptr);*/
 }
 
 QgsChunkNode::~QgsChunkNode()
@@ -75,7 +75,7 @@ void QgsChunkNode::populateChildren( const QVector<QgsChunkNode *> &children )
   Q_ASSERT( mChildCount == -1 );
   mChildCount = children.count();
   for ( int i = 0; i < mChildCount; ++i )
-    mChildren[i] = children[i];
+    mChildren.append(children[i]);
 }
 
 int QgsChunkNode::level() const

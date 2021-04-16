@@ -59,7 +59,7 @@ class _3D_EXPORT Qgs3dTilesChunkLoaderFactory : public QgsChunkLoaderFactory
      * The factory takes ownership over the passed \a symbol
      */
     Qgs3dTilesChunkLoaderFactory( const Qgs3DMapSettings &map, const QgsCoordinateTransform &coordinateTransform,
-                                  Tileset *tileset);
+                                  Tile *tile);
 
     virtual ~Qgs3dTilesChunkLoaderFactory();
 
@@ -69,11 +69,13 @@ class _3D_EXPORT Qgs3dTilesChunkLoaderFactory : public QgsChunkLoaderFactory
     virtual QVector<QgsChunkNode *> createChildren( QgsChunkNode *node ) const ;
     virtual int primitivesCount( QgsChunkNode *node ) const ;
 
+private:
+    void createChildrenRec (QVector<QgsChunkNode *> & out, Tile * tile, QgsChunkNode *node, int level) const;
+
 public:
     const Qgs3DMapSettings &mMap;
     QgsCoordinateTransform mCoordinateTransform;
-    Tileset *mTileset;
-
+    Tile *mTile;
 };
 
 
@@ -93,14 +95,14 @@ class Qgs3dTilesChunkLoader : public QgsChunkLoader
      * Constructs the loader
      * Qgs3dTilesChunkLoader takes ownership over symbol
      */
-    Qgs3dTilesChunkLoader( const Qgs3dTilesChunkLoaderFactory *factory, QgsChunkNode *node );
+    Qgs3dTilesChunkLoader( Qgs3dTilesChunkLoaderFactory *factory, QgsChunkNode *node );
     ~Qgs3dTilesChunkLoader() override;
 
     virtual void cancel() override;
     virtual Qt3DCore::QEntity *createEntity( Qt3DCore::QEntity *parent ) override;
 
   private:
-    const Qgs3dTilesChunkLoaderFactory *mFactory;
+    Qgs3dTilesChunkLoaderFactory *mFactory;
     bool mCanceled = false;
     QFutureWatcher<void> *mFutureWatcher = nullptr;
 };
@@ -120,10 +122,12 @@ class Qgs3dTilesChunkedEntity : public QgsChunkedEntity
 {
     Q_OBJECT
   public:
-    Qgs3dTilesChunkedEntity( Qt3DCore::QEntity * parent, Tile * tile, const Qgs3DMapSettings &map
-                                      , const QgsCoordinateTransform &coordinateTransform, bool showBoundingBoxes );
+    Qgs3dTilesChunkedEntity( Qt3DCore::QEntity * parent, Tile * tile, Qgs3dTilesChunkLoaderFactory *factory,
+                             bool showBoundingBoxes );
 
     virtual ~Qgs3dTilesChunkedEntity();
+
+    void setGeometryError(double err) { mTau = err;}
 };
 
 /// @endcond
