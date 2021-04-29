@@ -1,9 +1,9 @@
 /***************************************************************************
-  qgspointcloudlayerchunkloader_p.h
+  qgspointcloudlayerchunkloader.h
   --------------------------------------
-  Date                 : October 2020
-  Copyright            : (C) 2020 by Peter Petrik
-  Email                : zilolv dot sk at gmail dot com
+  Date                 : Mars 2021
+  Copyright            : (C) 2021 by Benoit De Mezzo
+  Email                : benoit dot de dot mezzo at oslandia dot com
  ***************************************************************************
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
@@ -30,16 +30,11 @@
 #include "qgschunkloader_p.h"
 #include "qgsfeature3dhandler_p.h"
 #include "qgschunkedentity_p.h"
-//#include "qgs3dtiles3drenderer.h"
 #include "3dtiles.h"
 
-#include <memory>
-
+#include <Qt3DRender/QSceneLoader>
 #include <QFutureWatcher>
-#include <Qt3DRender/QGeometry>
-#include <Qt3DRender/QBuffer>
-#include <Qt3DRender/QMaterial>
-#include <QVector3D>
+
 
 #define SIP_NO_FILE
 
@@ -59,7 +54,7 @@ class _3D_EXPORT Qgs3dTilesChunkLoaderFactory : public QgsChunkLoaderFactory
      * The factory takes ownership over the passed \a symbol
      */
     Qgs3dTilesChunkLoaderFactory( const Qgs3DMapSettings &map, const QgsCoordinateTransform &coordinateTransform,
-                                  Tile *tile);
+                                  Tile *tile );
 
     virtual ~Qgs3dTilesChunkLoaderFactory();
 
@@ -69,10 +64,10 @@ class _3D_EXPORT Qgs3dTilesChunkLoaderFactory : public QgsChunkLoaderFactory
     virtual QVector<QgsChunkNode *> createChildren( QgsChunkNode *node ) const ;
     virtual int primitivesCount( QgsChunkNode *node ) const ;
 
-private:
-    void createChildrenRec (QVector<QgsChunkNode *> & out, Tile * tile, QgsChunkNode *node, int level) const;
+  private:
+    void createChildrenRec( QVector<QgsChunkNode *> &out, Tile *tile, QgsChunkNode *node, int level ) const;
 
-public:
+  public:
     const Qgs3DMapSettings &mMap;
     QgsCoordinateTransform mCoordinateTransform;
     Tile *mTile;
@@ -122,12 +117,19 @@ class Qgs3dTilesChunkedEntity : public QgsChunkedEntity
 {
     Q_OBJECT
   public:
-    Qgs3dTilesChunkedEntity( Qt3DCore::QEntity * parent, Tile * tile, Qgs3dTilesChunkLoaderFactory *factory,
+    Qgs3dTilesChunkedEntity( Qt3DCore::QEntity *parent, Tile *tile, Qgs3dTilesChunkLoaderFactory *factory,
                              bool showBoundingBoxes );
 
     virtual ~Qgs3dTilesChunkedEntity();
 
-    void setGeometryError(double err) { mTau = err;}
+    void setGeometryError( double err ) { mTau = err;}
+
+  private:
+    Qt3DRender::QSceneLoader *mSceneLoader;
+    QgsAABB mBbox;
+
+  public slots:
+    void loaderChanged( Qt3DRender::QSceneLoader::Status status );
 };
 
 /// @endcond

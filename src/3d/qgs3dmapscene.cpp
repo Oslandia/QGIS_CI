@@ -83,8 +83,6 @@
 #include "qgspointcloudlayerelevationproperties.h"
 #include "qgspointcloudlayer.h"
 #include "qgspointcloudlayerchunkloader_p.h"
-#include "qgschunkboundsentity_p.h"
-#include <Qt3DExtras/QTorusMesh>
 
 Qgs3DMapScene::Qgs3DMapScene( const Qgs3DMapSettings &map, QgsAbstract3DEngine *engine )
   : mMap( map )
@@ -201,69 +199,17 @@ Qgs3DMapScene::Qgs3DMapScene( const Qgs3DMapSettings &map, QgsAbstract3DEngine *
   connect( mCameraController, &QgsCameraController::cameraChanged, this, &Qgs3DMapScene::onCameraChanged );
   connect( mCameraController, &QgsCameraController::viewportChanged, this, &Qgs3DMapScene::onCameraChanged );
 
-  // experiments with loading of existing 3D models.
-  // Torus shape data
-   //! [0]
-   Qt3DExtras::QTorusMesh * m_torus = new Qt3DExtras::QTorusMesh();
-   m_torus->setRadius(1.0f);
-   m_torus->setMinorRadius(0.4f);
-   m_torus->setRings(100);
-   m_torus->setSlices(20);
-   //! [0]
-
-   // TorusMesh Transform
-   //! [1]
-   Qt3DCore::QTransform *torusTransform = new Qt3DCore::QTransform();
-   torusTransform->setScale(2.0f);
-   torusTransform->setRotation(QQuaternion::fromAxisAndAngle(QVector3D(0.0f, 1.0f, 0.0f), 25.0f));
-   torusTransform->setTranslation(QVector3D(354757.76080977509263903, 36.27052261866629124, -6561966.87195158377289772));
-   //! [1]
-
-   //! [2]
-   Qt3DExtras::QPhongMaterial *torusMaterial = new Qt3DExtras::QPhongMaterial();
-   torusMaterial->setDiffuse(QColor(QRgb(0xbeb32b)));
-   //! [2]
-
-   // Torus
-   //! [3]
-   Qt3DCore::QEntity * m_torusEntity = new Qt3DCore::QEntity(this);
-   m_torusEntity->addComponent(m_torus);
-   m_torusEntity->addComponent(torusMaterial);
-   m_torusEntity->addComponent(torusTransform);
-
-  Qt3DCore::QEntity *loaderEntity = new Qt3DCore::QEntity;
-  AABBMesh * bbox  = new AABBMesh();
-  QList<QgsAABB> l;
-  l << QgsAABB(354857.76080977509263903, 36.27052261866629124, -6561966.87195158377289772,
-               355688.50668409303762019, 67.25688687805086374, -6561966.8982177060097456);
-  bbox->setBoxes(l);
-  bbox->setEnabled(true);
-  loaderEntity->addComponent(bbox);
-
-  Qt3DExtras::QPhongMaterial *material = new Qt3DExtras::QPhongMaterial;
-  material->setAmbient( Qt::white );
-  material->setEnabled(true);
-  material->setDiffuse(Qt::white);
-  loaderEntity->addComponent( material );
-
-  Qt3DCore::QTransform *meshTransform = new Qt3DCore::QTransform;
-  meshTransform->setScale( 1 );
-  loaderEntity->addComponent( meshTransform );
-
-  loaderEntity->setEnabled(true);
-  loaderEntity->setParent( this );
-
 #if 0
+  // experiments with loading of existing 3D models.
+
   // scene loader only gets loaded only when added to a scene...
   // it loads everything: geometries, materials, transforms, lights, cameras (if any)
   Qt3DCore::QEntity *loaderEntity = new Qt3DCore::QEntity;
   Qt3DRender::QSceneLoader *loader = new Qt3DRender::QSceneLoader;
-  loader->setSource( QUrl( "file:///home/bde/prog/formation/opengl/08-Qt/qt3d_git/examples/qt3d/exampleresources/assets/gltf/wine/wine.dae" ) );
+  loader->setSource( QUrl( "file:///home/martin/Downloads/LowPolyModels/tree.dae" ) );
   loaderEntity->addComponent( loader );
   loaderEntity->setParent( this );
-#endif
 
-#if 0
   // mesh loads just geometry as one geometry...
   // so if there are different materials (e.g. colors) used in the model, this information is lost
   Qt3DCore::QEntity *meshEntity = new Qt3DCore::QEntity;
