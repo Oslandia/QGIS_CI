@@ -46,7 +46,10 @@ Qt3DCore::QEntity *Qgs3dTilesLayer3DRenderer::createEntity( const Qgs3DMapSettin
   QgsCoordinateTransform coordTrans( t->mBv->mEpsg, map.crs(), map.transformContext() );
 
   Qgs3dTilesChunkLoaderFactory *facto = new Qgs3dTilesChunkLoaderFactory( map, coordTrans, meshLayer->mTileset->mRoot.get() );
-  Qgs3dTilesChunkedEntity *entity = new Qgs3dTilesChunkedEntity( NULL, t, facto, true );
+  //  Qgs3dTilesChunkedEntity *entity = new Qgs3dTilesChunkedEntity( facto, t, true );
+  QgsChunkedEntity *entity = new QgsChunkedEntity( t->mGeometricError, facto, false );
+  entity->setUsingAdditiveStrategy( t->mRefine ==  Refinement::ADD );
+  entity->setShowBoundingBoxes( true );
 
   return ( Qt3DCore::QEntity * )entity;
 }

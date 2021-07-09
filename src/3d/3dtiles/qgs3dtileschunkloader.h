@@ -70,7 +70,7 @@ class _3D_EXPORT Qgs3dTilesChunkLoaderFactory : public QgsChunkLoaderFactory
   public:
     const Qgs3DMapSettings &mMap;
     QgsCoordinateTransform mCoordinateTransform;
-    Tile *mTile;
+    Tile *mRootTile;
 };
 
 
@@ -96,10 +96,22 @@ class Qgs3dTilesChunkLoader : public QgsChunkLoader
     virtual void cancel() override;
     virtual Qt3DCore::QEntity *createEntity( Qt3DCore::QEntity *parent ) override;
 
+  protected:
+    void sceneLoaderChanged( Qt3DRender::QSceneLoader::Status status );
+
   private:
     Qgs3dTilesChunkLoaderFactory *mFactory;
     bool mCanceled = false;
     QFutureWatcher<void> *mFutureWatcher = nullptr;
+
+    Qt3DRender::QSceneLoader *mSceneLoader;
+    QgsAABB mBbox;
+    Tile *mTile;
+    QUrl mGltfUrl;
+
+    void finalizeEntity( Qt3DCore::QEntity *entity );
+    void prepareSceneLoader( Tile *tile );
+
 };
 
 
@@ -115,21 +127,18 @@ class Qgs3dTilesChunkLoader : public QgsChunkLoader
  */
 class Qgs3dTilesChunkedEntity : public QgsChunkedEntity
 {
-    Q_OBJECT
   public:
-    Qgs3dTilesChunkedEntity( Qt3DCore::QEntity *parent, Tile *tile, Qgs3dTilesChunkLoaderFactory *factory,
-                             bool showBoundingBoxes );
+    Qt3DRender::QSceneLoader *mSceneLoader;
+
+    Qgs3dTilesChunkedEntity( Qgs3dTilesChunkLoaderFactory *factory, Tile *tile, bool showBoundingBoxes );
 
     virtual ~Qgs3dTilesChunkedEntity();
 
+    void finalize( Qt3DCore::QEntity *entity, Tile *tile, QgsChunkNodeId tileId );
     void setGeometryError( double err ) { mTau = err;}
 
-  private:
-    Qt3DRender::QSceneLoader *mSceneLoader;
-    QgsAABB mBbox;
-
-  public slots:
-    void loaderChanged( Qt3DRender::QSceneLoader::Status status );
+  protected:
+    //void sceneLoaderChanged( Qt3DRender::QSceneLoader::Status status );
 };
 
 /// @endcond
