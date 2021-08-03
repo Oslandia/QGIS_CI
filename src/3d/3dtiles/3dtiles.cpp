@@ -317,7 +317,7 @@ Q3dCube Region::asCube( const QgsMatrix4x4 &transform,
 // Tile
 // =======================
 Tile::Tile() :
-  mParentTileset( NULL ), mBv(), mDepth( 0 ), mCombinedTransform( NULL )
+  mParentTileset( NULL ), mBv(), mRefine( Refinement::REPLACE ), mDepth( 0 ), mCombinedTransform( NULL )
 {
   // noop
 }
@@ -331,7 +331,7 @@ Tile::~Tile()
 }
 
 Tile::Tile( const QJsonObject &obj, int depth, Tileset *parTs, Tile *par ) :
-  mParentTileset( parTs ), mParentTile( par ), mDepth( depth ), mCombinedTransform( NULL )
+  mParentTileset( parTs ), mParentTile( par ), mRefine( Refinement::REPLACE ), mDepth( depth ), mCombinedTransform( NULL )
 {
 
   const QJsonObject &bvJ = obj["boundingVolume"].toObject();
@@ -436,6 +436,15 @@ QgsMatrix4x4 *Tile::getCombinedTransform()
     mCombinedTransform = new QgsMatrix4x4( getCombinedTransformRec( this ) );
   }
   return mCombinedTransform;
+}
+
+double Tile::getGeometricError()
+{
+  return mGeometricError;
+  /*     if (mDepth > 0)
+           return mGeometricError*100.0/((mDepth+1)*(mDepth+1));
+       else
+           return mGeometricError*100.0;*/
 }
 
 QgsGeometry Tile::getBoundingVolumeAsGeometry(
@@ -544,8 +553,7 @@ Tileset::Tileset( const QJsonObject &obj, const QUrl &url, Tile *parentTile, int
   mAsset.setFrom( obj["asset"].toObject() );
   mGeometricError = obj["geometricError"].toDouble();
   mProperties = obj["properties"].toObject();
-  mRoot = std::unique_ptr<Tile>(
-            new Tile( obj["root"].toObject(), depth, this ) );
+  mRoot = std::unique_ptr<Tile>( new Tile( obj["root"].toObject(), depth, this ) );
 }
 
 std::unique_ptr<ThreeDTilesContent> Tileset::fromUrl( const QUrl &url, const QUrl &base, Tile *parentTile, int depth )
@@ -557,8 +565,7 @@ std::unique_ptr<ThreeDTilesContent> Tileset::fromUrl( const QUrl &url, const QUr
 
     if ( !loadFile.open( QIODevice::ReadOnly ) )
     {
-      LOGTHROW( critical, std::runtime_error,
-                QString( "Couldn't open json file: " + u.toString() ) );
+      LOGTHROW( critical, std::runtime_error, QString( "Couldn't open json file: " + u.toString() ) );
     }
 
     QByteArray saveData = loadFile.readAll();
@@ -569,22 +576,24 @@ std::unique_ptr<ThreeDTilesContent> Tileset::fromUrl( const QUrl &url, const QUr
   }
   else
   {
-    LOGTHROW( critical, std::runtime_error,
-              QString( "Couldn't open json url " + u.toString() ) );
+    LOGTHROW( critical, std::runtime_error, QString( "Couldn't open json url " + u.toString() ) );
   }
 }
 
 Tile *Tileset::findTile( const QgsChunkNodeId &tileId, const QgsCoordinateTransform *coordTrans )
 {
   Tile *out = NULL;
-  if ( tileId.d == 0 )
+  if ( tileId.d >= 0 )
   {
-    out = mRoot.get();
-  }
-  else
-  {
-    QgsVector3D tileCenter = decodeTileId( tileId, *coordTrans );
-    out = findTileRecInTileset( this, tileId.d, tileCenter, coordTrans );
+    if ( tileId.d == 0 )
+    {
+      out = mRoot.get();
+    }
+    else
+    {
+      QgsVector3D tileCenter = decodeTileId( tileId, *coordTrans );
+      out = findTileRecInTileset( this, tileId.d, tileCenter, coordTrans );
+    }
   }
 
   return out;
@@ -676,6 +685,16 @@ void Tileset::buildRootBb( const QgsCoordinateTransform &coordinateTransform )
     mRootBb = new QgsAABB( mRoot->getBoundingVolumeAsAABB( &coordinateTransform ) );
   }
 }
+
+double Tileset::getGeometricError()
+{
+  return mGeometricError;
+  /*     if (mDepth > 0)
+           return mGeometricError*100.0/((mDepth+1)*(mDepth+1));
+       else
+           return mGeometricError*100.0;*/
+}
+
 
 // =======================
 // B3dmHolder

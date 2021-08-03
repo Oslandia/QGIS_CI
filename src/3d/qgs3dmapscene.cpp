@@ -354,8 +354,9 @@ void Qgs3DMapScene::onCameraChanged()
   }
 
   onShadowSettingsChanged();
-  qDebug() << "=================================================================================";
-  this->dumpObjectTree();
+  /* qDebug() << "===>>>>==============================================================================";
+   this->dumpObjectTree();
+   qDebug() << "===<<<<==============================================================================";*/
 }
 
 void removeQLayerComponentsFromHierarchy( Qt3DCore::QEntity *entity )

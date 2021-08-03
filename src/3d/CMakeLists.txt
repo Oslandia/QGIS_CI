@@ -284,7 +284,7 @@ if (NOT ANDROID)
     )
 endif()
 
-target_link_libraries(qgis_3d qgis_core)
+target_link_libraries(qgis_3d qgis_core tinygltf)
 
 # clang-tidy
 if(CLANG_TIDY_EXE)

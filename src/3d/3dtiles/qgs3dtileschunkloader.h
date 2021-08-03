@@ -109,8 +109,8 @@ class Qgs3dTilesChunkLoader : public QgsChunkLoader
     Tile *mTile;
     QUrl mGltfUrl;
 
-    void finalizeEntity( Qt3DCore::QEntity *entity );
     void prepareSceneLoader( Tile *tile );
+    void finalizeEntity( Qt3DCore::QEntity *entity );
 
 };
 

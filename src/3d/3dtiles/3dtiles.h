@@ -260,7 +260,7 @@ class _3D_EXPORT Tile
     QgsGeometry getBoundingVolumeAsGeometry( const QgsCoordinateTransform *coordTrans = NULL );
     QgsAABB getBoundingVolumeAsAABB( const QgsCoordinateTransform *coordTrans = NULL );
     QgsMatrix4x4 *getCombinedTransform();
-    double getGeometryError() {return mGeometricError;}
+    double getGeometricError();
 };
 Q_CORE_EXPORT QDebug &operator<<( QDebug &, const Tile & );
 
@@ -304,6 +304,7 @@ class _3D_EXPORT Tileset : public ThreeDTilesContent
     Tile *findTile( const QgsChunkNodeId &tileId, const QgsCoordinateTransform *coordTrans = NULL );
     QgsChunkNodeId encodeTileId( int tileLevel, const QgsAABB &tileBb, const QgsCoordinateTransform &coordinateTransform );
     QgsVector3D decodeTileId( const QgsChunkNodeId &tileId, const QgsCoordinateTransform &coordinateTransform );
+    double getGeometricError();
 
   private:
     Tile *findTileRecInTileset( Tileset *curTs, int depth, const QgsVector3D &tileCenter, const QgsCoordinateTransform *coordTrans = NULL );

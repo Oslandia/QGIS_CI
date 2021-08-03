@@ -18,7 +18,7 @@
 Qgs3dTilesLayer3DRenderer::Qgs3dTilesLayer3DRenderer( Qgs3dTilesLayer *layer ):
   QgsMeshLayer3DRenderer()
 {
-  setLayer( layer );
+  mLayerRef = QgsMapLayerRef( ( QgsMapLayer * )layer );
 }
 
 
@@ -45,11 +45,8 @@ Qt3DCore::QEntity *Qgs3dTilesLayer3DRenderer::createEntity( const Qgs3DMapSettin
   Tile *t = meshLayer->mTileset->mRoot.get();
   QgsCoordinateTransform coordTrans( t->mBv->mEpsg, map.crs(), map.transformContext() );
 
-  Qgs3dTilesChunkLoaderFactory *facto = new Qgs3dTilesChunkLoaderFactory( map, coordTrans, meshLayer->mTileset->mRoot.get() );
-  //  Qgs3dTilesChunkedEntity *entity = new Qgs3dTilesChunkedEntity( facto, t, true );
-  QgsChunkedEntity *entity = new QgsChunkedEntity( t->mGeometricError, facto, false );
-  entity->setUsingAdditiveStrategy( t->mRefine ==  Refinement::ADD );
-  entity->setShowBoundingBoxes( true );
+  Qgs3dTilesChunkLoaderFactory *facto = new Qgs3dTilesChunkLoaderFactory( map, coordTrans, t );
+  Qgs3dTilesChunkedEntity *entity = new Qgs3dTilesChunkedEntity( facto, t, true );
 
   return ( Qt3DCore::QEntity * )entity;
 }

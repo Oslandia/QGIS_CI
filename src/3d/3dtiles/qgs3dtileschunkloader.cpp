@@ -25,7 +25,9 @@
 #include "qgseventtracing.h"
 #include <QAttribute>
 
-///////////////
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 Qgs3dTilesChunkLoader::Qgs3dTilesChunkLoader( Qgs3dTilesChunkLoaderFactory *factory, QgsChunkNode *node )
   : QgsChunkLoader( node )
@@ -39,7 +41,7 @@ Qgs3dTilesChunkLoader::Qgs3dTilesChunkLoader( Qgs3dTilesChunkLoaderFactory *fact
   //
   QgsChunkNodeId tileId = mNode->tileId();
   Tile *tile = mFactory->mRootTile->mParentTileset->findTile( mNode->tileId(), &mFactory->mCoordinateTransform );
-  QFuture<void> future = QtConcurrent::run( [tile, tileId, this]
+  QFuture<void> future = QtConcurrent::run( [tile,  tileId, this]
   {
     QgsEventTracing::ScopedEvent e( QStringLiteral( "3D" ), QStringLiteral( "3DTiles chunk load" ) );
 
@@ -66,6 +68,7 @@ Qgs3dTilesChunkLoader::Qgs3dTilesChunkLoader( Qgs3dTilesChunkLoaderFactory *fact
 
 Qgs3dTilesChunkLoader::~Qgs3dTilesChunkLoader()
 {
+  qDebug() << "Qgs3dTilesChunkLoader::~Qgs3dTilesChunkLoader(): destruction of" << mNode->tileId().text();
   if ( mFutureWatcher && !mFutureWatcher->isFinished() )
   {
     disconnect( mFutureWatcher, &QFutureWatcher<void>::finished, this, &QgsChunkQueueJob::finished );
@@ -81,52 +84,12 @@ void Qgs3dTilesChunkLoader::cancel()
   mCanceled = true;
 }
 
-Qt3DCore::QEntity *Qgs3dTilesChunkLoader::createEntity( Qt3DCore::QEntity *chunkedEntity )
-{
-  Tile *tile = mFactory->mRootTile->mParentTileset->findTile( mNode->tileId(), &mFactory->mCoordinateTransform );
-  qDebug() << "Qgs3dTilesChunkLoader::createEntity for tileId" << mNode->tileId().text();
-  qDebug() << "Qgs3dTilesChunkLoader::createEntity found tile url" << tile->mContent.mUrl;
-  qDebug() << "Qgs3dTilesChunkLoader::createEntity found tile has" << tile->mChildren.length() << "children";
-  qDebug() << "Qgs3dTilesChunkLoader::createEntity found tile has a content of type" << tile->mContent.mSubContent->mType;
-
-  Qt3DCore::QEntity *sceneEntity = new Qt3DCore::QEntity( chunkedEntity );
-// if (mSceneLoader->status() == Qt3DRender::QSceneLoader::Status::Ready) {
-  finalizeEntity( sceneEntity );
-  //}
-  return sceneEntity;
-}
-
-void Qgs3dTilesChunkLoader::finalizeEntity( Qt3DCore::QEntity *sceneEntity )
-{
-  qDebug() << "Qgs3dTilesChunkLoader::finalizeEntity: Will add..."; // << mSceneLoader->entityNames().size() << "elements:";
-  mSceneLoader = new Qt3DRender::QSceneLoader( sceneEntity );
-  //mSceneLoader->setEnabled(true);
-  connect( mSceneLoader, &Qt3DRender::QSceneLoader::statusChanged, this, &Qgs3dTilesChunkLoader::sceneLoaderChanged );
-  mSceneLoader->setSource( mGltfUrl );
-
-  // UGLY PART
-  for ( int i = 0 ; i < 200 && mSceneLoader->status() != Qt3DRender::QSceneLoader::Status::Ready; i++ )
-  {
-    QCoreApplication::processEvents();
-    QThread::yieldCurrentThread();
-    QThread::msleep( 100 );
-  }
-  sceneEntity->setObjectName( QString( "Scene for " ) + mTile->mContent.mUrl.fileName() );
-  mSceneLoader->setObjectName( QString( "Loader for " ) + mTile->mContent.mUrl.fileName() );
-  for ( auto entName : mSceneLoader->entityNames() )
-  {
-    Qt3DCore::QEntity *ent = mSceneLoader->entity( entName );
-    ent->setParent( sceneEntity );
-  }
-  /*mSceneLoader->setParent(sceneEntity);
-  sceneEntity->addComponent(mSceneLoader);*/
-  qDebug() << "Qgs3dTilesChunkLoader::finalizeEntity: added" << mSceneLoader->entityNames().size() << "elements:";
-}
-
 void Qgs3dTilesChunkLoader::prepareSceneLoader( Tile *tile )
 {
+  if ( tile == nullptr ) // when called for root node
+    return;
   // load data
-  Tile *t = NULL;
+  Tile *t = nullptr;
   if ( tile->mContent.mSubContent->mType == ThreeDTilesContent::b3dm )
   {
     t = tile;
@@ -201,6 +164,73 @@ void Qgs3dTilesChunkLoader::prepareSceneLoader( Tile *tile )
   /*    mSceneLoader->setObjectName( gltfFilePath );
       mSceneLoader->setEnabled(true);*/
 }
+
+Qt3DCore::QEntity *Qgs3dTilesChunkLoader::createEntity( Qt3DCore::QEntity *chunkedEntity )
+{
+  Qt3DCore::QEntity *sceneEntity = new Qt3DCore::QEntity( chunkedEntity );
+  Tile *tile = mFactory->mRootTile->mParentTileset->findTile( mNode->tileId(), &mFactory->mCoordinateTransform );
+  if ( tile == nullptr )
+  {
+    sceneEntity->setObjectName( "=>root entity" );
+    sceneEntity->setEnabled( false );
+  }
+  else
+  {
+    qDebug() << "Qgs3dTilesChunkLoader::createEntity for tileId" << mNode->tileId().text();
+    qDebug() << "Qgs3dTilesChunkLoader::createEntity found tile url" << tile->mContent.mUrl;
+    qDebug() << "Qgs3dTilesChunkLoader::createEntity found tile has" << tile->mChildren.length() << "children";
+    qDebug() << "Qgs3dTilesChunkLoader::createEntity found tile has a content of type" << tile->mContent.mSubContent->mType;
+
+    sceneEntity->setObjectName( QString( "=>Scene for " ) + mTile->mContent.mUrl.fileName() );
+
+    finalizeEntity( sceneEntity );
+
+    auto entName = *( mSceneLoader->entityNames().begin() );
+    Qt3DCore::QEntity *ent = mSceneLoader->entity( entName );
+    ent->setObjectName( "===>useful entity" );
+    ent->setParent( sceneEntity );
+
+    if ( chunkedEntity->children().length() == 2 )
+    {
+      ( ( Qt3DCore::QEntity * )( chunkedEntity->children()[1] ) )->setEnabled( true );
+    }
+  }
+
+  return sceneEntity;
+}
+
+
+
+
+void Qgs3dTilesChunkLoader::finalizeEntity( Qt3DCore::QEntity *sceneEntity )
+{
+  qDebug() << "Qgs3dTilesChunkLoader::finalizeEntity: Will run scene loader..."; // << mSceneLoader->entityNames().size() << "elements:";
+  mSceneLoader = new Qt3DRender::QSceneLoader( sceneEntity );
+  connect( mSceneLoader, &Qt3DRender::QSceneLoader::statusChanged, this, &Qgs3dTilesChunkLoader::sceneLoaderChanged );
+
+  mSceneLoader->setObjectName( QString( "===>Loader for " ) + mTile->mContent.mUrl.fileName() );
+  mSceneLoader->setSource( mGltfUrl );  // <== event should be procced! Must call sceneLoaderChanged
+
+  // UGLY PART to force event to be procced
+  for ( int i = 0 ; i < 20 && mSceneLoader->status() != Qt3DRender::QSceneLoader::Status::Ready; i++ )
+  {
+    QCoreApplication::processEvents();
+    QThread::yieldCurrentThread();
+    QThread::msleep( 50 );
+  }
+
+  if ( mSceneLoader->status() == Qt3DRender::QSceneLoader::Status::Ready )
+  {
+    qDebug() << "Qgs3dTilesChunkLoader::finalizeEntity: added" << mSceneLoader->entityNames().size() << "elements:";
+  }
+  else
+  {
+    qWarning() << "Qgs3dTilesChunkLoader::finalizeEntity: failed to finalize entity!";
+  }
+
+  mSceneLoader->setEnabled( false );
+}
+
 
 
 
@@ -336,26 +366,29 @@ void Qgs3dTilesChunkLoader::sceneLoaderChanged( Qt3DRender::QSceneLoader::Status
         ent->addComponent( torusTransform );
         qDebug() <<  "        * ++++ transform" << torusTransform->matrix();
 
-        //if (!hasMaterial) {
-        torusMaterial = new Qt3DExtras::QPhongMaterial();
-        if ( mTile->mParentTile == NULL )
+        if ( !hasMaterial )
         {
-          torusMaterial->setDiffuse( QColor( QRgb( 0x0000ff ) ) );
+          torusMaterial = new Qt3DExtras::QPhongMaterial();
+          if ( mTile->mParentTile == NULL )
+          {
+            torusMaterial->setDiffuse( QColor( QRgb( 0x0000ff ) ) );
+          }
+          else
+          {
+            torusMaterial->setDiffuse( QColor( QRgb( 0xff0000 ) ) );
+          }
+          ent->addComponent( torusMaterial );
+          qDebug() <<  "        * ++++ material";
         }
-        else
-        {
-          torusMaterial->setDiffuse( QColor( QRgb( 0xff0000 ) ) );
-        }
-        ent->addComponent( torusMaterial );
-        qDebug() <<  "        * ++++ material";
-        //}
       }
     }
   }
   qDebug() <<  "Qgs3dTilesChunkLoader::sceneLoaderChanged: <<<<<<";
 }
 
-///////////////
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 
 Qgs3dTilesChunkLoaderFactory::Qgs3dTilesChunkLoaderFactory( const Qgs3DMapSettings &map,
@@ -369,6 +402,7 @@ Qgs3dTilesChunkLoaderFactory::Qgs3dTilesChunkLoaderFactory( const Qgs3DMapSettin
 
 Qgs3dTilesChunkLoaderFactory::~Qgs3dTilesChunkLoaderFactory()
 {
+  qDebug() << "================================ Qgs3dTilesChunkLoaderFactory::~Qgs3dTilesChunkLoaderFactory";
   // noop
 }
 
@@ -379,7 +413,15 @@ QgsChunkLoader *Qgs3dTilesChunkLoaderFactory::createChunkLoader( QgsChunkNode *n
 
 int Qgs3dTilesChunkLoaderFactory::primitivesCount( QgsChunkNode *node ) const
 {
-  return mRootTile->mParentTileset->findTile( node->tileId(), &mCoordinateTransform )->mChildren.length();
+  Tile *tile = mRootTile->mParentTileset->findTile( node->tileId(), &mCoordinateTransform );
+  if ( tile == nullptr ) // when called for root node, 
+  {
+    return 1;
+  }
+  else
+  {
+    return tile->mChildren.length();
+  }
 }
 
 
@@ -387,8 +429,9 @@ QgsChunkNode *Qgs3dTilesChunkLoaderFactory::createRootNode() const
 {
   qDebug() << "Qgs3dTilesChunkLoaderFactory: create ROOT NODE\n";
   QgsAABB bb = mRootTile->getBoundingVolumeAsAABB( &mCoordinateTransform );
-  QgsChunkNodeId tileId = mRootTile->mParentTileset->encodeTileId( mRootTile->mDepth, bb, mCoordinateTransform );
-  return new QgsChunkNode( tileId, bb, mRootTile->getGeometryError() );
+  QgsChunkNodeId tileId = mRootTile->mParentTileset->encodeTileId( -1, bb, mCoordinateTransform );
+  qDebug() << "Qgs3dTilesChunkLoaderFactory::createRootNode will use geometricError: " << 50000000;
+  return new QgsChunkNode( tileId, bb, 50000000 );
 }
 
 void Qgs3dTilesChunkLoaderFactory::createChildrenRec( QVector<QgsChunkNode *> &out, Tile *tile, QgsChunkNode *node, int level ) const
@@ -397,7 +440,8 @@ void Qgs3dTilesChunkLoaderFactory::createChildrenRec( QVector<QgsChunkNode *> &o
   {
     QgsAABB bb = childTile->getBoundingVolumeAsAABB( &mCoordinateTransform );
     QgsChunkNodeId childId = mRootTile->mParentTileset->encodeTileId( level, bb, mCoordinateTransform );
-    QgsChunkNode *childNode = new QgsChunkNode( childId, bb, childTile->getGeometryError(), node );
+    QgsChunkNode *childNode = new QgsChunkNode( childId, bb, tile->getGeometricError(), node );
+    qDebug() << "Qgs3dTilesChunkLoaderFactory::createChildrenRec " << childId.text() << "will use geometricError: " << tile->getGeometricError();
     out << childNode;
     //createChildrenRec (out, childTile.get(), childNode, level + 1);
   }
@@ -412,46 +456,53 @@ QVector<QgsChunkNode *> Qgs3dTilesChunkLoaderFactory::createChildren( QgsChunkNo
   qDebug() << "Qgs3dTilesChunkLoaderFactory: create children from tileId" << tileId.text();
   Tile *tile = mRootTile->mParentTileset->findTile( tileId, &mCoordinateTransform );
 
-  if ( tile->mChildren.isEmpty() )
+  if ( tile == nullptr ) // root node
   {
-    if ( tile->mContent.mSubContent->mType == ThreeDTilesContent::tileset )
-    {
-      Tile *subTilesetContent = ( ( Tileset * )tile->mContent.mSubContent.get() )->mRoot.get();
-      createChildrenRec( children, subTilesetContent, node, tileId.d + 1 );
-    }
+    QgsAABB bb = mRootTile->getBoundingVolumeAsAABB( &mCoordinateTransform );
+    QgsChunkNodeId tileId = mRootTile->mParentTileset->encodeTileId( mRootTile->mDepth, bb, mCoordinateTransform );
+    children << new QgsChunkNode( tileId, bb, mRootTile->mParentTileset->getGeometricError() );
+    qDebug() << "Qgs3dTilesChunkLoaderFactory::createChildren rootNode: " << tileId.text() << "will use geometricError: " << mRootTile->mParentTileset->getGeometricError();
 
   }
-  else     // only children without direct sub tileset
+  else
   {
-    createChildrenRec( children, tile, node, tileId.d + 1 );
+    if ( tile->mChildren.isEmpty() )
+    {
+      if ( tile->mContent.mSubContent->mType == ThreeDTilesContent::tileset )
+      {
+        Tile *subTilesetContent = ( ( Tileset * )tile->mContent.mSubContent.get() )->mRoot.get();
+        createChildrenRec( children, subTilesetContent, node, tileId.d + 1 );
+      }
+
+    }
+    else     // only children without direct sub tileset
+    {
+      createChildrenRec( children, tile, node, tileId.d + 1 );
+    }
   }
 
   return children;
 }
 
 
-///////////////
-
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 
 Qgs3dTilesChunkedEntity::Qgs3dTilesChunkedEntity( Qgs3dTilesChunkLoaderFactory *factory, Tile *tile, bool showBoundingBoxes )
-  : QgsChunkedEntity( tile->getGeometryError(), factory, false )
+  : QgsChunkedEntity( tile->getGeometricError(), factory, false )
 {
-  setUsingAdditiveStrategy( tile->mRefine ==  Refinement::ADD );
+  qDebug() << "================================ Qgs3dTilesChunkedEntity::Qgs3dTilesChunkedEntity construction !!";
+  setObjectName( "==>3dTilesChunkedEntity<==" );
+  setUsingAdditiveStrategy( tile->mRefine !=  Refinement::ADD );
   setShowBoundingBoxes( showBoundingBoxes );
 
-  /*mSceneLoader = new Qt3DRender::QSceneLoader(this);
-  connect( mSceneLoader, &Qt3DRender::QSceneLoader::statusChanged, this, &Qgs3dTilesChunkedEntity::sceneLoaderChanged);
-  mSceneLoader->setSource(QUrl("file:///tmp/3dtiles/dragon_low.b3dm/dragon_low.b3dm.json"));*/
 }
-/*
-void Qgs3dTilesChunkedEntity::sceneLoaderChanged( Qt3DRender::QSceneLoader::Status s ){
-     qDebug() << "================================ Qgs3dTilesChunkedEntity sceneloader" << s;
-}
-*/
 
 Qgs3dTilesChunkedEntity::~Qgs3dTilesChunkedEntity()
 {
+  qDebug() << "================================ Qgs3dTilesChunkedEntity::~Qgs3dTilesChunkedEntity destruction";
   // cancel / wait for jobs
   cancelActiveJobs();
 }
