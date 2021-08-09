@@ -23,7 +23,8 @@
 #include <fstream>
 #include <streambuf>
 #include <iosfwd>
-
+#include "qgsapplication.h"
+#include "qgssourcecache.h"
 
 const QgsMatrix4x4 &buildFromJson( QgsMatrix4x4 &matrix,
                                    const QJsonArray &array )
@@ -258,10 +259,8 @@ Q3dCube Sphere::asCube( const QgsMatrix4x4 &transform,
                         const QgsCoordinateTransform *coordTrans )
 {
   Q3dCube cube(
-    QgsVector3D( mCenter[0] - mRadius, mCenter[1] - mRadius,
-                 mCenter[2] - mRadius ),
-    QgsVector3D( mCenter[0] + mRadius, mCenter[1] + mRadius,
-                 mCenter[2] + mRadius ) );
+    QgsVector3D( mCenter[0] - mRadius, mCenter[1] - mRadius, mCenter[2] - mRadius ),
+    QgsVector3D( mCenter[0] + mRadius, mCenter[1] + mRadius, mCenter[2] + mRadius ) );
   cube = transform * cube;
   if ( coordTrans )
   {
@@ -447,8 +446,7 @@ double Tile::getGeometricError()
            return mGeometricError*100.0;*/
 }
 
-QgsGeometry Tile::getBoundingVolumeAsGeometry(
-  const QgsCoordinateTransform *coordTrans )
+QgsGeometry Tile::getBoundingVolumeAsGeometry( const QgsCoordinateTransform *coordTrans )
 {
   QgsMatrix4x4 *ct = getCombinedTransform();
   QgsCoordinateTransform *coordTrans2 = NULL;
@@ -461,8 +459,7 @@ QgsGeometry Tile::getBoundingVolumeAsGeometry(
   return mBv->asGeometry( *ct, coordTrans2 );
 }
 
-QgsAABB Tile::getBoundingVolumeAsAABB(
-  const QgsCoordinateTransform *coordTrans )
+QgsAABB Tile::getBoundingVolumeAsAABB( const QgsCoordinateTransform *coordTrans )
 {
   QgsMatrix4x4 *ct = getCombinedTransform();
   QgsCoordinateTransform *coordTrans2 = NULL;
@@ -519,11 +516,8 @@ const TileContent &TileContent::setFrom( const QJsonObject &obj, int depth,
 
   if ( mUrl.toString().endsWith( ".json" ) )
   {
-    qDebug() << "Loading tile (depth:" << depth << ") subcontent from tileset: "
+    qDebug() << "Lazy load tile (depth:" << depth << ") subcontent from tileset: "
              << mParentTile->mParentTileset->mSource.resolved( mUrl );
-    mSubContent = Tileset::fromUrl( mUrl,
-                                    mParentTile->mParentTileset->mSource, parentTile, depth );
-
   }
   else if ( mUrl.toString().endsWith( ".b3dm" ) )
   {
@@ -540,6 +534,24 @@ const TileContent &TileContent::setFrom( const QJsonObject &obj, int depth,
   }
 
   return *this;
+}
+
+ThreeDTilesContent *TileContent::getSubContentConst() const
+{
+  return mSubContent.get();
+}
+
+ThreeDTilesContent *TileContent::getSubContent()
+{
+  if ( mSubContent.get() == nullptr && mUrl.toString().endsWith( ".json" ) )
+  {
+    qDebug() << "Delayed loading tile (depth:" << mParentTile->mDepth + 1 << ") subcontent from tileset: "
+             << mParentTile->mParentTileset->mSource.resolved( mUrl );
+    mSubContent = Tileset::fromUrl( mUrl,
+                                    mParentTile->mParentTileset->mSource, mParentTile, mParentTile->mDepth + 1 );
+  }
+
+  return mSubContent.get();
 }
 
 // =======================
@@ -559,25 +571,22 @@ Tileset::Tileset( const QJsonObject &obj, const QUrl &url, Tile *parentTile, int
 std::unique_ptr<ThreeDTilesContent> Tileset::fromUrl( const QUrl &url, const QUrl &base, Tile *parentTile, int depth )
 {
   QUrl u = base.resolved( url );
-  if ( u.isLocalFile() || u.scheme().isEmpty() )
+  QString fileName = QgsApplication::instance()->sourceCache()->localFilePath( u.toString(), true );
+
+  QFile loadFile( fileName );
+  if ( loadFile.open( QIODevice::ReadOnly ) )
   {
-    QFile loadFile( u.toString() );
-
-    if ( !loadFile.open( QIODevice::ReadOnly ) )
-    {
-      LOGTHROW( critical, std::runtime_error, QString( "Couldn't open json file: " + u.toString() ) );
-    }
-
-    QByteArray saveData = loadFile.readAll();
-    QJsonDocument doc( QJsonDocument::fromJson( saveData ) );
-
-    return std::make_unique<Tileset>( doc.object(), u, parentTile, depth );
-
+    qDebug() << "Tileset::fromUrl will read file: " << fileName;
   }
   else
   {
-    LOGTHROW( critical, std::runtime_error, QString( "Couldn't open json url " + u.toString() ) );
+    LOGTHROW( critical, std::runtime_error, QString( "Couldn't open json file: " + u.toString() ) );
   }
+
+  QByteArray saveData = loadFile.readAll();
+  QJsonDocument doc( QJsonDocument::fromJson( saveData ) );
+
+  return std::make_unique<Tileset>( doc.object(), u, parentTile, depth );
 }
 
 Tile *Tileset::findTile( const QgsChunkNodeId &tileId, const QgsCoordinateTransform *coordTrans )
@@ -611,12 +620,12 @@ Tile *Tileset::findTileRecInTile( Tile *curTile, int depth, const QgsVector3D &t
   {
     if ( curTile->mChildren.isEmpty() ) // no children
     {
-      if ( curTile->mContent.mSubContent->mType == ThreeDTilesContent::tileset )
+      if ( curTile->mContent.getSubContent()->mType == ThreeDTilesContent::tileset )
       {
-        out = findTileRecInTileset( ( Tileset * )( curTile->mContent.mSubContent.get() ), depth + 1, tileCenter, coordTrans );
+        out = findTileRecInTileset( ( Tileset * )( curTile->mContent.getSubContent() ), depth + 1, tileCenter, coordTrans );
 
       }
-      else if ( curTile->mContent.mSubContent->mType == ThreeDTilesContent::b3dm )
+      else if ( curTile->mContent.getSubContent()->mType == ThreeDTilesContent::b3dm )
       {
         out = curTile;
       }
@@ -709,23 +718,21 @@ B3dmHolder::B3dmHolder( QIODevice &dev, const QUrl &url, Tile *parentTile, int d
 std::unique_ptr<ThreeDTilesContent> B3dmHolder::fromUrl( const QUrl &url, const QUrl &base, Tile *parentTile, int depth )
 {
   QUrl u = base.resolved( url );
-  if ( u.isLocalFile() || u.scheme().isEmpty() )
+  QString fileName = QgsApplication::instance()->sourceCache()->localFilePath( u.toString(), true );
+
+  QFile loadFile( fileName );
+
+  if ( loadFile.open( QIODevice::ReadOnly ) )
   {
-    QFile loadFile( u.toString() );
-
-    if ( !loadFile.open( QIODevice::ReadOnly ) )
-    {
-      LOGTHROW( critical, std::runtime_error,
-                QString( "Couldn't open b3dm file: " + u.toString() ) );
-    }
-
-    return std::make_unique < B3dmHolder > ( loadFile, u, parentTile, depth );
+    qDebug() << "B3dmHolder::fromUrl will read file: " << fileName;
   }
   else
   {
     LOGTHROW( critical, std::runtime_error,
-              QString( "Couldn't open b3dm url " + u.toString() ) );
+              QString( "Couldn't open b3dm file: " + u.toString() ) );
   }
+
+  return std::make_unique < B3dmHolder > ( loadFile, u, parentTile, depth );
 }
 
 // =======================
@@ -760,10 +767,10 @@ QDebug &operator<<( QDebug &out, const Tile &t )
   out << "transform:" << t.mTransform;
   out << ", bv:" << *t.mBv;
 
-  if ( t.mContent.mSubContent != NULL )
+  if ( t.mContent.getSubContentConst() != NULL )
   {
     out << ", url:" << t.mContent.mUrl;
-    out << ", content:" << *( t.mContent.mSubContent );
+    out << ", content:" << *( t.mContent.getSubContentConst() );
   }
 
   if ( !t.mChildren.isEmpty() )

@@ -117,7 +117,7 @@ class Asset
 /**
  * @brief base class for all bounding volume
  */
-class BoundingVolume
+class _3D_EXPORT BoundingVolume
 {
   public:
     enum BVType
@@ -148,7 +148,7 @@ Q_CORE_EXPORT QDebug &operator<<( QDebug &, const BoundingVolume & );
 /**
  * @brief The Box BoundingVolume
  */
-class Box: public BoundingVolume
+class _3D_EXPORT Box: public BoundingVolume
 {
   public:
     QgsVector3D mCenter;
@@ -170,7 +170,7 @@ Q_CORE_EXPORT QDebug &operator<<( QDebug &, const Box & );
 /**
  * @brief The Sphere BoundingVolume
  */
-class Sphere: public BoundingVolume
+class _3D_EXPORT Sphere: public BoundingVolume
 {
   public:
     QgsVector3D mCenter;
@@ -196,7 +196,7 @@ struct Extents3
 /**
  * @brief The Region BoundingVolume
  */
-class Region: public BoundingVolume
+class _3D_EXPORT Region: public BoundingVolume
 {
   public:
     Extents3 mExtents;
@@ -218,14 +218,18 @@ class TileContent
 {
   public:
     Tile *mParentTile;
-
     QUrl mUrl;
-    std::unique_ptr<ThreeDTilesContent> mSubContent;
 
   public:
     TileContent();
     ~TileContent();
     const TileContent &setFrom( const QJsonObject &obj, int maxDepth, Tile *parentTile );
+
+    ThreeDTilesContent *getSubContentConst() const;
+    ThreeDTilesContent *getSubContent();
+
+  private:
+    std::unique_ptr<ThreeDTilesContent> mSubContent;
 };
 
 

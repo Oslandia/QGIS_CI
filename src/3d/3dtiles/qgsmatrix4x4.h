@@ -145,6 +145,7 @@ class CORE_EXPORT QgsMatrix4x4
 #ifndef QT_NO_DEBUG_STREAM
     friend Q_GUI_EXPORT QDebug operator<<( QDebug dbg, const QgsMatrix4x4 &m );
 #endif
+    QString toString() const;
 
   private:
     double m[4][4];          // Column-major order to match OpenGL.
@@ -1062,6 +1063,11 @@ QT_WARNING_POP
 #ifndef QT_NO_DEBUG_STREAM
 Q_GUI_EXPORT QDebug operator<<( QDebug dbg, const QgsMatrix4x4 &m );
 #endif
+
+inline QString QgsMatrix4x4::toString() const
+{
+  return QStringLiteral( "QgsMatrix4x4 (%1, %2, %3, %4)" ).arg( row( 0 ).toString() ).arg( row( 1 ).toString() ).arg( row( 2 ).toString() ).arg( row( 3 ).toString() );
+}
 
 #ifndef QT_NO_DATASTREAM
 Q_GUI_EXPORT QDataStream &operator<<( QDataStream &, const QgsMatrix4x4 & );

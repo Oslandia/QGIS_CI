@@ -28,8 +28,13 @@ set(TESTS
   testqgs3dmaterial.cpp
   testqgstessellator.cpp
   testqgs3dsymbolregistry.cpp
+  testqgs3dtiles.cpp
 )
 
+set(LINKEDLIBRARIES
+    ${LINKEDLIBRARIES}
+    qgis_3d
+)
 
 foreach(TESTSRC ${TESTS})
   add_qgis_test(${TESTSRC} MODULE 3d LINKEDLIBRARIES qgis_3d)

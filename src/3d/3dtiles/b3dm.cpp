@@ -99,6 +99,7 @@ tinygltf::Model *B3dm::getGltfModel()
       QgsLogger::warning( warn.c_str() );
       delete mGltf;
       mGltf = NULL;
+      res = false;
     }
 
     if ( !err.empty() )
@@ -106,6 +107,7 @@ tinygltf::Model *B3dm::getGltfModel()
       QgsLogger::critical( err.c_str() );
       delete mGltf;
       mGltf = NULL;
+      res = false;
     }
 
     if ( !res )
