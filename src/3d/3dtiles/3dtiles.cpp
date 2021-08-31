@@ -166,6 +166,19 @@ BoundingVolume::BoundingVolume( const BoundingVolume::BVType &t ) :
   mFlipZYMat.rotate( -90.0, 1.0, 0.0, 0.0 );
 }
 
+bool BoundingVolume::checkCoordinateTransform( const QgsCoordinateTransform *coordTrans ) const
+{
+  if ( coordTrans != NULL && mEpsg.authid().compare( coordTrans->sourceCrs().authid() ) != 0 )  // if geom srs is different from the source srs, do not use coord trans
+  {
+    LOGTHROW( fatal, std::runtime_error, QStringLiteral( "Bounding volume CRS (%1) does not match transform CRS (%2)!" )
+              .arg( mEpsg.authid() )
+              .arg( coordTrans->sourceCrs().authid() ) );
+  }
+  return true;
+}
+
+
+
 QgsGeometry BoundingVolume::asGeometry( const QgsMatrix4x4 &transform,
                                         const QgsCoordinateTransform *coordTrans )
 {
@@ -205,10 +218,11 @@ Box::Box( const QJsonArray &value ) :
   mW.setY( value[10].toDouble() );
   mW.setZ( value[11].toDouble() );
 
-  /*  if (abs(mCenter[0]) > 180.0 || abs(mCenter[1]) > 180.0
-          || abs(mCenter[2]) > 180.0) {
-      mEpsg = QgsCoordinateReferenceSystem::fromEpsgId(4978);
-  }*/
+  if ( abs( mCenter[0] ) > 180.0 || abs( mCenter[1] ) > 180.0
+       || abs( mCenter[2] ) > 180.0 )
+  {
+    mEpsg = QgsCoordinateReferenceSystem::fromEpsgId( 4978 );
+  }
 }
 
 inline QgsMatrix4x4 Box::fromRotationTranslation()
@@ -222,6 +236,7 @@ inline QgsMatrix4x4 Box::fromRotationTranslation()
 Q3dCube Box::asCube( const QgsMatrix4x4 &transform,
                      const QgsCoordinateTransform *coordTrans )
 {
+  checkCoordinateTransform( coordTrans );
   Q3dCube cube( QgsVector3D( -1.0, -1.0, -1.0 ), QgsVector3D( 1.0, 1.0, 1.0 ) );
   QgsMatrix4x4 rotMat = fromRotationTranslation();
   //qDebug() << "Q3dCube rot matrix: " << rotMat << "\n";
@@ -249,15 +264,17 @@ Sphere::Sphere( const QJsonArray &value ) :
 
   mRadius = value[3].toDouble();
 
-  /*    if (abs(mCenter[0]) > 180.0 || abs(mCenter[1]) > 180.0
-          || abs(mCenter[2]) > 180.0) {
-      mEpsg = QgsCoordinateReferenceSystem::fromEpsgId(4978);
-  }*/
+  if ( abs( mCenter[0] ) > 180.0 || abs( mCenter[1] ) > 180.0
+       || abs( mCenter[2] ) > 180.0 )
+  {
+    mEpsg = QgsCoordinateReferenceSystem::fromEpsgId( 4978 );
+  }
 }
 
 Q3dCube Sphere::asCube( const QgsMatrix4x4 &transform,
                         const QgsCoordinateTransform *coordTrans )
 {
+  checkCoordinateTransform( coordTrans );
   Q3dCube cube(
     QgsVector3D( mCenter[0] - mRadius, mCenter[1] - mRadius, mCenter[2] - mRadius ),
     QgsVector3D( mCenter[0] + mRadius, mCenter[1] + mRadius, mCenter[2] + mRadius ) );
@@ -270,8 +287,7 @@ Q3dCube Sphere::asCube( const QgsMatrix4x4 &transform,
 }
 
 Extents3::Extents3() :
-  mLl( QgsVector3D( FLT_MIN, FLT_MIN, FLT_MIN ) ), mUr(
-    QgsVector3D( FLT_MAX, FLT_MAX, FLT_MAX ) )
+  mLl( QgsVector3D( FLT_MIN, FLT_MIN, FLT_MIN ) ), mUr( QgsVector3D( FLT_MAX, FLT_MAX, FLT_MAX ) )
 {
   // noop
 }
@@ -279,7 +295,7 @@ Extents3::Extents3() :
 Region::Region() :
   BoundingVolume( BoundingVolume::region )
 {
-  // noopmake_shared
+  mEpsg = QgsCoordinateReferenceSystem::fromEpsgId( 4979 );
 }
 
 Region::Region( const QJsonArray &value ) :
@@ -293,16 +309,13 @@ Region::Region( const QJsonArray &value ) :
   mExtents.mUr.setY( value[3].toDouble() );
   mExtents.mUr.setZ( value[5].toDouble() );
 
-  /*   if (abs(mExtents.mLl[0]) > 180.0 || abs(mExtents.mLl[1]) > 180.0
-          || abs(mExtents.mLl[2]) > 180.0 || abs(mExtents.mUr[0]) > 180.0
-          || abs(mExtents.mUr[1]) > 180.0 || abs(mExtents.mUr[2]) > 180.0) {
-      mEpsg = QgsCoordinateReferenceSystem::fromEpsgId(4978);
-  }*/
+  mEpsg = QgsCoordinateReferenceSystem::fromEpsgId( 4979 );
 }
 
 Q3dCube Region::asCube( const QgsMatrix4x4 &transform,
                         const QgsCoordinateTransform *coordTrans )
 {
+  checkCoordinateTransform( coordTrans );
   Q3dCube cube( mExtents.mLl, mExtents.mUr );
   cube = transform * cube;
   if ( coordTrans )
@@ -441,35 +454,21 @@ double Tile::getGeometricError()
 {
   return mGeometricError;
   /*     if (mDepth > 0)
-           return mGeometricError*100.0/((mDepth+1)*(mDepth+1));
-       else
-           return mGeometricError*100.0;*/
+         return mGeometricError*100.0/((mDepth+1)*(mDepth+1));
+     else
+         return mGeometricError*100.0;*/
 }
 
 QgsGeometry Tile::getBoundingVolumeAsGeometry( const QgsCoordinateTransform *coordTrans )
 {
   QgsMatrix4x4 *ct = getCombinedTransform();
-  QgsCoordinateTransform *coordTrans2 = NULL;
-  if ( coordTrans != NULL
-       && mBv->mEpsg.authid().compare( coordTrans->sourceCrs().authid() )
-       == 0 )  // if geom srs is the source srs, use coord trans
-  {
-    coordTrans2 = ( QgsCoordinateTransform * ) coordTrans;
-  }
-  return mBv->asGeometry( *ct, coordTrans2 );
+  return mBv->asGeometry( *ct, coordTrans );
 }
 
 QgsAABB Tile::getBoundingVolumeAsAABB( const QgsCoordinateTransform *coordTrans )
 {
   QgsMatrix4x4 *ct = getCombinedTransform();
-  QgsCoordinateTransform *coordTrans2 = NULL;
-  if ( coordTrans != NULL
-       && mBv->mEpsg.authid().compare( coordTrans->sourceCrs().authid() )
-       == 0 )  // if geom srs is the source srs, use coord trans
-  {
-    coordTrans2 = ( QgsCoordinateTransform * ) coordTrans;
-  }
-  return mBv->asQgsAABB( *ct, coordTrans2, true );
+  return mBv->asQgsAABB( *ct, coordTrans, true );
 }
 
 bool Tile::contains( const QgsVector3D &point, const QgsCoordinateTransform *coordTrans )
@@ -699,9 +698,9 @@ double Tileset::getGeometricError()
 {
   return mGeometricError;
   /*     if (mDepth > 0)
-           return mGeometricError*100.0/((mDepth+1)*(mDepth+1));
-       else
-           return mGeometricError*100.0;*/
+         return mGeometricError*100.0/((mDepth+1)*(mDepth+1));
+     else
+         return mGeometricError*100.0;*/
 }
 
 

@@ -133,6 +133,9 @@ class _3D_EXPORT BoundingVolume
   private:
     QgsMatrix4x4 mFlipZYMat;
 
+  protected:
+    bool checkCoordinateTransform( const QgsCoordinateTransform *coordTrans ) const;
+
   public:
     BoundingVolume( const BVType &t );
     virtual ~BoundingVolume() {}

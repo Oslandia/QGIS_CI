@@ -1,8 +1,8 @@
 /***************************************************************************
   TestQgs3dTiles.cpp
   ----------------------
-  Date                 : July 2021
-  Copyright            : (C) 2021 by Benoit De Mezzo
+  Date                 : July 2XY1
+  Copyright            : (C) 2XY1 by Benoit De Mezzo
   Email                : benoit dot de dot mezzo at oslandia dot com
  ***************************************************************************
  *                                                                         *
@@ -25,24 +25,71 @@
 class TestQgs3dTiles : public QObject
 {
     Q_OBJECT
-public:
+  public:
     TestQgs3dTiles() = default;
 
-private slots:
+  private slots:
     void initTestCase();// will be called before the first testfunction is executed.
     void cleanupTestCase();// will be called after the last testfunction was executed.
 
     void testCubeReprojection();
+    void testCube2Reprojection();
     void testSphereReprojection();
     void testSphere2Reprojection();
 
-private:
-    void checkBoudingVolume( BoundingVolume *bv, bool doComplexTransformTest=true );
+  private:
+    void checkBoudingVolume( BoundingVolume *bv, QgsVector3D translation );
 };
 
 //runs before all tests
 void TestQgs3dTiles::initTestCase()
 {
+  double radius = 6378200;
+  unsigned int rings = 64;
+  unsigned int sectors = 64;
+
+  double const R = 1. / ( double )( rings - 1 );
+  double const S = 1. / ( double )( sectors - 1 );
+  QVector<QVector<QgsVector3D>> ringList;
+
+  // Establish texture coordinates, vertex list, and normals
+  for ( unsigned int r = 1; r < rings; r++ )
+  {
+    QVector<QgsVector3D> ringPoint;
+    for ( unsigned int s = 0; s < sectors; s++ )
+    {
+      double const y = sin( -M_PI_2 + M_PI * r * R );
+      double const x = cos( 2 * M_PI * s * S ) * sin( M_PI * r * R );
+      double const z = sin( 2 * M_PI * s * S ) * sin( M_PI * r * R );
+      ringPoint.append( QgsVector3D( y * radius, x * radius, z * radius ) );
+    }
+    ringList.append( ringPoint );
+  }
+
+  for ( unsigned int s = 0; s < sectors; s++ )
+  {
+    QVector<QgsVector3D> ringPoint;
+    for ( unsigned int r = 0; r < rings - 1; r++ )
+    {
+      ringPoint.append( ringList[r][s] );
+    }
+    ringList.append( ringPoint );
+  }
+
+  for ( int r = 0; r < ringList.length(); r++ )
+  {
+    printf( "--- Ring %d\n", r );
+    printf( "insert into test_3d (id, name, geom) values (%d, 'ring %d', ST_SetSRID(ST_MakeLine(ARRAY[\n", ( 100 + r ), r );
+    for ( int p = 0; p < ringList[r].length(); p++ )
+    {
+      printf( "ST_MakePoint( %lf, %lf, %lf)", ringList[r][p].x(), ringList[r][p].y(), ringList[r][p].z() );
+      if ( p < ringList[r].length() - 1 )
+      {
+        printf( ", " );
+      }
+    }
+    printf( " ]), 4978));\n" );
+  }
 }
 
 //runs after all tests
@@ -52,194 +99,212 @@ void TestQgs3dTiles::cleanupTestCase()
 
 void TestQgs3dTiles::testCubeReprojection()
 {
-    QJsonArray bvValue = { 0, 0, 0, 2.0, 0, 0, 0, 2.0, 0, 0, 0, 2.0 };
-    Box bv( bvValue );
-    checkBoudingVolume( &bv );
+  QJsonArray bvValue = { 0, 0, 0, 2.0, 0, 0, 0, 2.0, 0, 0, 0, 2.0 }; // cartesian coordinates
+  Box bv( bvValue );
+  qDebug() << "===== cube near philadelphie";
+  checkBoudingVolume( &bv, QgsVector3D( 1215107, -4736648, 4081966 ) ); // CRS 4978 ~ near philadelphie
+}
+
+void TestQgs3dTiles::testCube2Reprojection()
+{
+  QJsonArray bvValue = { 0, 0, 0, 2.0, 0, 0, 0, 2.0, 0, 0, 0, 2.0 }; // cartesian coordinates
+  Box bv( bvValue );
+  qDebug() << "===== cube near lille";
+  checkBoudingVolume( &bv, QgsVector3D( 4046916, 214447, 4908778 ) ); // CRS 4978 ~ near lille
 }
 
 void TestQgs3dTiles::testSphereReprojection()
 {
-    QJsonArray bvValue = { 0, 0, 0, 2.0 };
-    Sphere bv( bvValue );
-    checkBoudingVolume( &bv );
+  QJsonArray bvValue = { 0, 0, 0, 2.0 }; // cartesian coordinates
+  Sphere bv( bvValue );
+  qDebug() << "===== sphere near philadelphie";
+  checkBoudingVolume( &bv, QgsVector3D( 1215107, -4736648, 4081966 ) ); // CRS 4978 ~ near philadelphie
 }
 
 void TestQgs3dTiles::testSphere2Reprojection()
 {
-    QJsonArray bvValue = { 4046916.0160611099563539,
-                           214447.2275126340100542,
-                           4908777.7954695904627442,
-                           24174.2948580211013905 };
-    Sphere bv( bvValue );
-    checkBoudingVolume( &bv, false ); // do not comply well with double translation...
+  QJsonArray bvValue = { 4046916, 214447, 4908778,
+                         24174.3
+                       }; // CRS 4978 ~ near lille ==> not transform/translation
+  Sphere bv( bvValue );
+  qDebug() << "===== sphere near lille";
+  checkBoudingVolume( &bv, QgsVector3D( 0, 0, 0 ) ); // do not comply well with double translation...
 }
 
-void TestQgs3dTiles::checkBoudingVolume( BoundingVolume *bv, bool doComplexTransformTest )
+void TestQgs3dTiles::checkBoudingVolume( BoundingVolume *bv, QgsVector3D translation )
 {
-    QgsCoordinateTransform coordTrans( QgsCoordinateReferenceSystem::fromEpsgId( 4978 ),
-                                       QgsCoordinateReferenceSystem::fromEpsgId( 3857 ),
-                                       QgsProject::instance() );
+  QgsCoordinateTransform coordTrans( QgsCoordinateReferenceSystem::fromEpsgId( 4978 ),
+                                     QgsCoordinateReferenceSystem::fromEpsgId( 3857 ),
+                                     QgsProject::instance() );
+  // column-major order
+  QgsMatrix4x4 tileTrans( 1, 0, 0, 0,
+                          0, 1, 0, 0,
+                          0, 0, 1, 0,
+                          translation.x(), translation.y(), translation.z(), 1 );
+  // to row-major order
+  tileTrans = tileTrans.transposed();
 
-    QgsMatrix4x4 tileTrans( 1, 0, 0, 0,
+  double dXY, dXZ, dYZ;
+  double drXY, drXZ, drYZ;
+  double fXY, fXZ, fYZ;
+  double frXY, frXZ, frYZ;
+
+  {
+    qDebug() << "== without rotation, without epsg reprojection";
+    Q3dCube c = bv->asCube( tileTrans );
+    dXY = c.mPoints[0].distance( c.mPoints[2] );
+    dYZ = c.mPoints[0].distance( c.mPoints[7] );
+    dXZ = c.mPoints[0].distance( c.mPoints[5] );
+    qDebug() << "dXY:" << dXY
+             << ", dYZ:" << dYZ
+             << ", dXZ:" << dXZ;
+    QCOMPARE( ( long )( dXY * 1.0e8 ), ( long )( dYZ * 1.0e8 ) ); // check cube diagonals
+    QCOMPARE( ( long )( dXY * 1.0e8 ), ( long )( dXZ * 1.0e8 ) ); // check cube diagonals
+  }
+
+  {
+    qDebug() << "== with rotation, without epsg reprojection";
+    tileTrans.rotate( 30.0, QgsVector3D( 1.0, 1.0, 1.0 ) );
+    tileTrans.rotate( -10.0, QgsVector3D( 1.0, -1.0, 0.5 ) );
+
+    Q3dCube c = bv->asCube( tileTrans );
+    drXY = c.mPoints[0].distance( c.mPoints[2] );
+    drYZ = c.mPoints[0].distance( c.mPoints[7] );
+    drXZ = c.mPoints[0].distance( c.mPoints[5] );
+    for ( QgsVector4D p : c.mPoints )
+    {
+      printf( "ST_MakePoint( %lf, %lf, %lf),\n", p.x(), p.y(), p.z() );
+    }
+    qDebug() << "drXY:" << drXY
+             << ", drYZ:" << drYZ
+             << ", drXZ:" << drXZ;
+    QCOMPARE( ( long )( drXY * 1.0e8 ), ( long )( drYZ * 1.0e8 ) ); // check cube diagonals
+    QCOMPARE( ( long )( drXY * 1.0e8 ), ( long )( drXZ * 1.0e8 ) ); // check cube diagonals
+  }
+
+  // reset transform
+  tileTrans = QgsMatrix4x4( 1, 0, 0, 0,
                             0, 1, 0, 0,
                             0, 0, 1, 0,
-                            1000000, -5000000, 4000000, 1 );
+                            translation.x(), translation.y(), translation.z(), 1 );
+  tileTrans = tileTrans.transposed();
+
+  {
+    qDebug() << "== without rotation, with epsg reprojection";
+    Q3dCube c = bv->asCube( tileTrans, &coordTrans );
+    fXY = dXY;
+    fYZ = dYZ;
+    fXZ = dXZ;
+    dXY = c.mPoints[0].distance( c.mPoints[2] );
+    dYZ = c.mPoints[0].distance( c.mPoints[7] );
+    dXZ = c.mPoints[0].distance( c.mPoints[5] );
+    qDebug() << "dXY:" << dXY
+             << ", dYZ:" << dYZ
+             << ", dXZ:" << dXZ;
+    // compute ratio with/without proj
+    fXY /= dXY;
+    fYZ /= dYZ;
+    fXZ /= dXZ;
+    qDebug() << "fXY:" << fXY
+             << ", fYZ:" << fYZ
+             << ", fXZ:" << fXZ;
+    qDebug() << "d dXY:" << abs( 1.0 - dXY / dYZ )
+             << ", d dYZ:" << abs( 1.0 - dXY / dXZ )
+             << ", d dXZ:" << abs( 1.0 - dYZ / dXZ );
+    QVERIFY( abs( 1.0 - dXY / dYZ ) < 0.15 );  // proportion differences are almost the same (still a cube)
+    QVERIFY( abs( 1.0 - dXY / dXZ ) < 0.15 );  // proportion differences are almost the same (still a cube)
+    QVERIFY( abs( 1.0 - dYZ / dXZ ) < 0.15 );  // proportion differences are almost the same (still a cube)
+    QVERIFY( abs( 1.0 - fXY ) < 0.35 );  // the proportions are almost preserved between reprojection
+    QVERIFY( abs( 1.0 - fYZ ) < 0.35 );  // the proportions are almost preserved between reprojection
+    QVERIFY( abs( 1.0 - fXZ ) < 0.35 );  // the proportions are almost preserved between reprojection
+  }
+
+  {
+    qDebug() << "== with rotation, with epsg reprojection";
+    tileTrans.rotate( 30.0, QgsVector3D( 1.0, 1.0, 1.0 ) );
+    tileTrans.rotate( -10.0, QgsVector3D( 1.0, -1.0, 0.5 ) );
+
+    Q3dCube c = bv->asCube( tileTrans, &coordTrans );
+    frXY = drXY;
+    frYZ = drYZ;
+    frXZ = drXZ;
+    drXY = c.mPoints[0].distance( c.mPoints[2] );
+    drYZ = c.mPoints[0].distance( c.mPoints[7] );
+    drXZ = c.mPoints[0].distance( c.mPoints[5] );
+    qDebug() << "drXY:" << drXY
+             << ", drYZ:" << drYZ
+             << ", drXZ:" << drXZ;
+    // compute ratio with/without proj
+    frXY /= drXY;
+    frYZ /= drYZ;
+    frXZ /= drXZ;
+    qDebug() << "frXY:" << frXY
+             << ", frYZ:" << frYZ
+             << ", frXZ:" << frXZ;
+    qDebug() << "d dXY:" << abs( 1.0 - dXY / dYZ )
+             << ", d dYZ:" << abs( 1.0 - dXY / dXZ )
+             << ", d dXZ:" << abs( 1.0 - dYZ / dXZ );
+    /*QVERIFY( abs( 1.0 - drXY / drYZ ) < 0.15 );  // proportion differences are almost the same (still a cube)
+    QVERIFY( abs( 1.0 - drXY / drXZ ) < 0.15 );  // proportion differences are almost the same (still a cube)
+    QVERIFY( abs( 1.0 - drYZ / drXZ ) < 0.15 );  // proportion differences are almost the same (still a cube)*/
+    QVERIFY( abs( 1.0 - frXY ) < 0.36 );  // the proportions are almost preserved between reprojection
+    QVERIFY( abs( 1.0 - frYZ ) < 0.35 );  // the proportions are almost preserved between reprojection
+    QVERIFY( abs( 1.0 - frXZ ) < 0.35 );  // the proportions are almost preserved between reprojection
+    QVERIFY( abs( 1.0 - fXY / frXY ) < 0.15 ); // proportion differences are almost the same
+    QVERIFY( abs( 1.0 - fYZ / frYZ ) < 0.15 ); // proportion differences are almost the same
+    QVERIFY( abs( 1.0 - fXZ / frXZ ) < 0.15 ); // proportion differences are almost the same
+  }
+
+
+  {
+    qDebug() << "== with transform matrix, without epsg reprojection";
+    tileTrans = QgsMatrix4x4( 97, 25, 0, 0,
+                              -16, 62.5, 76.5, 0,
+                              19, -74, 64.5, 0,
+                              translation.x(), translation.y(), translation.z(), 1 );
     tileTrans = tileTrans.transposed();
 
-    double d02, d05, d07;
-    double dr02, dr05, dr07;
-    double f02, f05, f07;
-    double fr02, fr05, fr07;
+    Q3dCube c = bv->asCube( tileTrans );
+    dXY = c.mPoints[0].distance( c.mPoints[2] );
+    dYZ = c.mPoints[0].distance( c.mPoints[7] );
+    dXZ = c.mPoints[0].distance( c.mPoints[5] );
+    qDebug() << "dXY:" << dXY
+             << ", dYZ:" << dYZ
+             << ", dXZ:" << dXZ;
+    QVERIFY( abs( 1.0 - dXY / dYZ ) < 0.15 );  // proportion differences are almost the same (still a cube)
+    QVERIFY( abs( 1.0 - dXY / dXZ ) < 0.15 );  // proportion differences are almost the same (still a cube)
+    QVERIFY( abs( 1.0 - dYZ / dXZ ) < 0.15 );  // proportion differences are almost the same (still a cube)
+  }
 
-    {
-        qDebug() << "== without rotation, without epsg reprojection";
-        Q3dCube c = bv->asCube( tileTrans );
-        d02 = c.mPoints[0].distance( c.mPoints[2] );
-        d07 = c.mPoints[0].distance( c.mPoints[7] );
-        d05 = c.mPoints[0].distance( c.mPoints[5] );
-        qDebug() << "d02:" << d02
-                 << ", d07:" << d07
-                 << ", d05:" << d05;
-        QCOMPARE( ( long )( d02 * 1.0e8 ), ( long )( d07 * 1.0e8 ) ); // check cube diagonals
-        QCOMPARE( ( long )( d02 * 1.0e8 ), ( long )( d05 * 1.0e8 ) ); // check cube diagonals
-    }
-
-    {
-        qDebug() << "== with rotation, without epsg reprojection";
-        tileTrans.rotate( 30.0, QgsVector3D( 1.0, 1.0, 1.0 ) );
-        tileTrans.rotate( -10.0, QgsVector3D( 1.0, -1.0, 0.5 ) );
-
-        Q3dCube c = bv->asCube( tileTrans );
-        dr02 = c.mPoints[0].distance( c.mPoints[2] );
-        dr07 = c.mPoints[0].distance( c.mPoints[7] );
-        dr05 = c.mPoints[0].distance( c.mPoints[5] );
-        qDebug() << "dr02:" << dr02
-                 << ", dr07:" << dr07
-                 << ", dr05:" << dr05;
-        QCOMPARE( ( long )( dr02 * 1.0e8 ), ( long )( dr07 * 1.0e8 ) ); // check cube diagonals
-        QCOMPARE( ( long )( dr02 * 1.0e8 ), ( long )( dr05 * 1.0e8 ) ); // check cube diagonals
-    }
-
-    // reset transform
-    tileTrans = QgsMatrix4x4( 1, 0, 0, 0,
-                              0, 1, 0, 0,
-                              0, 0, 1, 0,
-                              1000000, -5000000, 4000000, 1 );
-    tileTrans = tileTrans.transposed();
-
-    {
-        qDebug() << "== without rotation, with epsg reprojection";
-        Q3dCube c = bv->asCube( tileTrans, &coordTrans );
-        f02 = d02;
-        f07 = d07;
-        f05 = d05;
-        d02 = c.mPoints[0].distance( c.mPoints[2] );
-        d07 = c.mPoints[0].distance( c.mPoints[7] );
-        d05 = c.mPoints[0].distance( c.mPoints[5] );
-        qDebug() << "d02:" << d02
-                 << ", d07:" << d07
-                 << ", d05:" << d05;
-        // compute ratio with/without proj
-        f02 /= d02;
-        f07 /= d07;
-        f05 /= d05;
-        qDebug() << "f02:" << f02
-                 << ", f07:" << f07
-                 << ", f05:" << f05;
-        QVERIFY ( abs ( 1.0 - d02 / d07) < 0.11 ); // proportion differences are almost the same (still a cube)
-        QVERIFY ( abs ( 1.0 - d02 / d05) < 0.11 ); // proportion differences are almost the same (still a cube)
-        QVERIFY ( abs ( 1.0 - d07 / d05) < 0.11 ); // proportion differences are almost the same (still a cube)
-        QVERIFY( abs ( 1.0 - f02 ) < 0.21 ); // the proportions are almost preserved between reprojection
-        QVERIFY( abs ( 1.0 - f07 ) < 0.21 ); // the proportions are almost preserved between reprojection
-        QVERIFY( abs ( 1.0 - f05 ) < 0.21 ); // the proportions are almost preserved between reprojection
-    }
-
-    {
-        qDebug() << "== with rotation, with epsg reprojection";
-        tileTrans.rotate( 30.0, QgsVector3D( 1.0, 1.0, 1.0 ) );
-        tileTrans.rotate( -10.0, QgsVector3D( 1.0, -1.0, 0.5 ) );
-
-        Q3dCube c = bv->asCube( tileTrans, &coordTrans );
-        fr02 = dr02;
-        fr07 = dr07;
-        fr05 = dr05;
-        dr02 = c.mPoints[0].distance( c.mPoints[2] );
-        dr07 = c.mPoints[0].distance( c.mPoints[7] );
-        dr05 = c.mPoints[0].distance( c.mPoints[5] );
-        qDebug() << "dr02:" << dr02
-                 << ", dr07:" << dr07
-                 << ", dr05:" << dr05;
-        // compute ratio with/without proj
-        fr02 /= dr02;
-        fr07 /= dr07;
-        fr05 /= dr05;
-        qDebug() << "fr02:" << fr02
-                 << ", fr07:" << fr07
-                 << ", fr05:" << fr05;
-        QVERIFY ( abs ( 1.0 - dr02 / dr07) < 0.11 ); // proportion differences are almost the same (still a cube)
-        QVERIFY ( abs ( 1.0 - dr02 / dr05) < 0.11 ); // proportion differences are almost the same (still a cube)
-        QVERIFY ( abs ( 1.0 - dr07 / dr05) < 0.11 ); // proportion differences are almost the same (still a cube)
-        QVERIFY( abs ( 1.0 - fr02 ) < 0.21 ); // the proportions are almost preserved between reprojection
-        QVERIFY( abs ( 1.0 - fr07 ) < 0.21 ); // the proportions are almost preserved between reprojection
-        QVERIFY( abs ( 1.0 - fr05 ) < 0.21 ); // the proportions are almost preserved between reprojection
-        QVERIFY( abs ( 1.0 - f02/fr02 ) < 0.11 ); // proportion differences are almost the same
-        QVERIFY( abs ( 1.0 - f07/fr07 ) < 0.11 ); // proportion differences are almost the same
-        QVERIFY( abs ( 1.0 - f05/fr05 ) < 0.11 ); // proportion differences are almost the same
-    }
-
-
-    if (doComplexTransformTest)
-    {
-        {
-            qDebug() << "== with transform matrix, without epsg reprojection";
-            tileTrans = QgsMatrix4x4 (97, 25, 0, 0,
-                                      -16, 62.5, 76.5, 0,
-                                      19, -74, 64.5, 0,
-                                      1000000, -5000000, 4000000, 1);
-            tileTrans = tileTrans.transposed();
-
-            Q3dCube c = bv->asCube( tileTrans );
-            d02 = c.mPoints[0].distance( c.mPoints[2] );
-            d07 = c.mPoints[0].distance( c.mPoints[7] );
-            d05 = c.mPoints[0].distance( c.mPoints[5] );
-            qDebug() << "d02:" << d02
-                     << ", d07:" << d07
-                     << ", d05:" << d05;
-            QVERIFY ( abs ( 1.0 - d02 / d07) < 0.11 ); // proportion differences are almost the same (still a cube)
-            QVERIFY ( abs ( 1.0 - d02 / d05) < 0.11 ); // proportion differences are almost the same (still a cube)
-            QVERIFY ( abs ( 1.0 - d07 / d05) < 0.11 ); // proportion differences are almost the same (still a cube)
-        }
-
-        {
-            qDebug() << "== with transform matrix, with epsg reprojection";
-            Q3dCube c = bv->asCube( tileTrans, &coordTrans );
-            f02 = d02;
-            f07 = d07;
-            f05 = d05;
-            d02 = c.mPoints[0].distance( c.mPoints[2] );
-            d07 = c.mPoints[0].distance( c.mPoints[7] );
-            d05 = c.mPoints[0].distance( c.mPoints[5] );
-            qDebug() << "d02:" << d02
-                     << ", d07:" << d07
-                     << ", d05:" << d05;
-            // compute ratio with/without proj
-            f02 /= d02;
-            f07 /= d07;
-            f05 /= d05;
-            qDebug() << "f02:" << f02
-                     << ", f07:" << f07
-                     << ", f05:" << f05;
-            qDebug() << "d d02:" << abs ( 1.0 - d02 / d07)
-                     << ", d d07:" << abs ( 1.0 - d02 / d05)
-                     << ", d d05:" << abs ( 1.0 - d07 / d05);
-            QVERIFY ( abs ( 1.0 - d02 / d07) < 0.11 ); // proportion differences are almost the same (still a cube)
-            QVERIFY ( abs ( 1.0 - d02 / d05) < 0.11 ); // proportion differences are almost the same (still a cube)
-            QVERIFY ( abs ( 1.0 - d07 / d05) < 0.11 ); // proportion differences are almost the same (still a cube)
-            QVERIFY( abs ( 1.0 - f02 ) < 0.21 ); // the proportions are almost preserved between reprojection
-            QVERIFY( abs ( 1.0 - f07 ) < 0.21 ); // the proportions are almost preserved between reprojection
-            QVERIFY( abs ( 1.0 - f05 ) < 0.21 ); // the proportions are almost preserved between reprojection
-        }
-    }
+  {
+    qDebug() << "== with transform matrix, with epsg reprojection";
+    Q3dCube c = bv->asCube( tileTrans, &coordTrans );
+    fXY = dXY;
+    fYZ = dYZ;
+    fXZ = dXZ;
+    dXY = c.mPoints[0].distance( c.mPoints[2] );
+    dYZ = c.mPoints[0].distance( c.mPoints[7] );
+    dXZ = c.mPoints[0].distance( c.mPoints[5] );
+    qDebug() << "dXY:" << dXY
+             << ", dYZ:" << dYZ
+             << ", dXZ:" << dXZ;
+    // compute ratio with/without proj
+    fXY /= dXY;
+    fYZ /= dYZ;
+    fXZ /= dXZ;
+    qDebug() << "fXY:" << fXY
+             << ", fYZ:" << fYZ
+             << ", fXZ:" << fXZ;
+    qDebug() << "d dXY:" << abs( 1.0 - dXY / dYZ )
+             << ", d dYZ:" << abs( 1.0 - dXY / dXZ )
+             << ", d dXZ:" << abs( 1.0 - dYZ / dXZ );
+    QVERIFY( abs( 1.0 - dXY / dYZ ) < 0.15 );  // proportion differences are almost the same (still a cube)
+    QVERIFY( abs( 1.0 - dXY / dXZ ) < 0.15 );  // proportion differences are almost the same (still a cube)
+    QVERIFY( abs( 1.0 - dYZ / dXZ ) < 0.15 );  // proportion differences are almost the same (still a cube)
+    QVERIFY( abs( 1.0 - fXY ) < 0.25 );  // the proportions are almost preserved between reprojection
+    QVERIFY( abs( 1.0 - fYZ ) < 0.25 );  // the proportions are almost preserved between reprojection
+    QVERIFY( abs( 1.0 - fXZ ) < 0.25 );  // the proportions are almost preserved between reprojection
+  }
 }
 
 
