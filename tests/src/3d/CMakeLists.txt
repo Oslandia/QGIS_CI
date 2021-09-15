@@ -19,6 +19,7 @@ include_directories(SYSTEM
 
 
 add_subdirectory(sandbox)
+add_subdirectory(3dtilessandbox)
 
 set(TESTS
   testqgs3dutils.cpp
