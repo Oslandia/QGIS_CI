@@ -22,6 +22,7 @@
 
 #include <QSize>
 #include <QtMath>
+#include <Qt3DRender/QBuffer>
 
 /**
  * \ingroup UnitTests
@@ -41,6 +42,7 @@ class TestQgs3DUtils : public QObject
     void testRayFromScreenPoint();
     void testQgsBox3DDistanceTo();
     void testQgsRay3D();
+    void testCreateNormal();
   private:
 };
 
@@ -210,6 +212,78 @@ void TestQgs3DUtils::testQgsRay3D()
 
     QVERIFY( ray.isInFront( p1 ) );
     QVERIFY( !ray.isInFront( p2 ) );
+  }
+}
+
+void TestQgs3DUtils::testCreateNormal()
+{
+  {
+    Utils3d::VertexData vertex [] = { QVector3D( 0.0, 0.0, 0.0 ), QVector3D( 1.0, 0.0, 0.0 ), QVector3D( 1.0, 1.0, 0.0 ), QVector3D( 0.0, 1.0, 0.0 )};
+    Utils3d::FaceByVertexId faces [] = { Utils3d::FaceByVertexId( 0, 1, 2 ), Utils3d::FaceByVertexId( 0, 2, 3 )} ;
+
+    Utils3d::VertexData norms [100];
+    Qgs3DUtils::createNormal( vertex, 4, faces, 2, norms );
+    QVERIFY( norms[0].asVector3D().length() > 0.0 );
+    QCOMPARE( norms[0].asVector3D(), QVector3D( 0.0, 0.0, -1.0 ) );
+    QVERIFY( norms[1].asVector3D().length() > 0.0 );
+    QCOMPARE( norms[1].asVector3D(), QVector3D( 0.0, 0.0, -1.0 ) );
+    QVERIFY( norms[2].asVector3D().length() > 0.0 );
+    QCOMPARE( norms[2].asVector3D(), QVector3D( 0.0, 0.0, -1.0 ) );
+    QVERIFY( norms[3].asVector3D().length() > 0.0 );
+    QCOMPARE( norms[3].asVector3D(), QVector3D( 0.0, 0.0, -1.0 ) );
+    QVERIFY( norms[4].asVector3D().length() == 0.0 );
+    QCOMPARE( norms[4].asVector3D(), QVector3D( 0.0, 0.0, 0.0 ) );
+  }
+
+  {
+    Utils3d::VertexData vertex [] = { QVector3D( 0.0, 0.0, 1.0 ), QVector3D( 1.0, 0.0, 1.0 ), QVector3D( 1.0, 1.0, 0.0 ), QVector3D( 0.0, 1.0, 0.0 )};
+    Utils3d::FaceByVertexId faces [] = { Utils3d::FaceByVertexId( 0, 1, 2 ), Utils3d::FaceByVertexId( 0, 2, 3 )} ;
+
+    Utils3d::VertexData norms [100];
+    Qgs3DUtils::createNormal( vertex, 4, faces, 2, norms );
+    QVERIFY( norms[0].asVector3D().length() > 0.0 );
+    QCOMPARE( QTest::toString( norms[0].asVector3D() ), QTest::toString( QVector3D( 0.0, -0.707107, -0.707107 ) ) );
+    QVERIFY( norms[1].asVector3D().length() > 0.0 );
+    QCOMPARE( QTest::toString( norms[1].asVector3D() ), QTest::toString( QVector3D( 0.0, -0.707107, -0.707107 ) ) );
+    QVERIFY( norms[2].asVector3D().length() > 0.0 );
+    QCOMPARE( QTest::toString( norms[2].asVector3D() ), QTest::toString( QVector3D( 0.0, -0.707107, -0.707107 ) ) );
+    QVERIFY( norms[3].asVector3D().length() > 0.0 );
+    QCOMPARE( QTest::toString( norms[3].asVector3D() ), QTest::toString( QVector3D( 0.0, -0.707107, -0.707107 ) ) );
+    QVERIFY( norms[4].asVector3D().length() == 0.0 );
+    QCOMPARE( QTest::toString( norms[4].asVector3D() ), QTest::toString( QVector3D( 0.0, 0.0, 0.0 ) ) );
+  }
+
+  {
+    // try with QByteArray construction as it segfaults in qgis
+    QByteArray normBuf( sizeof( Utils3d::VertexData ) * 4, 0 );
+    printf( "buf addr: %ld\n", ( unsigned long ) normBuf.data() );
+    Utils3d::VertexData *norms = ( Utils3d::VertexData * )( normBuf.data() );
+    Utils3d::VertexData vertex [] = { QVector3D( 0.0, 0.0, 1.0 ), QVector3D( 1.0, 0.0, 1.0 ), QVector3D( 1.0, 1.0, 0.0 ), QVector3D( 0.0, 1.0, 0.0 )};
+    Utils3d::FaceByVertexId faces [] = { Utils3d::FaceByVertexId( 0, 1, 2 ), Utils3d::FaceByVertexId( 0, 2, 3 )} ;
+
+    Qgs3DUtils::createNormal( vertex, 4, faces, 2,  norms );
+
+    Qt3DRender::QBuffer *b = new Qt3DRender::QBuffer();
+    b->setData( normBuf );
+
+    QVERIFY( norms[0].asVector3D().length() > 0.0 );
+    QCOMPARE( QTest::toString( norms[0].asVector3D() ), QTest::toString( QVector3D( 0.0, -0.707107, -0.707107 ) ) );
+    QVERIFY( norms[1].asVector3D().length() > 0.0 );
+    QCOMPARE( QTest::toString( norms[1].asVector3D() ), QTest::toString( QVector3D( 0.0, -0.707107, -0.707107 ) ) );
+    QVERIFY( norms[2].asVector3D().length() > 0.0 );
+    QCOMPARE( QTest::toString( norms[2].asVector3D() ), QTest::toString( QVector3D( 0.0, -0.707107, -0.707107 ) ) );
+    QVERIFY( norms[3].asVector3D().length() > 0.0 );
+    QCOMPARE( QTest::toString( norms[3].asVector3D() ), QTest::toString( QVector3D( 0.0, -0.707107, -0.707107 ) ) );
+
+    norms = ( Utils3d::VertexData * )( b->data().data() );
+    QVERIFY( norms[0].asVector3D().length() > 0.0 );
+    QCOMPARE( QTest::toString( norms[0].asVector3D() ), QTest::toString( QVector3D( 0.0, -0.707107, -0.707107 ) ) );
+    QVERIFY( norms[1].asVector3D().length() > 0.0 );
+    QCOMPARE( QTest::toString( norms[1].asVector3D() ), QTest::toString( QVector3D( 0.0, -0.707107, -0.707107 ) ) );
+    QVERIFY( norms[2].asVector3D().length() > 0.0 );
+    QCOMPARE( QTest::toString( norms[2].asVector3D() ), QTest::toString( QVector3D( 0.0, -0.707107, -0.707107 ) ) );
+    QVERIFY( norms[3].asVector3D().length() > 0.0 );
+    QCOMPARE( QTest::toString( norms[3].asVector3D() ), QTest::toString( QVector3D( 0.0, -0.707107, -0.707107 ) ) );
   }
 }
 

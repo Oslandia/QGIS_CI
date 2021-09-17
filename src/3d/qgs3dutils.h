@@ -43,6 +43,43 @@ namespace Qt3DExtras
 
 #define SIP_NO_FILE
 
+namespace Utils3d
+{
+  struct FaceByVertexId
+  {
+    quint16 v1;
+    quint16 v2;
+    quint16 v3;
+    FaceByVertexId( quint16 i1, quint16 i2, quint16 i3 ): v1( i1 ), v2( i2 ), v3( i3 )
+    {
+      // nope
+    }
+  };
+
+  /**
+   * normal or position
+   */
+  struct VertexData
+  {
+    float x;
+    float y;
+    float z;
+
+    VertexData( const QVector3D &v = QVector3D() )
+    {
+      x = v.x();
+      y = v.y();
+      z = v.z();
+    }
+
+    QVector3D asVector3D() const
+    {
+      return QVector3D( x, y, z );
+    }
+
+  };
+};
+
 /**
  * \ingroup 3d
  * \brief Miscellaneous utility functions used from 3D code.
@@ -52,6 +89,8 @@ namespace Qt3DExtras
 class _3D_EXPORT Qgs3DUtils
 {
   public:
+
+    static void createNormal( Utils3d::VertexData *vertex, uint vSize, Utils3d::FaceByVertexId *faces, uint fSize, Utils3d::VertexData *norms );
 
     /**
      * Captures image of the current 3D scene of a 3D engine. The function waits
