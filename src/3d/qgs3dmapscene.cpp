@@ -396,6 +396,7 @@ void Qgs3DMapScene::updateScene()
     if ( entity->isEnabled() )
       entity->update( _sceneState( mCameraController ) );
   }
+  //this->dumpObjectTree();
   updateSceneState();
 }
 

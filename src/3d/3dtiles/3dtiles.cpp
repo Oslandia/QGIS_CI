@@ -19,15 +19,92 @@
 #include <QJsonObject>
 #include <QJsonArray>
 #include <QFile>
+#include <QDir>
 #include <algorithm>
 #include <fstream>
 #include <streambuf>
 #include <iosfwd>
 #include "qgsapplication.h"
 #include "qgssourcecache.h"
+#include <QThread>
+#include <QTimer>
+#include "qgsnetworkcontentfetcherregistry.h"
 
-const QgsMatrix4x4 &buildFromJson( QgsMatrix4x4 &matrix,
-                                   const QJsonArray &array )
+QString waitForData( QUrl url, const Tileset *ts )
+{
+  QString outFileName = url.toString();
+  if ( url.scheme().startsWith( "http" ) )
+  {
+    bool doDl = true;
+    QString fn = url.fileName();
+    QString cachedFileName = ( ts == NULL ? Tileset::getCacheDirectory( "no_name", fn ) : ts->getCacheDirectory( fn ) ) + fn ;
+    if ( fn.endsWith( ".b3dm" ) )
+    {
+      QFile cachedFile( cachedFileName );
+      if ( cachedFile.exists() )
+      {
+        outFileName = cachedFileName;
+        qDebug() << "DL file (cached)" << url.toString() << "to" << outFileName;
+        doDl = false;
+      }
+    }
+
+    if ( doDl )
+    {
+      QEventLoop loop;
+      QgsFetchedContent *fetchedContent = QgsApplication::instance()->networkContentFetcherRegistry()->fetch( url.toString(), Qgis::ActionStart::Immediate );
+      QObject::connect( fetchedContent, &QgsFetchedContent::fetched, &loop, &QEventLoop::quit );
+
+      loop.exec();
+      /*
+      QCoreApplication::processEvents( QEventLoop::ProcessEventsFlag::EventLoopExec );
+      int i = 1000;
+      while ( i > 0 && ( fetchedContent->status() == QgsFetchedContent::Downloading
+                   || fetchedContent->status() == QgsFetchedContent::NotStarted ) )
+      {
+      QThread::msleep(50);
+      QCoreApplication::processEvents( QEventLoop::ProcessEventsFlag::EventLoopExec );
+      i--;
+      }*/
+
+      if ( fetchedContent->status() == QgsFetchedContent::Finished )
+      {
+        if ( fn.endsWith( ".b3dm" ) )
+        {
+          ts == NULL ? Tileset::createCacheDirectories( "no_name", fn ) : ts->createCacheDirectories( fn );
+
+          QFile dLFile( fetchedContent->filePath() );
+          if ( !dLFile.rename( cachedFileName ) )
+          {
+            LOGTHROW( critical, std::runtime_error, QString( "Unable to create cache file:" + cachedFileName ) );
+          }
+          dLFile.close();
+
+          outFileName = cachedFileName;
+        }
+        else
+        {
+          outFileName = fetchedContent->filePath();
+        }
+
+        qDebug() << "DL file" << url.toString() << "to" << outFileName;
+      }
+      else
+      {
+        LOGTHROW( critical, std::runtime_error, QString( "Data not ready for:" + url.toString() ) );
+      }
+    }
+  }
+
+  return outFileName;
+}
+
+// =====================================================================
+// QgsMatrix4x4
+// =====================================================================
+
+const QgsMatrix4x4 &ThreeDTiles::buildFromJson( QgsMatrix4x4 &matrix,
+    const QJsonArray &array )
 {
   // read matrix as a column major order
   for ( int i( 0 ), column( 0 ); column < 4; ++column )
@@ -42,9 +119,9 @@ const QgsMatrix4x4 &buildFromJson( QgsMatrix4x4 &matrix,
   return matrix;
 }
 
-// =======================
-// Q3dCube
-// =======================
+// =====================================================================
+// Q3dPrimitive
+// =====================================================================
 
 Q3dPrimitive::Q3dPrimitive() :
   mPoints()
@@ -70,7 +147,7 @@ void Q3dPrimitive::reproject( const QgsCoordinateTransform &coordTrans )
 
 template<typename T, typename std::enable_if<
            std::is_base_of<Q3dPrimitive, T>::value>::type *>
-T operator*( const QgsMatrix4x4 &matrix, T &in )
+T ThreeDTiles::operator*( const QgsMatrix4x4 &matrix, T &in )
 {
   T out;
   out.mPoints.resize( in.mPoints.size() );
@@ -80,6 +157,10 @@ T operator*( const QgsMatrix4x4 &matrix, T &in )
   }
   return out;
 }
+
+// =====================================================================
+// Q3dCube
+// =====================================================================
 
 Q3dCube::Q3dCube() :
   Q3dPrimitive()
@@ -110,10 +191,20 @@ QVector<QgsPoint> Q3dCube::asQgsPoints()
     cubePts.append( QgsPoint( mPoints[i][0], mPoints[i][1], mPoints[i][2] ) );
   }
 
-  pts << cubePts[0] << cubePts[1] << cubePts[2] << cubePts[3] << cubePts[0]
-      << cubePts[4] << cubePts[5] << cubePts[6];
-  pts << cubePts[7] << cubePts[4] << cubePts[3] << cubePts[7] << cubePts[2]
-      << cubePts[6] << cubePts[1] << cubePts[5];
+  if ( cubePts.size() == 8 )
+  {
+    pts << cubePts[0] << cubePts[1] << cubePts[2] << cubePts[3] << cubePts[0]
+        << cubePts[4] << cubePts[5] << cubePts[6];
+    pts << cubePts[7] << cubePts[4] << cubePts[3] << cubePts[7] << cubePts[2]
+        << cubePts[6] << cubePts[1] << cubePts[5];
+  }
+  else
+  {
+    for ( int i = 0; i < cubePts.size(); i++ )
+    {
+      pts << cubePts[i] ;
+    }
+  }
   return pts;
 }
 
@@ -126,9 +217,9 @@ QDebug &operator<<( QDebug &out, const Q3dCube &t )
   return out;
 }
 
-// =======================
+// =====================================================================
 // ThreedTilesContent
-// =======================
+// =====================================================================
 ThreeDTilesContent::ThreeDTilesContent() :
   mType( unmanaged ), mSource( QUrl() ), mDepth( 0 ), mParentTile( NULL )
 {
@@ -141,9 +232,9 @@ ThreeDTilesContent::ThreeDTilesContent( const TileType &t, const QUrl &source, T
   // noop
 }
 
-// =======================
+// =====================================================================
 // Asset
-// =======================
+// =====================================================================
 Asset::Asset() :
   mVersion()
 {
@@ -156,21 +247,20 @@ const Asset &Asset::setFrom( const QJsonObject &obj )
   return *this;
 }
 
-// =======================
+// =====================================================================
 // BoundingVolume
-// =======================
+// =====================================================================
 BoundingVolume::BoundingVolume( const BoundingVolume::BVType &t ) :
   mType( t ), mEpsg( QgsCoordinateReferenceSystem::fromEpsgId( 4978 ) )
 {
-  mFlipZYMat.setToIdentity();
-  mFlipZYMat.rotate( -90.0, 1.0, 0.0, 0.0 );
+  //noop
 }
 
 bool BoundingVolume::checkCoordinateTransform( const QgsCoordinateTransform *coordTrans ) const
 {
   if ( coordTrans != NULL && mEpsg.authid().compare( coordTrans->sourceCrs().authid() ) != 0 )  // if geom srs is different from the source srs, do not use coord trans
   {
-    LOGTHROW( fatal, std::runtime_error, QStringLiteral( "Bounding volume CRS (%1) does not match transform CRS (%2)!" )
+    LOGTHROW( critical, std::runtime_error, QStringLiteral( "Bounding volume CRS (%1) does not match transform CRS (%2)!" )
               .arg( mEpsg.authid() )
               .arg( coordTrans->sourceCrs().authid() ) );
   }
@@ -192,13 +282,16 @@ QgsAABB BoundingVolume::asQgsAABB( const QgsMatrix4x4 &transform, const QgsCoord
 
   if ( flipZY )
   {
-    cube = mFlipZYMat * cube;
+    cube = flipZYMat * cube;
   }
 
   return QgsAABB( cube.ll().x(), cube.ll().y(), cube.ll().z(),
                   cube.ur().x(), cube.ur().y(), cube.ur().z() );
 }
 
+// =====================================================================
+// Box
+// =====================================================================
 Box::Box( const QJsonArray &value ) :
   BoundingVolume( BoundingVolume::box )
 {
@@ -249,6 +342,9 @@ Q3dCube Box::asCube( const QgsMatrix4x4 &transform,
   return cube;
 }
 
+// =====================================================================
+// Sphere
+// =====================================================================
 Sphere::Sphere() :
   BoundingVolume( BoundingVolume::sphere )
 {
@@ -292,6 +388,9 @@ Extents3::Extents3() :
   // noop
 }
 
+// =====================================================================
+// Region
+// =====================================================================
 Region::Region() :
   BoundingVolume( BoundingVolume::region )
 {
@@ -325,9 +424,9 @@ Q3dCube Region::asCube( const QgsMatrix4x4 &transform,
   return cube;
 }
 
-// =======================
+// =====================================================================
 // Tile
-// =======================
+// =====================================================================
 Tile::Tile() :
   mParentTileset( NULL ), mBv(), mRefine( Refinement::REPLACE ), mDepth( 0 ), mCombinedTransform( NULL )
 {
@@ -343,7 +442,7 @@ Tile::~Tile()
 }
 
 Tile::Tile( const QJsonObject &obj, int depth, Tileset *parTs, Tile *par ) :
-  mParentTileset( parTs ), mParentTile( par ), mRefine( Refinement::REPLACE ), mDepth( depth ), mCombinedTransform( NULL )
+  mParentTileset( parTs ), mParentTile( par ), mRefine( Refinement::REPLACE ), mDepth( depth ), mLazyLoadChildren( true ), mCombinedTransform( NULL )
 {
 
   const QJsonObject &bvJ = obj["boundingVolume"].toObject();
@@ -361,7 +460,8 @@ Tile::Tile( const QJsonObject &obj, int depth, Tileset *parTs, Tile *par ) :
   }
   else
   {
-    LOGTHROW( fatal, std::runtime_error, QString( "Invalid boundingVolume." ) );
+    QString str = QJsonDocument( bvJ ).toJson( QJsonDocument::Compact ).toStdString().c_str();
+    LOGTHROW( critical, std::runtime_error, QString( "Invalid boundingVolume. bv:" + str ) );
   }
 
   if ( obj.find( "geometricError" ) != obj.end() )
@@ -393,24 +493,37 @@ Tile::Tile( const QJsonObject &obj, int depth, Tileset *parTs, Tile *par ) :
 
   if ( obj.find( "content" ) != obj.end() )
   {
-    mContent.setFrom( obj["content"].toObject(), depth + 1, this );
+    setContentFrom( obj["content"].toObject() );
   }
 
-  if ( obj.find( "children" ) != obj.end() )
+  if ( ! mContentUrl.toString().endsWith( ".json" ) && obj.find( "children" ) != obj.end() ) // tileset content can not have children
   {
-    QJsonArray a = obj["children"].toArray();
-    for ( const auto &c : a )
-    {
-      mChildren.append(
-        std::make_shared<Tile>( c.toObject(), depth + 1, parTs,
-                                this ) );
-    }
+    mChildrenJsonArray = obj["children"].toArray();
   }
+}
+
+const QList<std::shared_ptr<Tile>> Tile::children() const
+{
+  return mChildren;
+}
+
+const QList<std::shared_ptr<Tile>> Tile::children()
+{
+  if ( ! mContentUrl.toString().endsWith( ".json" ) && mLazyLoadChildren ) // tileset content can not have children
+  {
+    for ( const auto &c : mChildrenJsonArray )
+    {
+      mChildren.append( std::make_shared<Tile>( c.toObject(), mDepth + 1, mParentTileset, this ) );
+    }
+    mLazyLoadChildren = false;
+  }
+
+  return mChildren;
 }
 
 QgsMatrix4x4 Tile::getCombinedTransformRec( Tile *p )
 {
-  if ( p->mParentTile != NULL )
+  if ( p->mParentTile != NULL ) // current tile is then child of another tile
   {
     return getCombinedTransformRec( p->mParentTile ) * p->mTransform;
   }
@@ -450,13 +563,12 @@ QgsMatrix4x4 *Tile::getCombinedTransform()
   return mCombinedTransform;
 }
 
-double Tile::getGeometricError()
+double Tile::getGeometricError() const
 {
-  return mGeometricError;
-  /*     if (mDepth > 0)
-         return mGeometricError*100.0/((mDepth+1)*(mDepth+1));
-     else
-         return mGeometricError*100.0;*/
+  if ( ! mParentTileset->getUseOriginalGeomError() && mDepth > 0 )
+    return mGeometricError / ( ( mDepth ) * ( mDepth ) );
+  else
+    return mGeometricError ;
 }
 
 QgsGeometry Tile::getBoundingVolumeAsGeometry( const QgsCoordinateTransform *coordTrans )
@@ -468,146 +580,154 @@ QgsGeometry Tile::getBoundingVolumeAsGeometry( const QgsCoordinateTransform *coo
 QgsAABB Tile::getBoundingVolumeAsAABB( const QgsCoordinateTransform *coordTrans )
 {
   QgsMatrix4x4 *ct = getCombinedTransform();
-  return mBv->asQgsAABB( *ct, coordTrans, true );
+  return mBv->asQgsAABB( *ct, coordTrans, mParentTileset->getFlipY() );
 }
 
-bool Tile::contains( const QgsVector3D &point, const QgsCoordinateTransform *coordTrans )
+bool Tile::contains( const QgsVector3D &point )
 {
   QgsMatrix4x4 *ct = getCombinedTransform();
-  QgsAABB c = mBv->asQgsAABB( *ct, coordTrans, true );
+  QgsAABB c = mBv->asQgsAABB( *ct, NULL, mParentTileset->getFlipY() );
   return ( point.x() >= c.minimum().x() && point.y() >= c.minimum().y() && point.z() >= c.minimum().z()
            && point.x() <= c.maximum().x() && point.y() <= c.maximum().y() && point.z() <= c.maximum().z() );
 }
 
 
-// =======================
-// TileContent
-// =======================
-TileContent::TileContent() :
-  mParentTile( NULL ), mUrl(), mSubContent()
+void Tile::setContentFrom( const QJsonObject &obj )
 {
-  // noop
-}
-
-TileContent::~TileContent()
-{
-  mSubContent.release();
-}
-
-const TileContent &TileContent::setFrom( const QJsonObject &obj, int depth,
-    Tile *parentTile )
-{
-  mParentTile = parentTile;
-
   if ( obj.find( "uri" ) != obj.end() )
   {
-    mUrl = QUrl( obj["uri"].toString() );
+    mContentUrl = QUrl( obj["uri"].toString() );
   }
   else if ( obj.find( "url" ) != obj.end() )
   {
-    mUrl = QUrl( obj["url"].toString() );
+    mContentUrl = QUrl( obj["url"].toString() );
   }
   else
   {
-    LOGTHROW( fatal, std::runtime_error,
-              QString( "No 'url' or 'uri' found in json." ) );
+    LOGTHROW( critical, std::runtime_error, QString( "No 'url' or 'uri' found in json." ) );
   }
 
-  if ( mUrl.toString().endsWith( ".json" ) )
-  {
-    qDebug() << "Lazy load tile (depth:" << depth << ") subcontent from tileset: "
-             << mParentTile->mParentTileset->mSource.resolved( mUrl );
-  }
-  else if ( mUrl.toString().endsWith( ".b3dm" ) )
-  {
-    qDebug() << "Loading tile (depth:" << depth << ") subcontent from b3dm: "
-             << mParentTile->mParentTileset->mSource.resolved( mUrl );
-    mSubContent = B3dmHolder::fromUrl( mUrl,
-                                       mParentTile->mParentTileset->mSource, parentTile, depth );
+  qDebug() << "Will lazy load tile (depth:" << mDepth + 1 << ") content from tileset: "
+           << mParentTileset->mSource.resolved( mContentUrl );
 
-  }
-  else
-  {
-    qWarning() << "Should load tile subcontent from: "
-               << mParentTile->mParentTileset->mSource.resolved( mUrl );
-  }
-
-  return *this;
 }
 
-ThreeDTilesContent *TileContent::getSubContentConst() const
+ThreeDTilesContent *Tile::getContentConst() const
 {
-  return mSubContent.get();
+  return mContent.get();
 }
 
-ThreeDTilesContent *TileContent::getSubContent()
+ThreeDTilesContent *Tile::getContent()
 {
-  if ( mSubContent.get() == nullptr && mUrl.toString().endsWith( ".json" ) )
+  if ( mContent.get() == nullptr )
   {
-    qDebug() << "Delayed loading tile (depth:" << mParentTile->mDepth + 1 << ") subcontent from tileset: "
-             << mParentTile->mParentTileset->mSource.resolved( mUrl );
-    mSubContent = Tileset::fromUrl( mUrl,
-                                    mParentTile->mParentTileset->mSource, mParentTile, mParentTile->mDepth + 1 );
+    if ( mContentUrl.toString().endsWith( ".json" ) )
+    {
+      qDebug() << "Loading delayed tile (depth:" << mDepth + 1 << ") content from tileset: "
+               << mParentTileset->mSource.resolved( mContentUrl );
+      mContent = Tileset::fromUrl( mContentUrl,
+                                   mParentTileset->mSource, mParentTile, mDepth + 1 );
+    }
+    else if ( mContentUrl.toString().endsWith( ".b3dm" ) )
+    {
+      qDebug() << "Loading delayed tile (depth:" << mDepth + 1 << ") content from b3dm: "
+               << mParentTileset->mSource.resolved( mContentUrl );
+      try
+      {
+        mContent = B3dmHolder::fromUrl( mContentUrl,
+                                        mParentTileset->mSource, this, mDepth + 1 );
+      }
+      catch ( std::runtime_error *e )
+      {
+        qWarning() << "B3dmHolder caught exception: " << e->what();
+        qWarning() << "Receive exception: couldn't create B3dmHolder!";
+      }
+    }
+    else
+    {
+      LOGTHROW( critical, std::runtime_error, QString( "Should load tile content from: %1" ).arg( mParentTileset->mSource.resolved( mContentUrl ).toString() ) );
+    }
   }
 
-  return mSubContent.get();
+  return mContent.get();
 }
 
-// =======================
+// =====================================================================
 // Tileset
-// =======================
+// =====================================================================
 Tileset::Tileset( const QJsonObject &obj, const QUrl &url, Tile *parentTile, int depth ) :
   ThreeDTilesContent( tileset, url, parentTile, depth ),
-  mRootBb( NULL )
+  mRootBb( NULL ), mCorrectTranslation( false ), mFlipY( false ), mUseFakeMaterial( false ),
+  mUseOriginalGeomError( false ), mName( "no_name" )
 {
+  try
+  {
+    mAsset.setFrom( obj["asset"].toObject() );
+    mGeometricError = obj["geometricError"].toDouble();
+    mProperties = obj["properties"].toObject();
+    mRootTile = std::unique_ptr<Tile>( new Tile( obj["root"].toObject(), depth, this ) );
+  }
+  catch ( std::runtime_error *e )
+  {
+    qWarning() << "Tileset caught exception: " << e->what();
+    QString str = QJsonDocument( obj ).toJson();
+    qWarning() << "Receive exception: couldn't create tileset! json:" << str;
+    //LOGTHROW( critical, std::runtime_error, QString( "Receive exception: couldn't create tileset! json:" + str ) );
+  }
+}
 
-  mAsset.setFrom( obj["asset"].toObject() );
-  mGeometricError = obj["geometricError"].toDouble();
-  mProperties = obj["properties"].toObject();
-  mRoot = std::unique_ptr<Tile>( new Tile( obj["root"].toObject(), depth, this ) );
+Tileset::~Tileset()
+{
+  if ( mRootBb )
+  {
+    delete mRootBb;
+  }
 }
 
 std::unique_ptr<ThreeDTilesContent> Tileset::fromUrl( const QUrl &url, const QUrl &base, Tile *parentTile, int depth )
 {
   QUrl u = base.resolved( url );
-  QString fileName = QgsApplication::instance()->sourceCache()->localFilePath( u.toString(), true );
 
-  QFile loadFile( fileName );
-  if ( loadFile.open( QIODevice::ReadOnly ) )
+  try
   {
-    qDebug() << "Tileset::fromUrl will read file: " << fileName;
+    QString fileName = waitForData( u, ( parentTile == NULL ? NULL : parentTile->mParentTileset ) );
+    QFile loadFile( fileName );
+    loadFile.open( QIODevice::ReadOnly );
+    QByteArray saveData = loadFile.readAll();
+    QJsonDocument doc( QJsonDocument::fromJson( saveData ) );
+    loadFile.close();
+
+    std::unique_ptr<ThreeDTilesContent> out = std::make_unique<Tileset>( doc.object(), u, parentTile, depth );
+    return out;
   }
-  else
+  catch ( std::runtime_error *e )
   {
-    LOGTHROW( critical, std::runtime_error, QString( "Couldn't open json file: " + u.toString() ) );
+    qWarning() << "Tileset::fromUrl for" << u.toString() << "/e:" << e->what();
+    LOGTHROW( critical, std::runtime_error, QString( "Receive exception: couldn't create tileset!" ) );
   }
 
-  QByteArray saveData = loadFile.readAll();
-  QJsonDocument doc( QJsonDocument::fromJson( saveData ) );
-
-  return std::make_unique<Tileset>( doc.object(), u, parentTile, depth );
 }
 
-Tile *Tileset::findTile( const QgsChunkNodeId &tileId, const QgsCoordinateTransform *coordTrans )
+Tile *Tileset::findTile( const QgsChunkNodeId &tileId )
 {
   Tile *out = NULL;
   if ( tileId.d >= 0 )
   {
     if ( tileId.d == 0 )
     {
-      out = mRoot.get();
+      out = mRootTile.get();
     }
     else
     {
-      QgsVector3D tileCenter = decodeTileId( tileId, *coordTrans );
-      out = findTileRecInTileset( this, tileId.d, tileCenter, coordTrans );
+      QgsVector3D tileCenter = decodeTileId( tileId );
+      out = findTileRecInTileset( this, tileId.d, tileCenter );
     }
   }
 
   return out;
 }
 
-Tile *Tileset::findTileRecInTile( Tile *curTile, int depth, const QgsVector3D &tileCenter, const QgsCoordinateTransform *coordTrans )
+Tile *Tileset::findTileRecInTile( Tile *curTile, int depth, const QgsVector3D &tileCenter )
 {
   Tile *out = NULL;
 
@@ -617,14 +737,14 @@ Tile *Tileset::findTileRecInTile( Tile *curTile, int depth, const QgsVector3D &t
   }
   else
   {
-    if ( curTile->mChildren.isEmpty() ) // no children
+    if ( curTile->children().isEmpty() ) // no children
     {
-      if ( curTile->mContent.getSubContent()->mType == ThreeDTilesContent::tileset )
+      if ( curTile->getContent()->mType == ThreeDTilesContent::tileset )
       {
-        out = findTileRecInTileset( ( Tileset * )( curTile->mContent.getSubContent() ), depth + 1, tileCenter, coordTrans );
+        out = findTileRecInTileset( ( Tileset * )( curTile->getContent() ), depth + 1, tileCenter );
 
       }
-      else if ( curTile->mContent.getSubContent()->mType == ThreeDTilesContent::b3dm )
+      else if ( curTile->getContent()->mType == ThreeDTilesContent::b3dm )
       {
         out = curTile;
       }
@@ -632,11 +752,11 @@ Tile *Tileset::findTileRecInTile( Tile *curTile, int depth, const QgsVector3D &t
     }
     else     // scan children
     {
-      for ( std::shared_ptr<Tile> child : curTile->mChildren )
+      for ( std::shared_ptr<Tile> child : curTile->children() )
       {
-        if ( child->contains( tileCenter, coordTrans ) )
+        if ( child->contains( tileCenter ) )
         {
-          out = findTileRecInTile( child.get(), depth, tileCenter, coordTrans );
+          out = findTileRecInTile( child.get(), depth, tileCenter );
           break;
         }
       }
@@ -646,67 +766,177 @@ Tile *Tileset::findTileRecInTile( Tile *curTile, int depth, const QgsVector3D &t
   return out;
 }
 
-Tile *Tileset::findTileRecInTileset( Tileset *curTs, int depth, const QgsVector3D &tileCenter, const QgsCoordinateTransform *coordTrans )
+Tile *Tileset::findTileRecInTileset( Tileset *curTs, int depth, const QgsVector3D &tileCenter )
 {
   Tile *out = NULL;
   Tile *curTile;
 
   if ( depth == curTs->mDepth )
   {
-    out = curTs->mRoot.get();
+    out = curTs->mRootTile.get();
   }
   else
   {
-    curTile = curTs->mRoot.get();
-    if ( curTile->contains( tileCenter, coordTrans ) )
+    curTile = curTs->mRootTile.get();
+    if ( curTile->contains( tileCenter ) )
     {
-      out = findTileRecInTile( curTile, depth, tileCenter, coordTrans );
+      out = findTileRecInTile( curTile, depth, tileCenter );
     }
   }
 
   return out;
 }
 
-QgsChunkNodeId Tileset::encodeTileId( int tileLevel, const QgsAABB &tileBb, const QgsCoordinateTransform &coordinateTransform )
+QgsChunkNodeId Tileset::encodeTileId( int tileLevel, const QgsAABB &tileBb )
 {
-  buildRootBb( coordinateTransform );
+  buildRootBb();
+  QgsChunkNodeId out( tileLevel,
+                      ( tileBb.xCenter() - mRootBb->xCenter() ) * 1000.0,
+                      ( tileBb.yCenter() - mRootBb->yCenter() ) * 1000.0,
+                      ( tileBb.zCenter() - mRootBb->zCenter() ) * 1000.0 );
 
-  return QgsChunkNodeId( tileLevel,
-                         ( tileBb.xCenter() - mRootBb->xCenter() ) * 1000.0,
-                         ( tileBb.yCenter() - mRootBb->yCenter() ) * 1000.0,
-                         ( tileBb.zCenter() - mRootBb->zCenter() ) * 1000.0 );
+//  qDebug() << "encodeTileId tileBb:" << tileBb.center() << "/ mRootBb:" << mRootBb->center() << "/ tileId:" << out.text();
+  return out;
 }
 
-QgsVector3D Tileset::decodeTileId( const QgsChunkNodeId &tileId, const QgsCoordinateTransform &coordinateTransform )
+QgsVector3D Tileset::decodeTileId( const QgsChunkNodeId &tileId )
 {
-  buildRootBb( coordinateTransform );
-
-  return QgsVector3D( ( tileId.x / 1000 ) + mRootBb->xCenter(),
-                      ( tileId.y / 1000 ) + mRootBb->yCenter(),
-                      ( tileId.z / 1000 ) + mRootBb->zCenter() );
+  buildRootBb();
+  QgsVector3D out( ( tileId.x / 1000.0 ) + mRootBb->xCenter(),
+                   ( tileId.y / 1000.0 ) + mRootBb->yCenter(),
+                   ( tileId.z / 1000.0 ) + mRootBb->zCenter() );
+//  qDebug() << "decodeTileId tileBb:" << out << "/ mRootBb:" << mRootBb->center() << "/ tileId:" << tileId.text();
+  return out;
 }
 
-void Tileset::buildRootBb( const QgsCoordinateTransform &coordinateTransform )
+void Tileset::buildRootBb()
 {
   if ( mRootBb == NULL )
   {
-    mRootBb = new QgsAABB( mRoot->getBoundingVolumeAsAABB( &coordinateTransform ) );
+    mRootBb = new QgsAABB( mRootTile->getBoundingVolumeAsAABB( NULL ) );
   }
 }
 
-double Tileset::getGeometricError()
+double Tileset::getGeometricError() const
 {
-  return mGeometricError;
-  /*     if (mDepth > 0)
-         return mGeometricError*100.0/((mDepth+1)*(mDepth+1));
-     else
-         return mGeometricError*100.0;*/
+  if ( ! getUseOriginalGeomError() && mDepth > 0 )
+    return mGeometricError / ( ( mDepth ) * ( mDepth ) );
+  else
+    return mGeometricError;
+}
+
+Tileset const *Tileset::getRootTileset() const
+{
+  Tileset const *curTS = this;
+  while ( curTS->mParentTile != NULL )  // a tileset can be included in a tile
+  {
+    curTS = curTS->mParentTile->mParentTileset; // a tile is always in a tileset
+  }
+  return curTS;
+}
+
+void Tileset::setName( QString val )
+{
+  mName = val;
+}
+
+QString Tileset::getName() const
+{
+  return getRootTileset()->mName;
 }
 
 
-// =======================
+void Tileset::setFlipY( bool val )
+{
+  mFlipY = val;
+}
+
+bool Tileset::getFlipY() const
+{
+  return getRootTileset()->mFlipY;
+}
+
+
+void Tileset::setCorrectTranslation( bool val )
+{
+  mCorrectTranslation = val;
+}
+
+bool Tileset::getCorrectTranslation() const
+{
+  return getRootTileset()->mCorrectTranslation;
+}
+
+void Tileset::setUseFakeMaterial( bool val )
+{
+  mUseFakeMaterial = val;
+}
+
+bool Tileset::getUseFakeMaterial() const
+{
+  return getRootTileset()->mUseFakeMaterial;
+}
+
+void Tileset::setUseOriginalGeomError( bool val )
+{
+  mUseOriginalGeomError = val;
+}
+
+bool Tileset::getUseOriginalGeomError() const
+{
+  return getRootTileset()->mUseOriginalGeomError;
+}
+
+void Tileset::createCacheDirectories( const QString &tsName, const QString &fileName )
+{
+  QDir rootDir( cacheDir3dTiles );
+  if ( !rootDir.exists() )
+  {
+    if ( !rootDir.mkdir( cacheDir3dTiles ) )
+    {
+      LOGTHROW( critical, std::runtime_error, QString( "Unable to create cache dir:" + cacheDir3dTiles ) );
+    }
+  }
+
+  QDir tsDir( cacheDir3dTiles + tsName );
+  if ( !tsDir.exists() )
+  {
+    if ( !tsDir.mkdir( cacheDir3dTiles + tsName ) )
+    {
+      LOGTHROW( critical, std::runtime_error, QString( "Unable to create tileset cache dir:" + cacheDir3dTiles + tsName ) );
+    }
+  }
+
+  QDir tileDir( cacheDir3dTiles + tsName + "/" + fileName );
+  if ( !tileDir.exists() )
+  {
+    if ( !tileDir.mkdir( cacheDir3dTiles + tsName + "/" + fileName ) )
+    {
+      LOGTHROW( critical, std::runtime_error, QString( "Unable to create tile cache dir:" + cacheDir3dTiles + tsName + "/" + fileName ) );
+    }
+  }
+}
+
+void Tileset::createCacheDirectories( const QString &fn ) const
+{
+  createCacheDirectories( getName(), fn );
+}
+
+QString Tileset::getCacheDirectory( const QString &tsName, const QString &fileName )
+{
+  return cacheDir3dTiles + tsName + "/" + fileName + "/" ;
+}
+
+QString Tileset::getCacheDirectory( const QString &fn ) const
+{
+  return getCacheDirectory( getName(), fn );
+}
+
+
+
+// =====================================================================
 // B3dmHolder
-// =======================
+// =====================================================================
 B3dmHolder::B3dmHolder( QIODevice &dev, const QUrl &url, Tile *parentTile, int depth ) :
   ThreeDTilesContent( b3dm, url, parentTile, depth ), mModel()
 {
@@ -717,32 +947,24 @@ B3dmHolder::B3dmHolder( QIODevice &dev, const QUrl &url, Tile *parentTile, int d
 std::unique_ptr<ThreeDTilesContent> B3dmHolder::fromUrl( const QUrl &url, const QUrl &base, Tile *parentTile, int depth )
 {
   QUrl u = base.resolved( url );
-  QString fileName = QgsApplication::instance()->sourceCache()->localFilePath( u.toString(), true );
+  QString fileName = waitForData( u, parentTile->mParentTileset );
 
   QFile loadFile( fileName );
-
-  if ( loadFile.open( QIODevice::ReadOnly ) )
-  {
-    qDebug() << "B3dmHolder::fromUrl will read file: " << fileName;
-  }
-  else
-  {
-    LOGTHROW( critical, std::runtime_error,
-              QString( "Couldn't open b3dm file: " + u.toString() ) );
-  }
-
-  return std::make_unique < B3dmHolder > ( loadFile, u, parentTile, depth );
+  loadFile.open( QIODevice::ReadOnly );
+  std::unique_ptr<ThreeDTilesContent> out = std::make_unique < B3dmHolder > ( loadFile, u, parentTile, depth );
+  loadFile.close();
+  return out;
 }
 
-// =======================
+// =====================================================================
 // QDebug OPERATORS
-// =======================
+// =====================================================================
 
 QDebug &operator<<( QDebug &out, const Tileset &ts )
 {
   out << "[Tileset";
   out << "version:" << ts.mAsset.mVersion;
-  out << ", root:" << *ts.mRoot;
+  out << ", root:" << *ts.mRootTile;
   out << "] \n";
   return out;
 }
@@ -766,16 +988,16 @@ QDebug &operator<<( QDebug &out, const Tile &t )
   out << "transform:" << t.mTransform;
   out << ", bv:" << *t.mBv;
 
-  if ( t.mContent.getSubContentConst() != NULL )
+  if ( t.getContentConst() != NULL )
   {
-    out << ", url:" << t.mContent.mUrl;
-    out << ", content:" << *( t.mContent.getSubContentConst() );
+    out << ", url:" << t.mContentUrl;
+    out << ", content:" << *( t.getContentConst() );
   }
 
-  if ( !t.mChildren.isEmpty() )
+  if ( !t.children().isEmpty() )
   {
     out << ", children: [";
-    for ( const auto &c : t.mChildren )
+    for ( const auto &c : t.children() )
     {
       out << "\n" << *c << "\n" << ",";
     }

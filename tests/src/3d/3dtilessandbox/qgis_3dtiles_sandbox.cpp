@@ -41,6 +41,7 @@
 #include "3dtiles/qgs3dtileschunkloader.h"
 #include "3dtiles/qgs3dtileslayer.h"
 #include <QLoggingCategory>
+#include <QCommandLineParser>
 
 void initCanvas3D( Qgs3DMapCanvas *canvas, Qgs3DMapSettings *mapSet, /*QList<QgsGeometry> & glist,*/
                    const QgsCoordinateTransform &coordTrans, Tileset *ts )
@@ -89,7 +90,6 @@ void initCanvas3D( Qgs3DMapCanvas *canvas, Qgs3DMapSettings *mapSet, /*QList<Qgs
   mapSet->setCrs( coordTrans.destinationCrs() );
   mapSet->setOrigin( QgsVector3D( 0, 0, 0 ) );
   mapSet->setLayers( visibleLayers );
-  mapSet->setTerrainLayers( visibleLayers );
 
   mapSet->setTransformContext( QgsProject::instance()->transformContext() );
   mapSet->setPathResolver( QgsProject::instance()->pathResolver() );
@@ -104,25 +104,45 @@ void initCanvas3D( Qgs3DMapCanvas *canvas, Qgs3DMapSettings *mapSet, /*QList<Qgs
   flatTerrain->setExtent( fullExtent );
   mapSet->setTerrainGenerator( flatTerrain );
 
-  QgsPointLightSettings defaultPointLight;
-  defaultPointLight.setPosition( QgsVector3D( 4e6, 0.25e6, 10e6 ) );
-  defaultPointLight.setConstantAttenuation( 0 );
+  QgsAABB ext = ts->mRootTile->getBoundingVolumeAsAABB( &coordTrans );
+
   QList<QgsPointLightSettings> lights;
-  lights << defaultPointLight;
-  QgsPointLightSettings defaultPointLight2;
-  defaultPointLight2.setPosition( QgsVector3D( 354958, 36.2705, 6.56284e6 ) );
-  defaultPointLight2.setConstantAttenuation( 0 );
-  lights << defaultPointLight2;
-  QgsPointLightSettings defaultPointLight3;
-  defaultPointLight3.setPosition( QgsVector3D( 355789, 67.3203, 6.56197e6 ) );
-  defaultPointLight3.setConstantAttenuation( 0 );
-  lights << defaultPointLight3;
+
+  QgsPointLightSettings defaultPointLight;
+  {
+    defaultPointLight.setPosition( QgsVector3D( ext.xMin, ext.zMin, ext.yMax * 2.0 ) );
+    defaultPointLight.setConstantAttenuation( 0 );
+    defaultPointLight.setLinearAttenuation( 0.0f );
+    defaultPointLight.setQuadraticAttenuation( 0.0f );
+    lights << defaultPointLight;
+  }
+  {
+    defaultPointLight.setPosition( QgsVector3D( ext.xMax, ext.zMin, ext.yMax * 2.0 ) );
+    defaultPointLight.setConstantAttenuation( 0 );
+    defaultPointLight.setLinearAttenuation( 0.0f );
+    defaultPointLight.setQuadraticAttenuation( 0.0f );
+    lights << defaultPointLight;
+  }
+  {
+    defaultPointLight.setPosition( QgsVector3D( ext.xMin, ext.zMax, ext.yMax * 2.0 ) );
+    defaultPointLight.setConstantAttenuation( 0 );
+    defaultPointLight.setLinearAttenuation( 0.0f );
+    defaultPointLight.setQuadraticAttenuation( 0.0f );
+    lights << defaultPointLight;
+  }
+  {
+    defaultPointLight.setPosition( QgsVector3D( ext.xMax, ext.zMax, ext.yMax * 2.0 ) );
+    defaultPointLight.setConstantAttenuation( 0 );
+    defaultPointLight.setLinearAttenuation( 0.0f );
+    defaultPointLight.setQuadraticAttenuation( 0.0f );
+    lights << defaultPointLight;
+  }
+
   mapSet->setPointLights( lights );
   mapSet->setOutputDpi( QgsApplication::desktop()->logicalDpiX() );
 
   canvas->setMap( mapSet );
 
-  QgsAABB ext = ts->mRoot->getBoundingVolumeAsAABB( &coordTrans );
   canvas->scene()->cameraController()->setViewFromTop( ext.xCenter(), ext.zCenter(), ext.yMax * 10.0, 0.0 );
   canvas->scene()->cameraController()->camera()->setNearPlane( 1 );
   canvas->scene()->cameraController()->camera()->setFarPlane( 100000.0f );
@@ -134,10 +154,10 @@ void initCanvas3D( Qgs3DMapCanvas *canvas, Qgs3DMapSettings *mapSet, /*QList<Qgs
     qDebug() << "pending jobs:" << canvas->scene()->totalPendingJobsCount();
   } );
 
-  QObject::connect( canvas->scene()->cameraController(), &QgsCameraController::cameraChanged, [canvas]
-  {
-    qDebug() << "Camera pos:" << canvas->scene()->cameraController()->camera()->position();
-  } );
+  /* QObject::connect( canvas->scene()->cameraController(), &QgsCameraController::cameraChanged, [canvas]
+   {
+     qDebug() << "Camera pos:" << canvas->scene()->cameraController()->camera()->position();
+   } );*/
 
 }
 
@@ -173,22 +193,99 @@ int main( int argc, char *argv[] )
   QgsApplication::initQgis();
   Qgs3D::initialize();
 
-  if ( argc < 3 )
-  {
-    qDebug() << "need json_tileset_file QGIS_project_file";
-    return 1;
-  }
+  // ================= manage option
+  QCoreApplication::setApplicationName( "3dTiles sandbox" );
+  QCoreApplication::setApplicationVersion( "1.0" );
+  QCommandLineParser parser;
+  parser.setApplicationDescription( "3dTiles sandbox" );
+  parser.addHelpOption();
+  parser.addVersionOption();
 
-  QString jsonFile( argv[1] );
-  QString projectFile( argv[2] );
+  QCommandLineOption nameOption( QStringList() << "n" << "name",
+                                 QStringLiteral( "3d Tiles tileset name (for cache)." ),
+                                 QStringLiteral( "name" ) );
+  parser.addOption( nameOption );
+
+  QCommandLineOption tilesetOption( QStringList() << "j" << "json",
+                                    QStringLiteral( "3d Tiles json tileset local path or remote url." ),
+                                    QStringLiteral( "path" ) );
+  parser.addOption( tilesetOption );
+
+  QCommandLineOption qgsOption( QStringList() << "q" << "qgs",
+                                QStringLiteral( "Qgis projet file to use." ),
+                                QStringLiteral( "path" ) );
+  parser.addOption( qgsOption );
+
+  QCommandLineOption origGeomOption( QStringList() << "g" << "origGeom",
+                                     QStringLiteral( "Use default geometric error. Default: false." ) );
+  parser.addOption( origGeomOption );
+
+  QCommandLineOption flipYOption( QStringList() << "y" << "flipY",
+                                  QStringLiteral( "Flip Y/Z. Default: false." ) );
+  parser.addOption( flipYOption );
+
+  QCommandLineOption fixTransOption( QStringList() << "f" << "fixTrans",
+                                     QStringLiteral( "Try to fix translation. Default: false." ) );
+  parser.addOption( fixTransOption );
+
+  QCommandLineOption useMatOption( QStringList() << "m" << "useMat",
+                                   QStringLiteral( "Use fake material. Default: false." ) );
+  parser.addOption( useMatOption );
+
+  /*      QCommandLineOption flipYOption(QStringList() << "y" << "flipY",
+                    QStringLiteral ( "Flip Y/Z. Default: false."));
+            parser.addOption(flipYOption);*/
+  // Process the actual command line arguments given by the user
+  parser.process( app );
+
+  QString jsonFile;
+  QString name;
+  QString projectFile;
+  bool doFlipY = false;
+  bool doFixTrans = false;
+  bool doUseMat = false;
+  bool doOrigGeom = false;
+
+  if ( parser.isSet( nameOption ) )
+    name = parser.value( nameOption );
+  else
+    parser.showHelp( 1 );
+
+  if ( parser.isSet( tilesetOption ) )
+    jsonFile = parser.value( tilesetOption );
+  else
+    parser.showHelp( 1 );
+
+  if ( parser.isSet( qgsOption ) )
+    projectFile = parser.value( qgsOption );
+  else
+    parser.showHelp( 1 );
+
+  if ( parser.isSet( flipYOption ) )
+    doFlipY = true;
+
+  if ( parser.isSet( fixTransOption ) )
+    doFixTrans = true;
+
+  if ( parser.isSet( useMatOption ) )
+    doUseMat = true;
+
+  if ( parser.isSet( origGeomOption ) )
+    doOrigGeom = true;
 
   Qgs3DMapSettings *map = new Qgs3DMapSettings;
 
-  qDebug() << "Will read json: " << jsonFile << "\n";
-  qDebug() << "Will read qgis: " << projectFile << "\n";
+  qDebug() << "Will read json:" << jsonFile;
+  qDebug() << "Will read qgis:" << projectFile;
+  qDebug() << "Will use doFlipY:" << doFlipY << "/ doFixTrans:" << doFixTrans << "/ doUseMat:" << doUseMat;
+
   std::unique_ptr<ThreeDTilesContent> ts = Tileset::fromUrl( QUrl( jsonFile ) );
 
-  //qDebug() << "Dump: \n" << *ts.get()<< "\n";
+  ( ( Tileset * )ts.get() )->setName( name );
+  ( ( Tileset * )ts.get() )->setFlipY( doFlipY );
+  ( ( Tileset * )ts.get() )->setCorrectTranslation( doFixTrans );
+  ( ( Tileset * )ts.get() )->setUseFakeMaterial( doUseMat );
+  ( ( Tileset * )ts.get() )->setUseOriginalGeomError( doOrigGeom );
 
   bool res = QgsProject::instance()->read( projectFile );
   if ( !res )
@@ -198,7 +295,7 @@ int main( int argc, char *argv[] )
   }
 
   QgsCoordinateTransform coordTrans( QgsCoordinateReferenceSystem::fromEpsgId( 4978 ),
-                                     QgsCoordinateReferenceSystem::fromEpsgId( 3857 ),
+                                     QgsProject::instance()->crs(),
                                      QgsProject::instance() );
   qDebug() << "2154: " << QgsCoordinateReferenceSystem::fromEpsgId( 2154 ).toProj();
   qDebug() << "3857: " << QgsCoordinateReferenceSystem::fromEpsgId( 3857 ).toProj();

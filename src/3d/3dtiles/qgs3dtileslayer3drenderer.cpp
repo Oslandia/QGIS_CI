@@ -42,7 +42,7 @@ Qt3DCore::QEntity *Qgs3dTilesLayer3DRenderer::createEntity( const Qgs3DMapSettin
 {
   Qgs3dTilesLayer *meshLayer = layer();
 
-  Tile *t = meshLayer->mTileset->mRoot.get();
+  Tile *t = meshLayer->mTileset->mRootTile.get();
   QgsCoordinateTransform coordTrans( t->mBv->mEpsg, map.crs(), map.transformContext() );
 
   Qgs3dTilesChunkLoaderFactory *facto = new Qgs3dTilesChunkLoaderFactory( map, coordTrans, t );

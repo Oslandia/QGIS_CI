@@ -54,15 +54,15 @@ class QgsChunkQueueJobFactory;
 struct QgsChunkNodeId
 {
   //! Constructs node ID
-  QgsChunkNodeId( int _d = -1, int _x = -1, int _y = -1, int _z = -1 )
+  QgsChunkNodeId( qint64 _d = -1, qint64 _x = -1, qint64 _y = -1, qint64 _z = -1 )
     : d( _d ), x( _x ), y( _y ), z( _z ) {}
 
-  int d, x, y, z;
+  qint64 d, x, y, z;
 
   //! Returns textual representation of the node ID in form of "Z/X/Y"
   QString text() const
   {
-    if ( z == -1 )
+    if ( z == ( qint64 ) - 1 )
       return QStringLiteral( "%1/%2/%3" ).arg( d ).arg( x ).arg( y );   // quadtree
     else
       return QStringLiteral( "%1/%2/%3/%4" ).arg( d ).arg( x ).arg( y ).arg( z );   // octree

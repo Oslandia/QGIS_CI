@@ -71,6 +71,7 @@ class _3D_EXPORT Qgs3dTilesChunkLoaderFactory : public QgsChunkLoaderFactory
     const Qgs3DMapSettings &mMap;
     QgsCoordinateTransform mCoordinateTransform;
     Tile *mRootTile;
+    QMap<QString, Qt3DCore::QEntity *> mCreatedEntity;
 };
 
 

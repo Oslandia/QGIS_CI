@@ -31,294 +31,343 @@
 #include "qgschunkedentity_p.h"
 #include "b3dm.h"
 
-const QgsMatrix4x4 &buildFromJson( QgsMatrix4x4 &mat, const QJsonArray &array );
-
-enum Refinement
-{
-  REPLACE,
-  ADD
-};
-
-class Tile;
-class Tileset;
-
-/**
- * @brief The Q3dCube class
- */
-class Q3dPrimitive
-{
-  public:
-    QVector<QgsVector4D> mPoints;
-
-  public:
-    Q3dPrimitive();
-    void reproject( const QgsCoordinateTransform &coordTrans );
-};
-
-template<typename T, typename std::enable_if<std::is_base_of<Q3dPrimitive, T>::value>::type * = nullptr>
-T operator*( const QgsMatrix4x4 &matrix, T &in );
-
-/**
- * @brief The Q3dCube class
- */
-class Q3dCube : public Q3dPrimitive
+namespace ThreeDTiles
 {
 
-  public:
-    Q3dCube();
-    Q3dCube( const QgsVector3D &ll, const QgsVector3D &ur );
+  const QgsMatrix4x4 &buildFromJson( QgsMatrix4x4 &mat, const QJsonArray &array );
 
-    QVector<QgsPoint> asQgsPoints() ;
+// from 3d tiles specifications:
+  static const QgsMatrix4x4 flipZYMat( 1.0, 0.0,  0.0, 0.0,
+                                       0.0, 0.0, 1.0, 0.0,
+                                       0.0, -1.0,  0.0, 0.0,
+                                       0.0, 0.0,  0.0, 1.0 );
 
-    QgsVector4D ll() const { return mPoints[0];};
-    QgsVector4D ur() const { return mPoints[6];};
-};
-Q_CORE_EXPORT QDebug &operator<<( QDebug &, const Q3dCube & );
+  static const QString cacheDir3dTiles( "/tmp/3dtiles/" );
 
-/**
- * @brief base class for tile content
- */
-class ThreeDTilesContent
-{
-  public:
-    enum TileType
-    {
-      unmanaged,
-      tileset,
-      b3dm
-    };
-    TileType mType;
-    QUrl mSource;
-    int mDepth;
-    Tile *mParentTile;
+  enum Refinement
+  {
+    REPLACE,
+    ADD
+  };
 
-  public:
-    ThreeDTilesContent();
-    ThreeDTilesContent( const TileType &t, const QUrl &source, Tile *parentTile, int depth );
-};
-Q_CORE_EXPORT QDebug &operator<<( QDebug &, const ThreeDTilesContent & );
+  class Tile;
+  class Tileset;
 
+  /**
+   * @brief The Q3dCube class
+   */
+  class Q3dPrimitive
+  {
+    public:
+      QVector<QgsVector4D> mPoints;
 
-/**
- * @brief Tileset description
- */
-class Asset
-{
-  public:
-    QString mVersion;
+    public:
+      Q3dPrimitive();
+      void reproject( const QgsCoordinateTransform &coordTrans );
+  };
 
-  public:
-    Asset();
+  template<typename T, typename std::enable_if<std::is_base_of<Q3dPrimitive, T>::value>::type * = nullptr>
+  T operator*( const QgsMatrix4x4 &matrix, T &in );
 
-    const Asset &setFrom( const QJsonObject &obj );
-};
+  /**
+   * @brief The Q3dCube class
+   */
+  class Q3dCube : public Q3dPrimitive
+  {
 
+    public:
+      Q3dCube();
+      Q3dCube( const QgsVector3D &ll, const QgsVector3D &ur );
 
-/**
- * @brief base class for all bounding volume
- */
-class _3D_EXPORT BoundingVolume
-{
-  public:
-    enum BVType
-    {
-      unmanaged,
-      box,
-      region,
-      sphere
-    };
-    BVType mType;
-    QgsCoordinateReferenceSystem mEpsg;
+      QVector<QgsPoint> asQgsPoints() ;
 
-  private:
-    QgsMatrix4x4 mFlipZYMat;
+      QgsVector4D ll() const { return mPoints[0];};
+      QgsVector4D ur() const { return mPoints[6];};
+  };
 
-  protected:
-    bool checkCoordinateTransform( const QgsCoordinateTransform *coordTrans ) const;
+  /**
+   * @brief base class for tile content
+   */
+  class ThreeDTilesContent
+  {
+    public:
+      enum TileType
+      {
+        unmanaged,
+        tileset,
+        b3dm
+      };
+      TileType mType;
+      QUrl mSource;
+      int mDepth;
+      Tile *mParentTile;
 
-  public:
-    BoundingVolume( const BVType &t );
-    virtual ~BoundingVolume() {}
-    //BoundingVolume &operator=(const BoundingVolume &other);
+    public:
+      ThreeDTilesContent();
+      ThreeDTilesContent( const TileType &t, const QUrl &source, Tile *parentTile, int depth );
 
-    virtual Q3dCube asCube( const QgsMatrix4x4 &transform, const QgsCoordinateTransform *coordTrans = NULL ) = 0;
-    virtual QgsGeometry asGeometry( const QgsMatrix4x4 &transform, const QgsCoordinateTransform *coordTrans = NULL );
-    virtual QgsAABB asQgsAABB( const QgsMatrix4x4 &transform, const QgsCoordinateTransform *coordTrans = NULL, bool flipZY = false );
-};
-Q_CORE_EXPORT QDebug &operator<<( QDebug &, const BoundingVolume & );
+      virtual ~ThreeDTilesContent() = default;
+  };
 
 
-/**
- * @brief The Box BoundingVolume
- */
-class _3D_EXPORT Box: public BoundingVolume
-{
-  public:
-    QgsVector3D mCenter;
-    QgsVector3D mU;
-    QgsVector3D mV;
-    QgsVector3D mW;
+  /**
+   * @brief Tileset description
+   */
+  class Asset
+  {
+    public:
+      QString mVersion;
 
-  public:
-    Box();
-    Box( const QJsonArray &value );
-    virtual ~Box() {}
+    public:
+      Asset();
 
-    QgsMatrix4x4 fromRotationTranslation();
-    virtual Q3dCube asCube( const QgsMatrix4x4 &transform, const QgsCoordinateTransform *coordTrans = NULL );
-};
-Q_CORE_EXPORT QDebug &operator<<( QDebug &, const Box & );
+      const Asset &setFrom( const QJsonObject &obj );
+  };
 
 
-/**
- * @brief The Sphere BoundingVolume
- */
-class _3D_EXPORT Sphere: public BoundingVolume
-{
-  public:
-    QgsVector3D mCenter;
-    double mRadius;
+  /**
+   * @brief base class for all bounding volume
+   */
+  class _3D_EXPORT BoundingVolume
+  {
+    public:
+      enum BVType
+      {
+        unmanaged,
+        box,
+        region,
+        sphere
+      };
+      BVType mType;
+      QgsCoordinateReferenceSystem mEpsg;
 
-  public:
-    Sphere();
-    Sphere( const QJsonArray &value );
-    virtual ~Sphere() {}
+    protected:
+      bool checkCoordinateTransform( const QgsCoordinateTransform *coordTrans ) const;
 
-    virtual Q3dCube asCube( const QgsMatrix4x4 &transform, const QgsCoordinateTransform *coordTrans = NULL );
-};
-QDebug &operator<<( QDebug &out, const Sphere &t );
+    public:
+      BoundingVolume( const BVType &t );
+      virtual ~BoundingVolume() {}
+      //BoundingVolume &operator=(const BoundingVolume &other);
 
-struct Extents3
-{
-  QgsVector3D mLl;
-  QgsVector3D mUr;
-
-  Extents3();
-};
-
-/**
- * @brief The Region BoundingVolume
- */
-class _3D_EXPORT Region: public BoundingVolume
-{
-  public:
-    Extents3 mExtents;
-
-  public:
-    Region();
-    Region( const QJsonArray &value );
-    virtual ~Region() {}
-
-    virtual Q3dCube asCube( const QgsMatrix4x4 &transform, const QgsCoordinateTransform *coordTrans = NULL );
-};
-QDebug &operator<<( QDebug &out, const Region &t );
+      virtual Q3dCube asCube( const QgsMatrix4x4 &transform, const QgsCoordinateTransform *coordTrans = NULL ) = 0;
+      virtual QgsGeometry asGeometry( const QgsMatrix4x4 &transform, const QgsCoordinateTransform *coordTrans = NULL );
+      virtual QgsAABB asQgsAABB( const QgsMatrix4x4 &transform, const QgsCoordinateTransform *coordTrans = NULL, bool flipZY = false );
+  };
 
 
-/**
- * @brief hold tile sub content data
- */
-class TileContent
-{
-  public:
-    Tile *mParentTile;
-    QUrl mUrl;
+  /**
+   * @brief The Box BoundingVolume
+   */
+  class _3D_EXPORT Box: public BoundingVolume
+  {
+    public:
+      QgsVector3D mCenter;
+      QgsVector3D mU;
+      QgsVector3D mV;
+      QgsVector3D mW;
 
-  public:
-    TileContent();
-    ~TileContent();
-    const TileContent &setFrom( const QJsonObject &obj, int maxDepth, Tile *parentTile );
+    public:
+      Box();
+      Box( const QJsonArray &value );
+      virtual ~Box() {}
 
-    ThreeDTilesContent *getSubContentConst() const;
-    ThreeDTilesContent *getSubContent();
-
-  private:
-    std::unique_ptr<ThreeDTilesContent> mSubContent;
-};
-
-
-/**
- * @brief a 3D tile
- */
-class _3D_EXPORT Tile
-{
-  public:
-    Tileset *mParentTileset;
-    Tile *mParentTile;
-
-    std::unique_ptr<BoundingVolume> mBv;
-    Refinement mRefine;
-    QgsMatrix4x4 mTransform;
-    TileContent mContent;
-    QList<std::shared_ptr<Tile>> mChildren;
-    double mGeometricError;
-    int mDepth;
-
-  private:
-    QgsMatrix4x4 *mCombinedTransform;
-
-    QgsMatrix4x4 getCombinedTransformRec( Tile *p );
-    QgsMatrix4x4 getCombinedTransformRec( Tileset *p );
-
-  public:
-    Tile();
-    virtual ~Tile();
-    Tile( const QJsonObject &obj, int depth, Tileset *parentTileset, Tile *parentTile = NULL );
-    bool contains( const QgsVector3D &point, const QgsCoordinateTransform *coordTrans = NULL );
-    QgsGeometry getBoundingVolumeAsGeometry( const QgsCoordinateTransform *coordTrans = NULL );
-    QgsAABB getBoundingVolumeAsAABB( const QgsCoordinateTransform *coordTrans = NULL );
-    QgsMatrix4x4 *getCombinedTransform();
-    double getGeometricError();
-};
-Q_CORE_EXPORT QDebug &operator<<( QDebug &, const Tile & );
-
-/**
- * @brief a tile content for B3dm
- */
-class B3dmHolder : public ThreeDTilesContent
-{
-  public:
-    B3dm mModel;
-
-  public:
-    B3dmHolder( QIODevice &dev, const QUrl &url, Tile *parentTile = NULL, int depth = 0 );
-
-    static std::unique_ptr<ThreeDTilesContent> fromUrl( const QUrl &url, const QUrl &base = QUrl(), Tile *parentTile = NULL, int depth = 0 );
-
-};
-Q_CORE_EXPORT QDebug &operator<<( QDebug &, const B3dmHolder & );
+      QgsMatrix4x4 fromRotationTranslation();
+      virtual Q3dCube asCube( const QgsMatrix4x4 &transform, const QgsCoordinateTransform *coordTrans = NULL );
+  };
 
 
-/**
- * @brief a tile content for json tile set
- */
-class _3D_EXPORT Tileset : public ThreeDTilesContent
-{
-  public:
-    Asset mAsset;
-    double mGeometricError;
-    QJsonObject mProperties;
-    std::unique_ptr<Tile> mRoot;
+  /**
+   * @brief The Sphere BoundingVolume
+   */
+  class _3D_EXPORT Sphere: public BoundingVolume
+  {
+    public:
+      QgsVector3D mCenter;
+      double mRadius;
 
-  private:
-    QgsAABB *mRootBb;
-    void buildRootBb( const QgsCoordinateTransform &coordinateTransform );
+    public:
+      Sphere();
+      Sphere( const QJsonArray &value );
+      virtual ~Sphere() {}
 
-  public:
-    Tileset( const QJsonObject &obj, const QUrl &url, Tile *parentTile = NULL, int depth = 0 );
+      virtual Q3dCube asCube( const QgsMatrix4x4 &transform, const QgsCoordinateTransform *coordTrans = NULL );
+  };
 
-    static std::unique_ptr<ThreeDTilesContent> fromUrl( const QUrl &url, const QUrl &base = QUrl(), Tile *parentTile = NULL, int depth = 0 );
+  struct Extents3
+  {
+    QgsVector3D mLl;
+    QgsVector3D mUr;
 
-    Tile *findTile( const QgsChunkNodeId &tileId, const QgsCoordinateTransform *coordTrans = NULL );
-    QgsChunkNodeId encodeTileId( int tileLevel, const QgsAABB &tileBb, const QgsCoordinateTransform &coordinateTransform );
-    QgsVector3D decodeTileId( const QgsChunkNodeId &tileId, const QgsCoordinateTransform &coordinateTransform );
-    double getGeometricError();
+    Extents3();
+  };
 
-  private:
-    Tile *findTileRecInTileset( Tileset *curTs, int depth, const QgsVector3D &tileCenter, const QgsCoordinateTransform *coordTrans = NULL );
-    Tile *findTileRecInTile( Tile *curTile, int depth, const QgsVector3D &tileCenter, const QgsCoordinateTransform *coordTrans = NULL );
-};
-Q_CORE_EXPORT QDebug &operator<<( QDebug &, const Tileset & );
+  /**
+   * @brief The Region BoundingVolume
+   */
+  class _3D_EXPORT Region: public BoundingVolume
+  {
+    public:
+      Extents3 mExtents;
+
+    public:
+      Region();
+      Region( const QJsonArray &value );
+      virtual ~Region() {}
+
+      virtual Q3dCube asCube( const QgsMatrix4x4 &transform, const QgsCoordinateTransform *coordTrans = NULL );
+  };
 
 
+  /**
+   * @brief a 3D tile
+   */
+  class _3D_EXPORT Tile
+  {
+    public:
+
+      /**
+       * \brief always included in a tileset
+       */
+      Tileset *mParentTileset;
+
+      /**
+       * \brief only when tile is the child of another one
+       */
+      Tile *mParentTile;
+
+      std::unique_ptr<BoundingVolume> mBv;
+      Refinement mRefine;
+      QgsMatrix4x4 mTransform;
+      QUrl mContentUrl;
+      double mGeometricError;
+      int mDepth;
+
+    private:
+      std::unique_ptr<ThreeDTilesContent> mContent;
+
+      // children part
+      bool mLazyLoadChildren;
+      QJsonArray mChildrenJsonArray;
+      QList<std::shared_ptr<Tile>> mChildren;
+
+      // transform part
+      QgsMatrix4x4 *mCombinedTransform;
+
+      QgsMatrix4x4 getCombinedTransformRec( Tile *p );
+      QgsMatrix4x4 getCombinedTransformRec( Tileset *p );
+
+    public:
+      Tile();
+      virtual ~Tile();
+      Tile( const QJsonObject &obj, int depth, Tileset *parentTileset, Tile *parentTile = NULL );
+
+      void setContentFrom( const QJsonObject &obj );
+      ThreeDTilesContent *getContentConst() const;
+      ThreeDTilesContent *getContent();
+
+      const QList<std::shared_ptr<Tile>> children();
+      const QList<std::shared_ptr<Tile>> children() const;
+
+      /**
+       * \brief contains
+       * \param point in tile original CRS
+       * \return TRUE if tile contains point
+       */
+      bool contains( const QgsVector3D &point );
+      QgsGeometry getBoundingVolumeAsGeometry( const QgsCoordinateTransform *coordTrans = NULL );
+      QgsAABB getBoundingVolumeAsAABB( const QgsCoordinateTransform *coordTrans = NULL );
+      QgsMatrix4x4 *getCombinedTransform();
+      double getGeometricError() const;
+  };
+
+  /**
+   * @brief a tile content for B3dm
+   */
+  class B3dmHolder : public ThreeDTilesContent
+  {
+    public:
+      B3dm mModel;
+
+    public:
+      B3dmHolder( QIODevice &dev, const QUrl &url, Tile *parentTile = NULL, int depth = 0 );
+      virtual ~B3dmHolder() = default;
+
+      static std::unique_ptr<ThreeDTilesContent> fromUrl( const QUrl &url, const QUrl &base = QUrl(), Tile *parentTile = NULL, int depth = 0 );
+
+  };
+
+
+  /**
+   * @brief a tile content for json tile set
+   */
+  class _3D_EXPORT Tileset : public ThreeDTilesContent
+  {
+    public:
+      Asset mAsset;
+      double mGeometricError;
+      QJsonObject mProperties;
+      std::unique_ptr<Tile> mRootTile;
+
+    private:
+      QgsAABB *mRootBb;
+      void buildRootBb();
+      bool mCorrectTranslation;
+      bool mFlipY;
+      bool mUseFakeMaterial;
+      bool mUseOriginalGeomError;
+      QString mName;
+
+    public:
+      Tileset( const QJsonObject &obj, const QUrl &url, Tile *parentTile = NULL, int depth = 0 );
+      virtual ~Tileset();
+
+      static std::unique_ptr<ThreeDTilesContent> fromUrl( const QUrl &url, const QUrl &base = QUrl(), Tile *parentTile = NULL, int depth = 0 );
+
+      Tile *findTile( const QgsChunkNodeId &tileId );
+      QgsChunkNodeId encodeTileId( int tileLevel, const QgsAABB &tileBb );
+      QgsVector3D decodeTileId( const QgsChunkNodeId &tileId );
+      double getGeometricError() const;
+
+      Tileset const *getRootTileset() const;
+
+      void setName( QString val );
+      QString getName() const;
+
+      void setFlipY( bool flipY );
+      bool getFlipY() const;
+
+      void setCorrectTranslation( bool correct );
+      bool getCorrectTranslation() const;
+
+      void setUseFakeMaterial( bool val );
+      bool getUseFakeMaterial() const;
+
+      void setUseOriginalGeomError( bool val );
+      bool getUseOriginalGeomError() const;
+
+      void createCacheDirectories( const QString &filename ) const;
+      QString getCacheDirectory( const QString &filename ) const;
+
+      static void createCacheDirectories( const QString &tsName, const QString &fileName );
+      static QString getCacheDirectory( const QString &tsName, const QString &filename );
+
+    private:
+      Tile *findTileRecInTileset( Tileset *curTs, int depth, const QgsVector3D &tileCenter );
+      Tile *findTileRecInTile( Tile *curTile, int depth, const QgsVector3D &tileCenter );
+  };
+
+}
+
+Q_CORE_EXPORT QDebug &operator<<( QDebug &, const ThreeDTiles::B3dmHolder & );
+Q_CORE_EXPORT QDebug &operator<<( QDebug &, const ThreeDTiles::Tile & );
+Q_CORE_EXPORT QDebug &operator<<( QDebug &, const ThreeDTiles::Tileset & );
+Q_CORE_EXPORT QDebug &operator<<( QDebug &, const ThreeDTiles::Q3dCube & );
+Q_CORE_EXPORT QDebug &operator<<( QDebug &, const ThreeDTiles::ThreeDTilesContent & );
+Q_CORE_EXPORT QDebug &operator<<( QDebug &, const ThreeDTiles::BoundingVolume & );
+Q_CORE_EXPORT QDebug &operator<<( QDebug &, const ThreeDTiles::Box & );
+Q_CORE_EXPORT QDebug &operator<<( QDebug &out, const ThreeDTiles::Sphere &t );
+Q_CORE_EXPORT QDebug &operator<<( QDebug &out, const ThreeDTiles::Region &t );
+
+using namespace ThreeDTiles;
 
 #endif // 3dtiles_3dtiles_hpp_included_

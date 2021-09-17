@@ -159,6 +159,11 @@ FeatureTable::FeatureTable( const QJsonObject &obj, const QByteArray &binary ) :
 
     }
 
+    QgsLogger::warning( QStringLiteral( "Found RTC_CENTER at x:%1, y%2, z:%3" ).
+                        arg( mRtcCenter.x() ).
+                        arg( mRtcCenter.y() ).
+                        arg( mRtcCenter.z() ) );
+
   }
   if ( obj.find( "BATCH_LENGTH" ) != obj.end() )
   {

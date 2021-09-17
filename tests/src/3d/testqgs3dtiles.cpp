@@ -36,6 +36,7 @@ class TestQgs3dTiles : public QObject
     void testCube2Reprojection();
     void testSphereReprojection();
     void testSphere2Reprojection();
+    void testCubeInclusion();
 
   private:
     void checkBoudingVolume( BoundingVolume *bv, QgsVector3D translation );
@@ -130,6 +131,7 @@ void TestQgs3dTiles::testSphere2Reprojection()
   qDebug() << "===== sphere near lille";
   checkBoudingVolume( &bv, QgsVector3D( 0, 0, 0 ) ); // do not comply well with double translation...
 }
+
 
 void TestQgs3dTiles::checkBoudingVolume( BoundingVolume *bv, QgsVector3D translation )
 {
@@ -307,6 +309,92 @@ void TestQgs3dTiles::checkBoudingVolume( BoundingVolume *bv, QgsVector3D transla
   }
 }
 
+
+void TestQgs3dTiles::testCubeInclusion()
+{
+  QgsCoordinateTransform coordTrans( QgsCoordinateReferenceSystem::fromEpsgId( 4978 ),
+                                     QgsCoordinateReferenceSystem::fromEpsgId( 3857 ),
+                                     QgsProject::instance() );
+  double radius = 6378137.0; //6378200;
+
+//  QgsVector3D translation( 4046916, 214447, 4908778 ); // CRS 4978 ~ near lille
+//  QgsVector3D translation( 1215107, -4736648, 4081966 ); // CRS 4978 ~ near philadelphie
+  QgsVector3D translation( radius, 0, 0 ); // CRS 4978 ~ 0
+
+  // column-major order
+  QgsMatrix4x4 tileTrans( 1, 0, 0, 0,
+                          0, 1, 0, 0,
+                          0, 0, 1, 0,
+                          translation.x(), translation.y(), translation.z(), 1 );
+  // to row-major order
+  tileTrans = tileTrans.transposed();
+  double halfSize = 200.0;
+  QJsonArray bvValue = { 0, 0, 0, halfSize, 0, 0, 0, halfSize, 0, 0, 0, halfSize }; // cartesian coordinates
+  Box bv( bvValue );
+  Q3dCube outCube = bv.asCube( tileTrans );
+  QCOMPARE( outCube.ll().x(), translation.x() - halfSize );
+  QCOMPARE( outCube.ll().y(), translation.y() - halfSize );
+  QCOMPARE( outCube.ll().z(), translation.z() - halfSize );
+  QCOMPARE( outCube.ur().x(), translation.x() + halfSize );
+  QCOMPARE( outCube.ur().y(), translation.y() + halfSize );
+  QCOMPARE( outCube.ur().z(), translation.z() + halfSize );
+
+  unsigned int rings = 16;
+
+  double const R = 1. / ( double )( rings - 1 );
+
+  /*
+    // Establish texture coordinates, vertex list, and normals
+    for ( unsigned int r = rings - 1; r > 0 ; r-- )
+    {
+          double const x = radius * sin( M_PI_2 * r * R );
+          double const z = radius * cos( 2 * M_PI * 0 ) * sin( M_PI_2 - M_PI_2 * r * R ) ;
+          double const y = radius * sin( 2 * M_PI * 0 ) * sin( M_PI_2 * r * R );
+          translation = QgsVector3D( x, y, z );
+          qDebug() << "=============== translation r:" << 90.0-180.0 * M_PI_2 * r * R / M_PI << "° / trans:" << translation;
+    }
+    double d = 6216936.50036383 /1297111.01622877735644579;
+  */
+  for ( unsigned int r = rings - 1; r > 0 ; r-- )
+  {
+    double const x = radius * sin( M_PI_2 * r * R );
+    double const z = radius * cos( 2 * M_PI * 0 ) * sin( M_PI_2 - M_PI_2 * r * R ) ;
+    double const y = radius * sin( 2 * M_PI * 0 ) * sin( M_PI_2 * r * R );
+    translation = QgsVector3D( x, y, z );
+    qDebug() << "=============== lat:" << 90.0 - 180.0 * M_PI_2 *r *R / M_PI << "° / translation 4978:" << translation;
+
+    tileTrans = QgsMatrix4x4( 1, 0, 0, 0,
+                              0, 1, 0, 0,
+                              0, 0, 1, 0,
+                              translation.x(), translation.y(), translation.z(), 1 );
+    // to row-major order
+    tileTrans = tileTrans.transposed();
+    outCube = bv.asCube( tileTrans, &coordTrans );
+    qDebug() << "=============== outCube 3857 coord:" << outCube;
+    qDebug() << "=============== outCube 3857 dim:" << outCube.ur() - outCube.ll();
+
+    for ( double step = 0.0; step <= 0.5; step += 0.1 )
+    {
+      double f = 0.49 + step;
+      qDebug() << "===== cube inclusion f:" << f;
+      bvValue = { 0, 0, 0,
+                  halfSize * f, 0, 0,
+                  0, halfSize * f, 0,
+                  0, 0, halfSize *f
+                };  // cartesian coordinates
+      Box included( bvValue );
+      Q3dCube inCube = included.asCube( tileTrans, &coordTrans );
+      qDebug() << "inCube 3857 coord:" << inCube;
+      qDebug() << "diff ll:" << outCube.ll() - inCube.ll() << " / ur:" << outCube.ur() - inCube.ll();
+      QVERIFY( outCube.ll().x() < inCube.ll().x() );
+      QVERIFY( outCube.ll().y() < inCube.ll().y() );
+      QVERIFY( outCube.ll().z() < inCube.ll().z() );
+      QVERIFY( outCube.ur().x() > inCube.ur().x() );
+      QVERIFY( outCube.ur().y() > inCube.ur().y() );
+      QVERIFY( outCube.ur().z() > inCube.ur().z() );
+    }
+  }
+}
 
 
 

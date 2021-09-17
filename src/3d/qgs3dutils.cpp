@@ -730,22 +730,36 @@ QVector2D Qgs3DUtils::textureToScreenCoordinates( QVector2D textureXY, QSize win
 
 void Qgs3DUtils::createNormal( Utils3d::VertexData *vertex, uint vSize, Utils3d::FaceByVertexId *faces, uint fSize, Utils3d::VertexData *norms )
 {
-  for ( uint i = 0; i < fSize; i++ )
+  quint16 maxI = 0;
+  for ( uint fIdx = 0; fIdx < fSize; fIdx++ )
   {
-    const quint16 ia = faces[i].v1;
-    const quint16 ib = faces[i].v2;
-    const quint16 ic = faces[i].v3;
+    const quint16 v1 = faces[fIdx].v1;
+    const quint16 v2 = faces[fIdx].v2;
+    const quint16 v3 = faces[fIdx].v3;
 
-    const QVector3D e1 = vertex[ia].asVector3D() - vertex[ib].asVector3D();
-    const QVector3D e2 = vertex[ic].asVector3D() - vertex[ib].asVector3D();
+    if ( !( v1 < vSize && v2 < vSize && v3 < vSize ) )
+    {
+      qDebug() << "Error in face" << fIdx;
+      qDebug() << "Error in ia" << v1 << "iab" << v2 << "ic" << v3;
+    }
+    Q_ASSERT( ( v1 < vSize && v2 < vSize && v3 < vSize ) );
+
+    const QVector3D e1 = vertex[v1].asVector3D() - vertex[v2].asVector3D();
+    const QVector3D e2 = vertex[v3].asVector3D() - vertex[v2].asVector3D();
     const QVector3D no = QVector3D::crossProduct( e1, e2 );
 
-    norms[ia] = norms[ia].asVector3D() + no;
-    norms[ib] = norms[ib].asVector3D() + no;
-    norms[ic] = norms[ic].asVector3D() + no;
+    norms[v1] = norms[v1].asVector3D() + no;
+    norms[v2] = norms[v2].asVector3D() + no;
+    norms[v3] = norms[v3].asVector3D() + no;
+
+    if ( v1 > maxI ) maxI = v1;
+    if ( v2 > maxI ) maxI = v2;
+    if ( v3 > maxI ) maxI = v3;
   }
-  for ( uint i = 0; i < vSize; i++ )
+
+  qDebug() << " NORMAL imax" << maxI;
+  for ( uint vIdx = 0; vIdx < maxI; vIdx++ )
   {
-    norms[i] = norms[i].asVector3D().normalized();
+    norms[vIdx] = -norms[vIdx].asVector3D().normalized() * -1.0;
   }
 }
