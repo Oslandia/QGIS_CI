@@ -110,28 +110,28 @@ void initCanvas3D( Qgs3DMapCanvas *canvas, Qgs3DMapSettings *mapSet, /*QList<Qgs
 
   QgsPointLightSettings defaultPointLight;
   {
-    defaultPointLight.setPosition( QgsVector3D( ext.xMin, ext.zMin, ext.yMax * 2.0 ) );
+    defaultPointLight.setPosition( QgsVector3D( ext.xMin, ext.yMax * 2.0, ext.zMin ) );
     defaultPointLight.setConstantAttenuation( 0 );
     defaultPointLight.setLinearAttenuation( 0.0f );
     defaultPointLight.setQuadraticAttenuation( 0.0f );
     lights << defaultPointLight;
   }
   {
-    defaultPointLight.setPosition( QgsVector3D( ext.xMax, ext.zMin, ext.yMax * 2.0 ) );
+    defaultPointLight.setPosition( QgsVector3D( ext.xMax, ext.yMax * 2.0, ext.zMin ) );
     defaultPointLight.setConstantAttenuation( 0 );
     defaultPointLight.setLinearAttenuation( 0.0f );
     defaultPointLight.setQuadraticAttenuation( 0.0f );
     lights << defaultPointLight;
   }
   {
-    defaultPointLight.setPosition( QgsVector3D( ext.xMin, ext.zMax, ext.yMax * 2.0 ) );
+    defaultPointLight.setPosition( QgsVector3D( ext.xMin, ext.yMax * 2.0, ext.zMax ) );
     defaultPointLight.setConstantAttenuation( 0 );
     defaultPointLight.setLinearAttenuation( 0.0f );
     defaultPointLight.setQuadraticAttenuation( 0.0f );
     lights << defaultPointLight;
   }
   {
-    defaultPointLight.setPosition( QgsVector3D( ext.xMax, ext.zMax, ext.yMax * 2.0 ) );
+    defaultPointLight.setPosition( QgsVector3D( ext.xMax, ext.yMax * 2.0, ext.zMax ) );
     defaultPointLight.setConstantAttenuation( 0 );
     defaultPointLight.setLinearAttenuation( 0.0f );
     defaultPointLight.setQuadraticAttenuation( 0.0f );
@@ -220,21 +220,18 @@ int main( int argc, char *argv[] )
                                      QStringLiteral( "Use default geometric error. Default: false." ) );
   parser.addOption( origGeomOption );
 
-  QCommandLineOption flipYOption( QStringList() << "y" << "flipY",
-                                  QStringLiteral( "Flip Y/Z. Default: false." ) );
+  QCommandLineOption flipYOption( QStringList() << "y" << "yUp",
+                                  QStringLiteral( "Flip to Y up. Default: false." ) );
   parser.addOption( flipYOption );
 
   QCommandLineOption fixTransOption( QStringList() << "f" << "fixTrans",
                                      QStringLiteral( "Try to fix translation. Default: false." ) );
   parser.addOption( fixTransOption );
 
-  QCommandLineOption useMatOption( QStringList() << "m" << "useMat",
+  QCommandLineOption useMatOption( QStringList() << "m" << "fakeMat",
                                    QStringLiteral( "Use fake material. Default: false." ) );
   parser.addOption( useMatOption );
 
-  /*      QCommandLineOption flipYOption(QStringList() << "y" << "flipY",
-                    QStringLiteral ( "Flip Y/Z. Default: false."));
-            parser.addOption(flipYOption);*/
   // Process the actual command line arguments given by the user
   parser.process( app );
 
@@ -282,7 +279,7 @@ int main( int argc, char *argv[] )
   std::unique_ptr<ThreeDTilesContent> ts = Tileset::fromUrl( QUrl( jsonFile ) );
 
   ( ( Tileset * )ts.get() )->setName( name );
-  ( ( Tileset * )ts.get() )->setFlipY( doFlipY );
+  ( ( Tileset * )ts.get() )->setFlipToYUp( doFlipY );
   ( ( Tileset * )ts.get() )->setCorrectTranslation( doFixTrans );
   ( ( Tileset * )ts.get() )->setUseFakeMaterial( doUseMat );
   ( ( Tileset * )ts.get() )->setUseOriginalGeomError( doOrigGeom );

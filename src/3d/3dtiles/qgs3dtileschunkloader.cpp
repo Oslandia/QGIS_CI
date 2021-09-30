@@ -69,8 +69,8 @@ Qgs3dTilesChunkLoader::~Qgs3dTilesChunkLoader()
     mFutureWatcher->waitForFinished();
   }
 
-  //if ( mSceneLoader )
-  //  disconnect( mSceneLoader, &Qt3DRender::QSceneLoader::statusChanged, this, &Qgs3dTilesChunkLoader::sceneLoaderChanged );
+  if ( mSceneLoader )
+    disconnect( mSceneLoader, &Qt3DRender::QSceneLoader::statusChanged, this, &Qgs3dTilesChunkLoader::sceneLoaderChanged );
   qDebug() << mNode->tileId().text() << "ChunkLoader::~Qgs3dTilesChunkLoader(): destruction Done!" ;
 }
 
@@ -104,7 +104,7 @@ void Qgs3dTilesChunkLoader::prepareSceneLoader( Tile *tile )
     t = ( ( Tileset * )tile->getContent() )->mRootTile.get();
     if ( t->getContent()->mType == ThreeDTilesContent::tileset )
     {
-      qWarning() << "WTF?";
+      qWarning() << "WTF? Sub tileset have no children but another sub tileset";
       return;
     }
   }
@@ -123,21 +123,6 @@ void Qgs3dTilesChunkLoader::prepareSceneLoader( Tile *tile )
 
   QString gltfDirStr = mTile->mParentTileset->getCacheDirectory( mTile->mContentUrl.fileName() ) ;
   QDir gltfDir( gltfDirStr );
-  /*if ( !gltfDir.exists() )
-  {
-    if ( !gltfDir.mkdir( gltfDirStr ) )
-    {
-      if ( gltfDir.exists() )
-      {
-        // created by another thread
-      }
-      else
-      {
-        qDebug() << mNode->tileId().text() << "ChunkLoader::prepareSceneLoader: Failed to create directory:" << gltfDir ;
-        return;
-      }
-    }
-  }*/
 
   QString gltfFilePath = gltfDir.absoluteFilePath( mTile->mContentUrl.fileName() + ".json" );
   setObjectName( mNode->tileId().text() + "Chunk " + mTile->mContentUrl.fileName() );
@@ -190,7 +175,6 @@ Qt3DCore::QEntity *Qgs3dTilesChunkLoader::createEntity( Qt3DCore::QEntity *chunk
   }
   else
   {
-
     qDebug() << mNode->tileId().text() << "ChunkLoader::createEntity found tile gltf" << mGltfUrl;
     qDebug() << mNode->tileId().text() << "ChunkLoader::createEntity found tile url" << mTile->mContentUrl;
     qDebug() << mNode->tileId().text() << "ChunkLoader::createEntity found tile has" << mTile->children().length() << "children";
@@ -199,7 +183,6 @@ Qt3DCore::QEntity *Qgs3dTilesChunkLoader::createEntity( Qt3DCore::QEntity *chunk
     sceneEntity->setObjectName( QString( "=>Scene for " ) + mTile->mContentUrl.fileName() );
 
     finalizeEntity( sceneEntity );
-    sceneEntity->setEnabled( true );
 
     if ( mSceneLoader->status() == Qt3DRender::QSceneLoader::Status::Ready )
     {
@@ -409,19 +392,11 @@ void Qgs3dTilesChunkLoader::sceneLoaderChanged( Qt3DRender::QSceneLoader::Status
         aTransform = new Qt3DCore::QTransform();
         QgsMatrix4x4 fixRot;
         fixRot.setToIdentity();
-        /*/tmp/3dtiles/dragon/dragon_high.b3dm/dragon_high.b3dm.json
-        QgsCoordinateTransform coordTrans( mFactory->mCoordinateTransform.destinationCrs(),
-                                           QgsCoordinateReferenceSystem::fromEpsgId( 4326 ),
-                                           mFactory->mCoordinateTransform.context() );
-        QgsVector3D transCenter = coordTrans.transform( flipCenter );
-        qDebug() <<  "        * ++++ transCenter" << mTile->getBoundingVolumeAsAABB().center()
-                 << ">>" << flipCenter
-                 << ">>" << transCenter;
-        fixRot.rotate( - transCenter.y(), QgsVector3D( 1.0, 0.0, 0.0 ) );
-        fixRot.rotate( -( 90.0 + transCenter.x() ), QgsVector3D( 0.0, 0.0, 1.0 ) );
-        */
+
         QVector3D center4978;
         QVector3D yUpCenter4978;
+
+        // try to fix rotation
         if ( mFactory->mCoordinateTransform.destinationCrs() != QgsCoordinateReferenceSystem::fromEpsgId( 4978 ) )
         {
           /*if ( mTile->getContentConst()->mType == ThreeDTilesContent::b3dm && ( ( B3dmHolder * )( mTile->getContentConst() ) )->mModel.mFeatureTable.mRtcCenter.length() != 0.0 )
@@ -433,8 +408,8 @@ void Qgs3dTilesChunkLoader::sceneLoaderChanged( Qt3DRender::QSceneLoader::Status
           else
           {*/
           qDebug() << mNode->tileId().text() << "        * USING Tile bbox center!";
-          QgsAABB bb4978 = mTile->getBoundingVolumeAsAABB();
-          center4978 = QVector3D( bb4978.xCenter(), bb4978.zCenter(), -bb4978.yCenter() );
+          QgsAABB yUpBb4978 = mTile->getBoundingVolumeAsAABB();
+          center4978 = QVector3D( yUpBb4978.xCenter(), -yUpBb4978.zCenter(), -yUpBb4978.yCenter() );
           //}
           yUpCenter4978 = QVector3D( center4978.x(), -center4978.z(), center4978.y() );
 
@@ -447,22 +422,28 @@ void Qgs3dTilesChunkLoader::sceneLoaderChanged( Qt3DRender::QSceneLoader::Status
           phi = 180.0 * atan( yUpCenter4978.y() / yUpCenter4978.x() ) / M_PI;
           if ( mTile->getCombinedTransform()->isIdentity() )
           {
-            qDebug() << mNode->tileId().text() << "        * ++++ FOR Lille!";
-            fixRot.rotate( -( 90.0 + phi ), QgsVector3D( 0.0, 0.0, 1.0 ) );
-            fixRot.rotate( theta, QgsVector3D( 0.0, 1.0, 0.0 ) );
-            fixRot.rotate( -( 90.0 + psi ), QgsVector3D( 1.0, 0.0, 0.0 ) );
+            qDebug() << mNode->tileId().text() << "        * ++++ FOR Lille friche!";
+            fixRot.rotate( -( 180.0 + theta ) / M_PI_2, QgsVector3D( 0.0, 0.0, 1.0 ) );
+            fixRot.rotate( phi, QgsVector3D( 0.0, 1.0, 0.0 ) );
+            fixRot.rotate( ( 90.0 + psi ) / M_PI_2, QgsVector3D( 1.0, 0.0, 0.0 ) );
           }
           else
           {
             qDebug() << mNode->tileId().text() << "        * ++++ FOR DRAGON!";
-            fixRot.rotate( -( 90.0 + phi )*M_PI_2, QgsVector3D( 0.0, 0.0, 1.0 ) );
-            fixRot.rotate( -theta, QgsVector3D( 0.0, 1.0, 0.0 ) );
-            fixRot.rotate( psi, QgsVector3D( 1.0, 0.0, 0.0 ) );
+            fixRot.rotate( theta, QgsVector3D( 0.0, 0.0, 1.0 ) );
+            fixRot.rotate( 90.0 + phi, QgsVector3D( 0.0, 1.0, 0.0 ) );
+            fixRot.rotate( 90.0 - psi, QgsVector3D( 1.0, 0.0, 0.0 ) );
           }
 
           qDebug() << mNode->tileId().text() << "        * ++++ transform psi:" << psi << "phi:" << phi << "theta:" << theta;
           qDebug() << mNode->tileId().text() << "        * ++++ transform fixRot:" << fixRot;
           //aTransform->setScale( 100.0f );
+          fixRot = ThreeDTiles::flipToYUpMat * fixRot; // because we move from z-up projection to classical y-up projection
+        }
+
+        if ( mTile->mParentTileset->getFlipToYUp() )
+        {
+          fixRot = ThreeDTiles::flipToYUpMat * fixRot;
         }
 
         QMatrix4x4 transformMatrix( ( *mTile->getCombinedTransform() * fixRot ).toQMatrix4x4( & mFactory->mCoordinateTransform ) );
@@ -471,16 +452,17 @@ void Qgs3dTilesChunkLoader::sceneLoaderChanged( Qt3DRender::QSceneLoader::Status
         if ( mTile->mParentTileset->getCorrectTranslation() )
         {
           // mFactory->mCoordinateTransform.transform( yUpCenter4978 );
-          QgsVector3D c = mFactory->mCoordinateTransform.transform( ( *mTile->getCombinedTransform() ) * center4978 );
-          QVector3D zUpCenter( c.x(), -c.z(), c.y() );
+          //QgsVector3D c = mFactory->mCoordinateTransform.transform( ( *mTile->getCombinedTransform() ) * center4978 );
+          //QVector3D zUpCenter( c.x(), -c.z(), c.y() );
           /*          if (mTile->mParentTileset->getFlipY() )
                       aTransform->setTranslation( QVector3D( c.x(), c.z(), -c.y() ) );
                     else*/
-          qDebug() << mNode->tileId().text() << "        * ++++ will use translation" << zUpCenter << "instead of" << QVector3D( mBbox.xCenter(), mBbox.yCenter(), mBbox.zCenter() );
-          aTransform->setTranslation( zUpCenter );
-          /*
-          QgsAABB bbDest = mTile->getBoundingVolumeAsAABB( &mFactory->mCoordinateTransform);
-          aTransform->setTranslation( QVector3D( bbDest.xCenter(), bbDest.yCenter(), bbDest.zCenter() ) );*/
+          //aTransform->setTranslation( zUpCenter );
+
+          QgsAABB bbProj = mTile->getBoundingVolumeAsAABB( &mFactory->mCoordinateTransform );
+          aTransform->setTranslation( QVector3D( bbProj.xCenter(), bbProj.yCenter(), bbProj.zCenter() ) );
+
+          qDebug() << mNode->tileId().text() << "        * ++++ will use translation" << QVector3D( bbProj.xCenter(), bbProj.yCenter(), bbProj.zCenter() ) << "instead of" << QVector3D( mBbox.xCenter(), mBbox.yCenter(), mBbox.zCenter() );
         }
 
         ent->addComponent( aTransform );
@@ -489,13 +471,17 @@ void Qgs3dTilesChunkLoader::sceneLoaderChanged( Qt3DRender::QSceneLoader::Status
         if ( ! hasMaterial )
         {
           aMaterial = new Qt3DExtras::QPhongMaterial();
-          //aMaterial->setDiffuse( QColor( ( int )( 25.6 * (mTile->mDepth % 10) ) , ( int )( 25.6 * (mTile->mDepth % 100) / 10 ), ( int )( 25.6 * mTile->mDepth /100 ) ) );
-          aMaterial->setDiffuse( QColor( ( int )( 50.0 + 25.6 * ( 1 + mTile->mDepth / 100 ) ),
-                                         ( int )( 50.0 + 25.6 * ( 1 + ( mTile->mDepth % 100 ) / 10 ) ),
-                                         ( int )( 50.0 + 25.6 * ( mTile->mDepth % 10 ) ) ) );
-          //aMaterial->set
+          int w = 3;
+          int o = 20;
+          QColor col( ( int )( o + 200.0 / w * ( ( mTile->mDepth + 1 ) / ( w * w ) ) ),
+                      ( int )( o + 200.0 / w * ( ( mTile->mDepth + 1 ) / w ) ),
+                      ( int )( o + 200.0 / w * ( ( mTile->mDepth + 1 ) % w ) ) );
+          aMaterial->setDiffuse( col );
           ent->addComponent( aMaterial );
-          qDebug() <<  "        * ++++ material";
+          /*          qDebug() <<  "        * ++++ material. col: r"<< col.red()
+                              << "g"<<  col.green()
+                              << "b"<<  col.blue()
+                              << "a"<<  col.alpha();*/
         }
       }
     }

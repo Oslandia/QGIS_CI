@@ -30,6 +30,7 @@
 
 #include "qgschunkedentity_p.h"
 #include "b3dm.h"
+#include "cachemanager.h"
 
 namespace ThreeDTiles
 {
@@ -37,12 +38,15 @@ namespace ThreeDTiles
   const QgsMatrix4x4 &buildFromJson( QgsMatrix4x4 &mat, const QJsonArray &array );
 
 // from 3d tiles specifications:
-  static const QgsMatrix4x4 flipZYMat( 1.0, 0.0,  0.0, 0.0,
-                                       0.0, 0.0, 1.0, 0.0,
-                                       0.0, -1.0,  0.0, 0.0,
-                                       0.0, 0.0,  0.0, 1.0 );
+  static const QgsMatrix4x4 flipToYUpMat( 1.0, 0.0,  0.0, 0.0,
+                                          0.0, 0.0, 1.0, 0.0,
+                                          0.0, -1.0,  0.0, 0.0,
+                                          0.0, 0.0,  0.0, 1.0 );
 
-  static const QString cacheDir3dTiles( "/tmp/3dtiles/" );
+  static const QgsMatrix4x4 flipToZUpMat( 1.0, 0.0,  0.0, 0.0,
+                                          0.0, 0.0, -1.0, 0.0,
+                                          0.0, 1.0,  0.0, 0.0,
+                                          0.0, 0.0,  0.0, 1.0 );
 
   enum Refinement
   {
@@ -151,7 +155,7 @@ namespace ThreeDTiles
 
       virtual Q3dCube asCube( const QgsMatrix4x4 &transform, const QgsCoordinateTransform *coordTrans = NULL ) = 0;
       virtual QgsGeometry asGeometry( const QgsMatrix4x4 &transform, const QgsCoordinateTransform *coordTrans = NULL );
-      virtual QgsAABB asQgsAABB( const QgsMatrix4x4 &transform, const QgsCoordinateTransform *coordTrans = NULL, bool flipZY = false );
+      virtual QgsAABB asQgsAABB( const QgsMatrix4x4 &transform, const QgsCoordinateTransform *coordTrans = NULL, bool flipToYUpMat = false );
   };
 
 
@@ -312,7 +316,7 @@ namespace ThreeDTiles
       QgsAABB *mRootBb;
       void buildRootBb();
       bool mCorrectTranslation;
-      bool mFlipY;
+      bool mFlipToYUp;
       bool mUseFakeMaterial;
       bool mUseOriginalGeomError;
       QString mName;
@@ -333,8 +337,8 @@ namespace ThreeDTiles
       void setName( QString val );
       QString getName() const;
 
-      void setFlipY( bool flipY );
-      bool getFlipY() const;
+      void setFlipToYUp( bool flipY );
+      bool getFlipToYUp() const;
 
       void setCorrectTranslation( bool correct );
       bool getCorrectTranslation() const;
@@ -347,9 +351,6 @@ namespace ThreeDTiles
 
       void createCacheDirectories( const QString &filename ) const;
       QString getCacheDirectory( const QString &filename ) const;
-
-      static void createCacheDirectories( const QString &tsName, const QString &fileName );
-      static QString getCacheDirectory( const QString &tsName, const QString &filename );
 
     private:
       Tile *findTileRecInTileset( Tileset *curTs, int depth, const QgsVector3D &tileCenter );

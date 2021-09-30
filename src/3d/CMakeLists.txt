@@ -51,6 +51,7 @@ set(QGIS_3D_SRCS
 
   3dtiles/qgsvector4d.cpp
   3dtiles/qgsmatrix4x4.cpp
+  3dtiles/cachemanager.cpp
   3dtiles/3dtiles.cpp
   3dtiles/b3dm.cpp
   3dtiles/qgs3dtileschunkloader.cpp
@@ -164,6 +165,7 @@ set(QGIS_3D_HDRS
 
   3dtiles/qgsvector4d.h
   3dtiles/qgsmatrix4x4.h
+  3dtiles/cachemanager.h
   3dtiles/3dtiles.h
   3dtiles/b3dm.h
   3dtiles/qgs3dtileschunkloader.h

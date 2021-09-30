@@ -19,85 +19,10 @@
 #include <QJsonObject>
 #include <QJsonArray>
 #include <QFile>
-#include <QDir>
 #include <algorithm>
 #include <fstream>
 #include <streambuf>
 #include <iosfwd>
-#include "qgsapplication.h"
-#include "qgssourcecache.h"
-#include <QThread>
-#include <QTimer>
-#include "qgsnetworkcontentfetcherregistry.h"
-
-QString waitForData( QUrl url, const Tileset *ts )
-{
-  QString outFileName = url.toString();
-  if ( url.scheme().startsWith( "http" ) )
-  {
-    bool doDl = true;
-    QString fn = url.fileName();
-    QString cachedFileName = ( ts == NULL ? Tileset::getCacheDirectory( "no_name", fn ) : ts->getCacheDirectory( fn ) ) + fn ;
-    if ( fn.endsWith( ".b3dm" ) )
-    {
-      QFile cachedFile( cachedFileName );
-      if ( cachedFile.exists() )
-      {
-        outFileName = cachedFileName;
-        qDebug() << "DL file (cached)" << url.toString() << "to" << outFileName;
-        doDl = false;
-      }
-    }
-
-    if ( doDl )
-    {
-      QEventLoop loop;
-      QgsFetchedContent *fetchedContent = QgsApplication::instance()->networkContentFetcherRegistry()->fetch( url.toString(), Qgis::ActionStart::Immediate );
-      QObject::connect( fetchedContent, &QgsFetchedContent::fetched, &loop, &QEventLoop::quit );
-
-      loop.exec();
-      /*
-      QCoreApplication::processEvents( QEventLoop::ProcessEventsFlag::EventLoopExec );
-      int i = 1000;
-      while ( i > 0 && ( fetchedContent->status() == QgsFetchedContent::Downloading
-                   || fetchedContent->status() == QgsFetchedContent::NotStarted ) )
-      {
-      QThread::msleep(50);
-      QCoreApplication::processEvents( QEventLoop::ProcessEventsFlag::EventLoopExec );
-      i--;
-      }*/
-
-      if ( fetchedContent->status() == QgsFetchedContent::Finished )
-      {
-        if ( fn.endsWith( ".b3dm" ) )
-        {
-          ts == NULL ? Tileset::createCacheDirectories( "no_name", fn ) : ts->createCacheDirectories( fn );
-
-          QFile dLFile( fetchedContent->filePath() );
-          if ( !dLFile.rename( cachedFileName ) )
-          {
-            LOGTHROW( critical, std::runtime_error, QString( "Unable to create cache file:" + cachedFileName ) );
-          }
-          dLFile.close();
-
-          outFileName = cachedFileName;
-        }
-        else
-        {
-          outFileName = fetchedContent->filePath();
-        }
-
-        qDebug() << "DL file" << url.toString() << "to" << outFileName;
-      }
-      else
-      {
-        LOGTHROW( critical, std::runtime_error, QString( "Data not ready for:" + url.toString() ) );
-      }
-    }
-  }
-
-  return outFileName;
-}
 
 // =====================================================================
 // QgsMatrix4x4
@@ -276,13 +201,13 @@ QgsGeometry BoundingVolume::asGeometry( const QgsMatrix4x4 &transform,
   return QgsGeometry( new QgsLineString( cube.asQgsPoints() ) );
 }
 
-QgsAABB BoundingVolume::asQgsAABB( const QgsMatrix4x4 &transform, const QgsCoordinateTransform *coordTrans, bool flipZY )
+QgsAABB BoundingVolume::asQgsAABB( const QgsMatrix4x4 &transform, const QgsCoordinateTransform *coordTrans, bool flipToYUp )
 {
   Q3dCube cube = asCube( transform, coordTrans );
 
-  if ( flipZY )
+  if ( ( coordTrans != NULL && coordTrans->destinationCrs() != QgsCoordinateReferenceSystem::fromEpsgId( 4978 ) ) || flipToYUp )
   {
-    cube = flipZYMat * cube;
+    cube = flipToYUpMat * cube;
   }
 
   return QgsAABB( cube.ll().x(), cube.ll().y(), cube.ll().z(),
@@ -523,7 +448,7 @@ const QList<std::shared_ptr<Tile>> Tile::children()
 
 QgsMatrix4x4 Tile::getCombinedTransformRec( Tile *p )
 {
-  if ( p->mParentTile != NULL ) // current tile is then child of another tile
+  if ( p->mParentTile != NULL ) // when current tile is the child of another tile
   {
     return getCombinedTransformRec( p->mParentTile ) * p->mTransform;
   }
@@ -580,13 +505,13 @@ QgsGeometry Tile::getBoundingVolumeAsGeometry( const QgsCoordinateTransform *coo
 QgsAABB Tile::getBoundingVolumeAsAABB( const QgsCoordinateTransform *coordTrans )
 {
   QgsMatrix4x4 *ct = getCombinedTransform();
-  return mBv->asQgsAABB( *ct, coordTrans, mParentTileset->getFlipY() );
+  return mBv->asQgsAABB( *ct, coordTrans, mParentTileset->getFlipToYUp() );
 }
 
 bool Tile::contains( const QgsVector3D &point )
 {
   QgsMatrix4x4 *ct = getCombinedTransform();
-  QgsAABB c = mBv->asQgsAABB( *ct, NULL, mParentTileset->getFlipY() );
+  QgsAABB c = mBv->asQgsAABB( *ct, NULL, mParentTileset->getFlipToYUp() );
   return ( point.x() >= c.minimum().x() && point.y() >= c.minimum().y() && point.z() >= c.minimum().z()
            && point.x() <= c.maximum().x() && point.y() <= c.maximum().y() && point.z() <= c.maximum().z() );
 }
@@ -657,7 +582,7 @@ ThreeDTilesContent *Tile::getContent()
 // =====================================================================
 Tileset::Tileset( const QJsonObject &obj, const QUrl &url, Tile *parentTile, int depth ) :
   ThreeDTilesContent( tileset, url, parentTile, depth ),
-  mRootBb( NULL ), mCorrectTranslation( false ), mFlipY( false ), mUseFakeMaterial( false ),
+  mRootBb( NULL ), mCorrectTranslation( false ), mFlipToYUp( false ), mUseFakeMaterial( false ),
   mUseOriginalGeomError( false ), mName( "no_name" )
 {
   try
@@ -690,7 +615,7 @@ std::unique_ptr<ThreeDTilesContent> Tileset::fromUrl( const QUrl &url, const QUr
 
   try
   {
-    QString fileName = waitForData( u, ( parentTile == NULL ? NULL : parentTile->mParentTileset ) );
+    QString fileName = CacheManager::retrieveFileContent( u, ( parentTile == NULL ? "no_name" : parentTile->mParentTileset->getName() ) );
     QFile loadFile( fileName );
     loadFile.open( QIODevice::ReadOnly );
     QByteArray saveData = loadFile.readAll();
@@ -846,14 +771,14 @@ QString Tileset::getName() const
 }
 
 
-void Tileset::setFlipY( bool val )
+void Tileset::setFlipToYUp( bool val )
 {
-  mFlipY = val;
+  mFlipToYUp = val;
 }
 
-bool Tileset::getFlipY() const
+bool Tileset::getFlipToYUp() const
 {
-  return getRootTileset()->mFlipY;
+  return getRootTileset()->mFlipToYUp;
 }
 
 
@@ -887,49 +812,14 @@ bool Tileset::getUseOriginalGeomError() const
   return getRootTileset()->mUseOriginalGeomError;
 }
 
-void Tileset::createCacheDirectories( const QString &tsName, const QString &fileName )
-{
-  QDir rootDir( cacheDir3dTiles );
-  if ( !rootDir.exists() )
-  {
-    if ( !rootDir.mkdir( cacheDir3dTiles ) )
-    {
-      LOGTHROW( critical, std::runtime_error, QString( "Unable to create cache dir:" + cacheDir3dTiles ) );
-    }
-  }
-
-  QDir tsDir( cacheDir3dTiles + tsName );
-  if ( !tsDir.exists() )
-  {
-    if ( !tsDir.mkdir( cacheDir3dTiles + tsName ) )
-    {
-      LOGTHROW( critical, std::runtime_error, QString( "Unable to create tileset cache dir:" + cacheDir3dTiles + tsName ) );
-    }
-  }
-
-  QDir tileDir( cacheDir3dTiles + tsName + "/" + fileName );
-  if ( !tileDir.exists() )
-  {
-    if ( !tileDir.mkdir( cacheDir3dTiles + tsName + "/" + fileName ) )
-    {
-      LOGTHROW( critical, std::runtime_error, QString( "Unable to create tile cache dir:" + cacheDir3dTiles + tsName + "/" + fileName ) );
-    }
-  }
-}
-
 void Tileset::createCacheDirectories( const QString &fn ) const
 {
-  createCacheDirectories( getName(), fn );
-}
-
-QString Tileset::getCacheDirectory( const QString &tsName, const QString &fileName )
-{
-  return cacheDir3dTiles + tsName + "/" + fileName + "/" ;
+  CacheManager::createCacheDirectories( getName(), fn );
 }
 
 QString Tileset::getCacheDirectory( const QString &fn ) const
 {
-  return getCacheDirectory( getName(), fn );
+  return CacheManager::getCacheDirectory( getName(), fn );
 }
 
 
@@ -947,7 +837,7 @@ B3dmHolder::B3dmHolder( QIODevice &dev, const QUrl &url, Tile *parentTile, int d
 std::unique_ptr<ThreeDTilesContent> B3dmHolder::fromUrl( const QUrl &url, const QUrl &base, Tile *parentTile, int depth )
 {
   QUrl u = base.resolved( url );
-  QString fileName = waitForData( u, parentTile->mParentTileset );
+  QString fileName = CacheManager::retrieveFileContent( u, parentTile->mParentTileset->getName() );
 
   QFile loadFile( fileName );
   loadFile.open( QIODevice::ReadOnly );
