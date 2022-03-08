@@ -20,6 +20,7 @@
 #include "qgsshadowrenderingframegraph.h"
 #include "qgspostprocessingentity.h"
 #include "qgspreviewquad.h"
+#include "qgs3daxis.h"
 
 namespace Qt3DRender
 {
@@ -83,6 +84,7 @@ class _3D_EXPORT QgsWindow3DEngine : public QgsAbstract3DEngine
     Qt3DCore::QEntity *mSceneRoot = nullptr;
 
     QgsPreviewQuad *mPreviewQuad = nullptr;
+    Qgs3DAxis *m3DAxis = nullptr;
     QSize mSize = QSize( 1024, 768 );
 };
 
