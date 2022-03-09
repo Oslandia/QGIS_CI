@@ -57,6 +57,7 @@ class Qgs3DMapExportSettings;
 class QgsShadowRenderingFrameGraph;
 class QgsPostprocessingEntity;
 class QgsChunkNode;
+class Qgs3DBoundingBoxEntity;
 
 #define SIP_NO_FILE
 
@@ -207,6 +208,7 @@ class _3D_EXPORT Qgs3DMapScene : public Qt3DCore::QEntity
     QgsSkyboxEntity *mSkybox = nullptr;
     //! Entity that shows rotation center = useful for debugging camera issues
     Qt3DCore::QEntity *mEntityRotationCenter = nullptr;
+    Qgs3DBoundingBoxEntity *mBoundingBox = nullptr;
 };
 
 #endif // QGS3DMAPSCENE_H
