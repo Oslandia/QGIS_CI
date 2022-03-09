@@ -84,6 +84,7 @@
 #include "qgspointcloudlayerelevationproperties.h"
 #include "qgspointcloudlayer.h"
 #include "qgspointcloudlayerchunkloader_p.h"
+#include "qgs3dboundingboxentity.h"
 
 Qgs3DMapScene::Qgs3DMapScene( Qgs3DMapSettings &map, QgsAbstract3DEngine *engine )
   : mMap( map )
@@ -626,6 +627,9 @@ void Qgs3DMapScene::createTerrainDeferred()
     QgsAABB rootBbox = mMap.terrainGenerator()->rootChunkBbox( mMap );
     float rootError = mMap.terrainGenerator()->rootChunkError( mMap );
     mMap.terrainGenerator()->setupQuadtree( rootBbox, rootError, maxZoomLevel );
+
+    mBoundingBox = new Qgs3DBoundingBoxEntity( this );
+    mBoundingBox->setBox( rootBbox );
 
     mTerrain = new QgsTerrainEntity( mMap );
     mTerrain->setParent( this );

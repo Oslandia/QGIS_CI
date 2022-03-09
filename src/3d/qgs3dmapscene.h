@@ -58,6 +58,7 @@ class Qgs3DMapExportSettings;
 class QgsShadowRenderingFrameGraph;
 class QgsPostprocessingEntity;
 class QgsChunkNode;
+class Qgs3DBoundingBoxEntity;
 
 #define SIP_NO_FILE
 
@@ -250,6 +251,9 @@ class _3D_EXPORT Qgs3DMapScene : public Qt3DCore::QEntity
 
     //! 3d axis visualization
     Qgs3DAxis *m3DAxis = nullptr;
+
+    // 3D bounding box visualization
+    Qgs3DBoundingBoxEntity *mBoundingBox = nullptr;
 
 };
 
