@@ -28,7 +28,9 @@ class QwtCompass;
 #include "qgs3dmapcanvas.h"
 #include "qgscameracontroller.h"
 
-class Qgs3DNavigationWidget : public QWidget
+#include <ui_3dnavigationwidget.h>
+
+class Qgs3DNavigationWidget : public QWidget, private Ui::Q3DNavigationWidget
 {
     Q_OBJECT
   public:
@@ -40,6 +42,7 @@ class Qgs3DNavigationWidget : public QWidget
      * Update the state of navigation widget from camera's state
      */
     void updateFromCamera();
+    void updateAxisMode( const QString &modeStr );
 
   signals:
     void sizeChanged( const QSize &newSize );
@@ -51,16 +54,6 @@ class Qgs3DNavigationWidget : public QWidget
 
   private:
     Qgs3DMapCanvas *mParent3DMapCanvas = nullptr;
-    QToolButton *mZoomInButton = nullptr;
-    QToolButton *mZoomOutButton = nullptr;
-    QToolButton *mTiltUpButton = nullptr;
-    QToolButton *mTiltDownButton = nullptr;
-    QToolButton *mMoveUpButton = nullptr;
-    QToolButton *mMoveRightButton = nullptr;
-    QToolButton *mMoveDownButton = nullptr;
-    QToolButton *mMoveLeftButton = nullptr;
-    QwtCompass *mCompas = nullptr;
-    QTableView *mCameraInfo = nullptr;
     QStandardItemModel *mCameraInfoItemModel = nullptr;
 };
 
