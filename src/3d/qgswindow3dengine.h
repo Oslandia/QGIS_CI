@@ -75,6 +75,9 @@ class _3D_EXPORT QgsWindow3DEngine : public QgsAbstract3DEngine
     QSurface *surface() const override;
 
     void setSize( QSize s ) override;
+
+    Qgs3dAxis *get3DAxis() { return m3DAxis; };
+
   private:
     //! 3D window with all the 3D magic inside
     Qt3DExtras::Qt3DWindow *mWindow3D = nullptr;

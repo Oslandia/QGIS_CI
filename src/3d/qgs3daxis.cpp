@@ -13,19 +13,15 @@
  *                                                                         *
  ***************************************************************************/
 
-#include <Qt3DCore/QEntity>
 #include <Qt3DCore/QTransform>
 #include <Qt3DExtras/QConeMesh>
 #include <Qt3DExtras/QCylinderMesh>
 #include <Qt3DExtras/QPhongMaterial>
-#include <Qt3DExtras/Qt3DWindow>
 #include <Qt3DExtras/QText2DEntity>
-#include <Qt3DRender/QCamera>
 #include <Qt3DRender/QCameraSelector>
 #include <Qt3DRender/QClearBuffers>
 #include <Qt3DRender/QLayer>
 #include <Qt3DRender/QLayerFilter>
-#include <Qt3DRender/QViewport>
 
 #include "qgs3daxis.h"
 
@@ -69,9 +65,16 @@ Qgs3DAxis::Qgs3DAxis( Qt3DExtras::Qt3DWindow *mainWindow, Qt3DRender::QCamera *m
 
 void Qgs3DAxis::createScene()
 {
-  createAxis( Axis::X );
-  createAxis( Axis::Y );
-  createAxis( Axis::Z );
+  if ( mMode != OFF && mAxisRoot == nullptr )
+  {
+    qDebug() << "Should recreate mAxisRoot" << mMode;
+    mAxisRoot = new Qt3DCore::QEntity( mSceneEntity );
+    mAxisRoot->setObjectName( "3DAxisRoot" );
+    createAxis( Axis::X );
+    createAxis( Axis::Y );
+    createAxis( Axis::Z );
+    mAxisRoot->setEnabled( true );
+  }
 }
 
 void Qgs3DAxis::createAxis( const Qgs3DAxis::Axis &axis )
@@ -90,19 +93,25 @@ void Qgs3DAxis::createAxis( const Qgs3DAxis::Axis &axis )
     case Axis::X:
       rotation = QQuaternion::fromAxisAndAngle( QVector3D( 0.0f, 0.0f, 1.0f ), -90.0f );
       color = Qt::red;
-      axisName = QString( "X" );
+      if ( mMode == SRS )       axisName = QString( "X" );
+      else if ( mMode == NEU )       axisName = QString( "East" );
+      else axisName = QString( "X?" );
       textTranslation = QVector3D( mCylinderLength, -mCylinderLength / 4.0f, 0.0f );
       break;
     case Axis::Y:
       rotation = QQuaternion::fromAxisAndAngle( QVector3D( 0.0f, 0.0f, 0.0f ), 0.0f );
       color = Qt::green;
-      axisName = QString( "Y" );
+      if ( mMode == SRS )       axisName = QString( "Y" );
+      else if ( mMode == NEU )       axisName = QString( "North" );
+      else        axisName = QString( "Y?" );
       textTranslation = QVector3D( coneBottomRadius, ( mCylinderLength + coneLength ) / 2.0, 0.0f );
       break;
     case Axis::Z:
       rotation = QQuaternion::fromAxisAndAngle( QVector3D( 1.0f, 0.0f, 0.0f ), 90.0f );
       color = Qt::blue;
-      axisName = QString( "Z" );
+      if ( mMode == SRS )       axisName = QString( "Z" );
+      else if ( mMode == NEU )       axisName = QString( "Up" );
+      else axisName = QString( "Z?" );
       textTranslation = QVector3D( 0.0f, -mCylinderLength / 4.0f, mCylinderLength + coneLength / 2.0 );
       break;
     default:
@@ -110,7 +119,7 @@ void Qgs3DAxis::createAxis( const Qgs3DAxis::Axis &axis )
   }
 
   // cylinder
-  Qt3DCore::QEntity *cylinder = new Qt3DCore::QEntity( mSceneEntity );
+  Qt3DCore::QEntity *cylinder = new Qt3DCore::QEntity( mAxisRoot );
   Qt3DExtras::QCylinderMesh *cylinderMesh = new Qt3DExtras::QCylinderMesh;
   cylinderMesh->setRadius( cylinderRadius );
   cylinderMesh->setLength( mCylinderLength );
@@ -131,7 +140,7 @@ void Qgs3DAxis::createAxis( const Qgs3DAxis::Axis &axis )
   cylinder->addComponent( cylinderTransform );
 
   // cone
-  Qt3DCore::QEntity *coneEntity = new Qt3DCore::QEntity( mSceneEntity );
+  Qt3DCore::QEntity *coneEntity = new Qt3DCore::QEntity( mAxisRoot );
   Qt3DExtras::QConeMesh *coneMesh = new Qt3DExtras::QConeMesh;
   coneMesh->setLength( coneLength );
   coneMesh->setBottomRadius( coneBottomRadius );
@@ -154,7 +163,7 @@ void Qgs3DAxis::createAxis( const Qgs3DAxis::Axis &axis )
 
   // TODO must face the camera
   // axis name
-  Qt3DExtras::QText2DEntity *textWhite = new Qt3DExtras::QText2DEntity( mSceneEntity );
+  Qt3DExtras::QText2DEntity *textWhite = new Qt3DExtras::QText2DEntity( mAxisRoot );
   textWhite->setFont( QFont( "monospace", 8 ) );
   textWhite->setHeight( 25 );
   textWhite->setWidth( 125 );
@@ -166,7 +175,7 @@ void Qgs3DAxis::createAxis( const Qgs3DAxis::Axis &axis )
   textWhiteTransform->setTranslation( textTranslation );
   textWhite->addComponent( textWhiteTransform );
 
-  Qt3DExtras::QText2DEntity *textBlack = new Qt3DExtras::QText2DEntity( mSceneEntity );
+  Qt3DExtras::QText2DEntity *textBlack = new Qt3DExtras::QText2DEntity( mAxisRoot );
   textBlack->setFont( QFont( "monospace", 8 ) );
   textBlack->setHeight( 20 );
   textBlack->setWidth( 100 );
@@ -195,4 +204,25 @@ void Qgs3DAxis::updateCamera( const QVector3D &viewVector )
   QVector3D mainCameraShift =  - viewVector.normalized() * 2.0 * mCylinderLength; // 2.0 * mCylinderLength ==> to be far enough to have no clipping
   qDebug() << "update camera, main Camera shift" << mainCameraShift;
   mCamera->setPosition( mainCameraShift );
+}
+
+void Qgs3dAxis::updateMode( Mode axisMode )
+{
+  if ( mMode != axisMode && mAxisRoot )
+  {
+    for ( int i = 0; i < mSceneEntity->childNodes().size(); i++ )
+    {
+      if ( mSceneEntity->childNodes().at( i )->objectName() == "3DAxisRoot" )
+      {
+        qDebug() << "Should delete mAxisRoot";
+        mSceneEntity->childNodes().remove( i );
+        mAxisRoot->setEnabled( false );
+        delete mAxisRoot;
+        mAxisRoot = nullptr;
+        break;
+      }
+    }
+  }
+  mMode = axisMode;
+  createScene();
 }

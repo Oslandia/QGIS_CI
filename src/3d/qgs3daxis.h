@@ -16,27 +16,17 @@
 #ifndef QGS3DAXIS_H
 #define QGS3DAXIS_H
 
-#include <QSurface>
+#include "qgis_3d.h"
 
-namespace Qt3DCore
-{
-  class QEntity;
-}
-
-namespace Qt3DRender
-{
-  class QCamera;
-  class QViewport;
-}
-
-namespace Qt3DExtras
-{
-  class Qt3DWindow;
-}
+#include <QVector3D>
+#include <Qt3DCore/QEntity>
+#include <Qt3DRender/QCamera>
+#include <Qt3DExtras/Qt3DWindow>
+#include <Qt3DRender/QViewport>
 
 #define SIP_NO_FILE
 
-class Qgs3DAxis : public QObject
+class _3D_EXPORT Qgs3DAxis : public QObject
 {
     Q_OBJECT
   public:
@@ -48,6 +38,15 @@ class Qgs3DAxis : public QObject
       Y = 2,
       Z = 3
     };
+
+    enum Mode
+    {
+      OFF = 1,
+      SRS = 2,
+      NEU = 3 // North-East-Up
+    };
+
+    void updateMode( Qgs3dAxis::Mode axisMode );
 
   private:
     void createScene();
@@ -61,6 +60,8 @@ class Qgs3DAxis : public QObject
     Qt3DRender::QCamera *mCamera = nullptr;
     Qt3DRender::QViewport *mViewport = nullptr;
     float mCylinderLength = 4.0f;
+    Qgs3dAxis::Mode mMode = Qgs3dAxis::Mode::SRS;
+    Qt3DCore::QEntity *mAxisRoot = nullptr;
 };
 
 #endif // QGS3DAXIS_H
