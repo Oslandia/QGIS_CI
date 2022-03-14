@@ -32,7 +32,7 @@
       <number>10</number>
      </property>
      <item row="0" column="0">
-      <widget class="QToolButton" name="moveUpButton">
+      <widget class="QToolButton" name="tiltUpButton">
        <property name="text">
         <string/>
        </property>
@@ -49,7 +49,7 @@
       </widget>
      </item>
      <item row="0" column="1" alignment="Qt::AlignHCenter">
-      <widget class="QToolButton" name="tiltUpButton">
+      <widget class="QToolButton" name="moveUpButton">
        <property name="text">
         <string/>
        </property>

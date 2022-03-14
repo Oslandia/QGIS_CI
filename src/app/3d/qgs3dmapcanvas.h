@@ -23,6 +23,7 @@
 #include "qgsrange.h"
 #include "qgscameracontroller.h"
 #include "qgsrectangle.h"
+#include "qgs3daxis.h"
 
 namespace Qt3DExtras
 {
@@ -119,6 +120,13 @@ class Qgs3DMapCanvas : public QWidget
      */
     QVector<QgsPointXY> viewFrustum2DExtent();
 
+    /**
+     * Returns the 3D axis object
+     *
+     * \since QGIS 3.26
+     */
+    Qgs3DAxis *get3DAxis() { return m3DAxis; };
+
   signals:
     //! Emitted when the 3D map canvas was successfully saved as image
     void savedAsImage( const QString &fileName );
@@ -177,6 +185,8 @@ class Qgs3DMapCanvas : public QWidget
     QgsTemporalController *mTemporalController = nullptr;
 
     QSplitter *mSplitter = nullptr;
+
+    Qgs3DAxis *m3DAxis = nullptr;
 };
 
 #include "qgswindow3dengine.h"
