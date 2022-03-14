@@ -23,14 +23,16 @@
 #include <Qt3DRender/QCamera>
 #include <Qt3DExtras/Qt3DWindow>
 #include <Qt3DRender/QViewport>
+#include <Qt3DExtras/QText2DEntity>
+#include "qgs3dmapsettings.h"
 
 #define SIP_NO_FILE
 
-class _3D_EXPORT Qgs3DAxis : public QObject
+class Qgs3DAxis : public QObject
 {
     Q_OBJECT
   public:
-    Qgs3DAxis( Qt3DExtras::Qt3DWindow *mainWindow, Qt3DRender::QCamera *mainCamera, Qt3DCore::QEntity *root );
+    Qgs3DAxis( Qt3DExtras::Qt3DWindow *mainWindow,  Qt3DCore::QEntity *main3DScene, QgsCameraController *camera, const Qgs3DMapSettings *map );
 
     enum Axis
     {
@@ -46,12 +48,12 @@ class _3D_EXPORT Qgs3DAxis : public QObject
       NEU = 3 // North-East-Up
     };
 
-    void updateMode( Qgs3dAxis::Mode axisMode );
+    void updateMode( Qgs3DAxis::Mode axisMode );
 
   private:
     void createScene();
     void createAxis( const Axis &axis );
-    void updateCamera( const QVector3D &viewVector );
+    void updateCamera( /*const QVector3D &viewVector*/ );
     void updateViewportSize( int val );
 
     Qt3DExtras::Qt3DWindow *mMainWindow = nullptr;
@@ -60,8 +62,14 @@ class _3D_EXPORT Qgs3DAxis : public QObject
     Qt3DRender::QCamera *mCamera = nullptr;
     Qt3DRender::QViewport *mViewport = nullptr;
     float mCylinderLength = 4.0f;
-    Qgs3dAxis::Mode mMode = Qgs3dAxis::Mode::SRS;
+    Qgs3DAxis::Mode mMode = Qgs3DAxis::Mode::SRS;
     Qt3DCore::QEntity *mAxisRoot = nullptr;
+    Qt3DExtras::QText2DEntity *mTextWhite_X, *mTextWhite_Y, *mTextWhite_Z;
+
+    Qt3DCore::QTransform *mTextTransform_X, *mTextTransform_Y, *mTextTransform_Z;
+    QgsCoordinateReferenceSystem mCrs;
+    QVector3D mPreviousVector;
+
 };
 
 #endif // QGS3DAXIS_H

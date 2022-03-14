@@ -36,8 +36,6 @@ QgsWindow3DEngine::QgsWindow3DEngine( QObject *parent )
 
   // force switching to no shadow rendering
   setShadowRenderingEnabled( false );
-
-  m3DAxis = new Qgs3DAxis( mWindow3D, mWindow3D->camera(), mRoot );
 }
 
 QWindow *QgsWindow3DEngine::window()
