@@ -7,7 +7,6 @@ set(QGIS_3D_SRCS
   qgsabstract3dengine.cpp
   qgsabstractvectorlayer3drenderer.cpp
   qgs3danimationsettings.cpp
-  qgs3daxis.cpp
   qgs3dexportobject.cpp
   qgs3dmapexportsettings.cpp
   qgs3dmapscene.cpp
@@ -102,7 +101,6 @@ set(QGIS_3D_HDRS
   processing/qgs3dalgorithms.h
   qgs3d.h
   qgs3danimationsettings.h
-  qgs3daxis.h
   qgs3dmapscene.h
   qgs3dmapsettings.h
   qgs3dsceneexporter.h
