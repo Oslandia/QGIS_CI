@@ -27,7 +27,7 @@ get-sonar-binaries:
     - develop
 
 build:
-image: qgis/qgis3-build-deps:latest
+  image: qgis/qgis3-build-deps:latest
   stage: build
   cache:
     policy: pull-push
