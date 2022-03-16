@@ -16,7 +16,8 @@ mirror_from_github:
     - git config --global user.name "${GITLAB_USER_NAME}"
     - git config --global user.email "${GITLAB_USER_EMAIL}"
   script:
-    - git checkout master
+    - git checkout develop
     - git pull
+    - git checkout master
     - git pull --ff-only "https://github.com/qgis/QGIS.git" master
     - git push -f "git@gitlab.com:Oslandia/qgis/qgis.git" master
