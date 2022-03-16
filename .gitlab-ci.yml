@@ -1,5 +1,6 @@
 stages:
   - mirror from github
+  - build
 
 mirror_from_github:
   stage: mirror from github
@@ -21,3 +22,8 @@ mirror_from_github:
     - git checkout master
     - git pull --ff-only "https://github.com/qgis/QGIS.git" master
     - git push -f "git@gitlab.com:Oslandia/qgis/qgis.git" master
+    
+    
+include:
+  - local: /.gitlab/pipeline/sonar.yml
+
