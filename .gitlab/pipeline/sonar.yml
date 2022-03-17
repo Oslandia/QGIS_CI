@@ -41,6 +41,7 @@ build:
     # prepare the build tree
     - mkdir build
     - cmake -S . -B build -GNinja -DCMAKE_BUILD_TYPE=Debug -DWITH_DESKTOP=ON -DWITH_SERVER=OFF -DWITH_3D=ON -DWITH_BINDINGS=ON -DWITH_CUSTOM_WIDGETS=OFF -DBINDINGS_GLOBAL_INSTALL=OFF -DWITH_STAGED_PLUGINS=ON -DWITH_GRASS=OFF -DSUPPRESS_QT_WARNINGS=ON -DDISABLE_DEPRECATED=ON -DENABLE_TESTS=OFF -DWITH_QSPATIALITE=OFF -DWITH_APIDOC=OFF -DWITH_ASTYLE=OFF -DQT5_3DEXTRA_LIBRARY="/usr/lib/x86_64-linux-gnu/libQt53DExtras.so" -DQT5_3DEXTRA_INCLUDE_DIR="external/qt3dextra-headers"  -DQt53DExtras_DIR="external/qt3dextra-headers/cmake/Qt53DExtras" -DCMAKE_PREFIX_PATH="external/qt3dextra-headers"
+    - cd build
     # run the build inside the build wrapper
     - build-wrapper/build-wrapper-linux-x86-64 --out-dir bw-output ninja -j0
   artifacts:
