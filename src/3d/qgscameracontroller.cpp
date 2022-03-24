@@ -147,6 +147,7 @@ static QVector3D unproject( QVector3D v, const QMatrix4x4 &modelView, const QMat
 }
 
 
+// Deprecated!
 float find_x_on_line( float x0, float y0, float x1, float y1, float y )
 {
   const float d_x = x1 - x0;
