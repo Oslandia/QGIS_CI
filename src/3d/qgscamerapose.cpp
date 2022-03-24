@@ -43,6 +43,11 @@ void QgsCameraPose::readXml( const QDomElement &elem )
   mHeadingAngle = elem.attribute( QStringLiteral( "heading" ) ).toFloat();
 }
 
+void QgsCameraPose::setDistanceFromCenterPoint( float distance )
+{
+  mDistanceFromCenterPoint = std::max( distance, 10.0f );
+}
+
 void QgsCameraPose::setPitchAngle( float pitch )
 {
   // prevent going over the head
