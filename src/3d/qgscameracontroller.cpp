@@ -124,6 +124,7 @@ void QgsCameraController::setViewport( QRect viewport )
 }
 
 
+// Deprecated!
 static QVector3D unproject( QVector3D v, const QMatrix4x4 &modelView, const QMatrix4x4 &projection, QRect viewport )
 {
   // Reimplementation of QVector3D::unproject() - see qtbase/src/gui/math3d/qvector3d.cpp
