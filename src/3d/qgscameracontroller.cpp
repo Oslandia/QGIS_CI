@@ -287,9 +287,6 @@ void QgsCameraController::updateCameraFromPose()
     mCameraPose.setCenterPoint( QgsVector3D( 0, 0, 0 ) );
   }
 
-  if ( mCameraPose.distanceFromCenterPoint() < 10 )
-    mCameraPose.setDistanceFromCenterPoint( 10 );
-
   if ( mCamera )
     mCameraPose.updateCamera( mCamera );
   emit cameraChanged();
