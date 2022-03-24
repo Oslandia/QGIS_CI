@@ -275,7 +275,10 @@ class _3D_EXPORT QgsCameraController : public Qt3DCore::QEntity
 
     void handleTerrainNavigationWheelZoom();
 
-    double cameraCenterElevation();
+    /**
+     * \deprecated since QGIS 3.26, this is not used anymore
+    */
+    Q_DECL_DEPRECATED double cameraCenterElevation();
 
     /**
      * Returns the minimum depth value in the square [px - 3, px + 3] * [py - 3, py + 3]

@@ -279,6 +279,7 @@ void QgsCameraController::readXml( const QDomElement &elem )
   setLookingAtPoint( QgsVector3D( x, elev, y ), dist, pitch, yaw );
 }
 
+// Deprecated!
 double QgsCameraController::cameraCenterElevation()
 {
   double res = 0.0;
