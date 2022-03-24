@@ -151,6 +151,7 @@ void QgsCameraController::rotateCamera( float diffPitch, float diffYaw )
   mCameraPose.setCenterPoint( viewCenter );
   mCameraPose.setPitchAngle( pitch + diffPitch );
   mCameraPose.setHeadingAngle( yaw + diffYaw );
+  updateCameraFromPose();
 }
 
 
@@ -410,7 +411,6 @@ void QgsCameraController::onPositionChangedTerrainNavigation( Qt3DInput::QMouseE
     const float diffPitch = 0.2f * dy;
     const float diffYaw = - 0.2f * dx;
     rotateCamera( diffPitch, diffYaw );
-    updateCameraFromPose();
   }
   else if ( hasLeftButton && !hasShift && !hasCtrl )
   {
@@ -764,7 +764,6 @@ void QgsCameraController::onKeyPressedTerrainNavigation( Qt3DInput::QKeyEvent *e
       const float diffPitch = ty;   // down key = rotating camera down
       const float diffYaw = -tx;    // right key = rotating camera to the right
       rotateCamera( diffPitch, diffYaw );
-      updateCameraFromPose();
     }
   }
 
@@ -927,7 +926,6 @@ void QgsCameraController::onPositionChangedFlyNavigation( Qt3DInput::QMouseEvent
 
       const float diffYaw = - 0.2f * dx;
       rotateCamera( diffPitch, diffYaw );
-      updateCameraFromPose();
     }
     else if ( mouse->buttons() & Qt::LeftButton )
     {
@@ -944,7 +942,6 @@ void QgsCameraController::onPositionChangedFlyNavigation( Qt3DInput::QMouseEvent
       }
       const float diffYaw = - 0.2f * dx;
       rotateCamera( diffPitch, diffYaw );
-      updateCameraFromPose();
     }
   }
 
