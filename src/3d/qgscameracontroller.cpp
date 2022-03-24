@@ -154,6 +154,7 @@ float find_x_on_line( float x0, float y0, float x1, float y1, float y )
   return x0 + k * d_x;
 }
 
+// Deprecated!
 QPointF screen_point_to_point_on_plane( QPointF pt, QRect viewport, Qt3DRender::QCamera *camera, float y )
 {
   // get two points of the ray
