@@ -287,10 +287,6 @@ void QgsCameraController::updateCameraFromPose()
     mCameraPose.setCenterPoint( QgsVector3D( 0, 0, 0 ) );
   }
 
-  if ( mCameraPose.pitchAngle() > 180 )
-    mCameraPose.setPitchAngle( 180 );  // prevent going over the head
-  if ( mCameraPose.pitchAngle() < 0 )
-    mCameraPose.setPitchAngle( 0 );   // prevent going over the head
   if ( mCameraPose.distanceFromCenterPoint() < 10 )
     mCameraPose.setDistanceFromCenterPoint( 10 );
 
