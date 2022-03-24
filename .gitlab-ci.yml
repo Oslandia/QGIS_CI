@@ -1,6 +1,5 @@
 stages:
   - mirror from github
-  - build
 
 mirror_from_github:
   stage: mirror from github
