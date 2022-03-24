@@ -62,8 +62,11 @@ void QgsCameraPose::setPitchAngle( float pitch )
   // prevent going over the head
   if ( pitch > 180.0f )
     mPitchAngle = 180.0f;
-  else if ( pitch < 0.0f )
-    mPitchAngle = 0.0f;
+  else if ( pitch < 0.2f )
+    mPitchAngle = 0.2f;  /* prevent bug in QgsCameraPose::updateCamera when updating camera rotation.
+                            With a mPitchAngle < 0.2, QQuaternion::fromEulerAngles( mPitchAngle, mHeadingAngle, 0 ) will return bad rotation angle.
+                            See https://bugreports.qt.io/browse/QTBUG-72103
+                         */
   else
     mPitchAngle = pitch;
 }
