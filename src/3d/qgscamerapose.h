@@ -55,12 +55,12 @@ class _3D_EXPORT QgsCameraPose
     //! Returns distance of the camera from the center point
     float distanceFromCenterPoint() const { return mDistanceFromCenterPoint; }
     //! Sets distance of the camera from the center point
-    void setDistanceFromCenterPoint( float distance ) { mDistanceFromCenterPoint = distance; }
+    void setDistanceFromCenterPoint( float distance );
 
     //! Returns pitch angle in degrees
     float pitchAngle() const { return mPitchAngle; }
     //! Sets pitch angle in degrees
-    void setPitchAngle( float pitch ) { mPitchAngle = pitch; }
+    void setPitchAngle( float pitch );
 
     //! Returns heading (yaw) angle in degrees
     float headingAngle() const { return mHeadingAngle; }

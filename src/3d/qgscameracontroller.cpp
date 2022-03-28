@@ -124,6 +124,7 @@ void QgsCameraController::setViewport( QRect viewport )
 }
 
 
+// Deprecated!
 static QVector3D unproject( QVector3D v, const QMatrix4x4 &modelView, const QMatrix4x4 &projection, QRect viewport )
 {
   // Reimplementation of QVector3D::unproject() - see qtbase/src/gui/math3d/qvector3d.cpp
@@ -146,6 +147,7 @@ static QVector3D unproject( QVector3D v, const QMatrix4x4 &modelView, const QMat
 }
 
 
+// Deprecated!
 float find_x_on_line( float x0, float y0, float x1, float y1, float y )
 {
   const float d_x = x1 - x0;
@@ -154,6 +156,7 @@ float find_x_on_line( float x0, float y0, float x1, float y1, float y )
   return x0 + k * d_x;
 }
 
+// Deprecated!
 QPointF screen_point_to_point_on_plane( QPointF pt, QRect viewport, Qt3DRender::QCamera *camera, float y )
 {
   // get two points of the ray
@@ -198,6 +201,7 @@ void QgsCameraController::rotateCamera( float diffPitch, float diffYaw )
   mCameraPose.setCenterPoint( viewCenter );
   mCameraPose.setPitchAngle( pitch + diffPitch );
   mCameraPose.setHeadingAngle( yaw + diffYaw );
+  updateCameraFromPose();
 }
 
 
@@ -279,6 +283,7 @@ void QgsCameraController::readXml( const QDomElement &elem )
   setLookingAtPoint( QgsVector3D( x, elev, y ), dist, pitch, yaw );
 }
 
+// Deprecated!
 double QgsCameraController::cameraCenterElevation()
 {
   double res = 0.0;
@@ -347,13 +352,6 @@ double QgsCameraController::sampleDepthBuffer( const QImage &buffer, int px, int
 
 void QgsCameraController::updateCameraFromPose()
 {
-  if ( mCameraPose.pitchAngle() > 180 )
-    mCameraPose.setPitchAngle( 180 );  // prevent going over the head
-  if ( mCameraPose.pitchAngle() < 0 )
-    mCameraPose.setPitchAngle( 0 );   // prevent going over the head
-  if ( mCameraPose.distanceFromCenterPoint() < 10 )
-    mCameraPose.setDistanceFromCenterPoint( 10 );
-
   if ( mCamera )
     mCameraPose.updateCamera( mCamera );
   emit cameraChanged();
@@ -362,19 +360,7 @@ void QgsCameraController::updateCameraFromPose()
 void QgsCameraController::moveCameraPositionBy( const QVector3D &posDiff )
 {
   mCameraPose.setCenterPoint( mCameraPose.centerPoint() + posDiff );
-
-  if ( mCameraPose.pitchAngle() > 180 )
-    mCameraPose.setPitchAngle( 180 );  // prevent going over the head
-  if ( mCameraPose.pitchAngle() < 0 )
-    mCameraPose.setPitchAngle( 0 );   // prevent going over the head
-  if ( mCameraPose.distanceFromCenterPoint() < 10 )
-    mCameraPose.setDistanceFromCenterPoint( 10 );
-
-  if ( mCamera )
-    mCameraPose.updateCamera( mCamera );
-
-  emit cameraChanged();
-
+  updateCameraFromPose();
 }
 
 void QgsCameraController::onPositionChanged( Qt3DInput::QMouseEvent *mouse )
@@ -486,7 +472,6 @@ void QgsCameraController::onPositionChangedTerrainNavigation( Qt3DInput::QMouseE
     const float diffPitch = 0.2f * dy;
     const float diffYaw = - 0.2f * dx;
     rotateCamera( diffPitch, diffYaw );
-    updateCameraFromPose();
   }
   else if ( hasLeftButton && !hasShift && !hasCtrl )
   {
@@ -842,7 +827,6 @@ void QgsCameraController::onKeyPressedTerrainNavigation( Qt3DInput::QKeyEvent *e
       const float diffPitch = ty;   // down key = rotating camera down
       const float diffYaw = -tx;    // right key = rotating camera to the right
       rotateCamera( diffPitch, diffYaw );
-      updateCameraFromPose();
     }
   }
 
@@ -1005,7 +989,6 @@ void QgsCameraController::onPositionChangedFlyNavigation( Qt3DInput::QMouseEvent
 
       const float diffYaw = - 0.2f * dx;
       rotateCamera( diffPitch, diffYaw );
-      updateCameraFromPose();
     }
     else if ( mouse->buttons() & Qt::LeftButton )
     {
@@ -1022,7 +1005,6 @@ void QgsCameraController::onPositionChangedFlyNavigation( Qt3DInput::QMouseEvent
       }
       const float diffYaw = - 0.2f * dx;
       rotateCamera( diffPitch, diffYaw );
-      updateCameraFromPose();
     }
   }
 
