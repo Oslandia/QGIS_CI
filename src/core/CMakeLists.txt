@@ -704,6 +704,7 @@ set(QGIS_CORE_SRCS
   mesh/qgsmeshdataset.cpp
   mesh/qgsmeshdatasetgroupstore.cpp
   mesh/qgsmeshlayer.cpp
+  mesh/qgsmeshlayerelevationproperties.cpp
   mesh/qgsmeshlayerinterpolator.cpp
   mesh/qgsmeshlayerprofilegenerator.cpp
   mesh/qgsmeshlayerrenderer.cpp
@@ -1475,6 +1476,7 @@ set(QGIS_CORE_HDRS
   mesh/qgsmeshdataset.h
   mesh/qgsmeshdatasetgroupstore.h
   mesh/qgsmeshlayer.h
+  mesh/qgsmeshlayerelevationproperties.h
   mesh/qgsmeshlayerinterpolator.h
   mesh/qgsmeshlayerprofilegenerator.h
   mesh/qgsmeshlayerrenderer.h
