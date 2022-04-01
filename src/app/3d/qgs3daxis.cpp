@@ -21,57 +21,153 @@
 #include <Qt3DRender/QClearBuffers>
 #include <Qt3DRender/QLayer>
 #include <Qt3DRender/QLayerFilter>
+#include <Qt3DRender/qcameralens.h>
 #include<ctime>
 
 #include "qgs3daxis.h"
 
-Qgs3DAxis::Qgs3DAxis( Qt3DExtras::Qt3DWindow *mainWindow, Qt3DCore::QEntity *main3DScene, QgsCameraController *cameraCtrl, const Qgs3DMapSettings *map )
-  : QObject( mainWindow )
+Qgs3DAxis::Qgs3DAxis( Qt3DExtras::Qt3DWindow *parentWindow, Qt3DCore::QEntity *parent3DScene, QgsCameraController *cameraCtrl, const Qgs3DMapSettings *map )
+  : QObject( parentWindow ), mParentWindow( parentWindow ), mParentCamera( cameraCtrl->camera() ),
+    mCylinderLength( 40.0f ), mAxisViewportSize( 3.0 * mCylinderLength ),
+    mAxisViewportVertPos( AxisViewportPosition::END ), mAxisViewportHorizPos( AxisViewportPosition::END ),
+    mFontSize( 10 ), mMode( Mode::SRS ), mAxisRoot( nullptr ), mTextTransform_X( nullptr ), mTextTransform_Y( nullptr ),
+    mTextTransform_Z( nullptr ), mCrs( map->crs() )
 {
-  mMainCamera = cameraCtrl->camera();
-  mMainWindow = mainWindow;
-  mCrs = map->crs();
+  mAxisViewport = constructAxisViewport( parent3DScene );
+  mAxisViewport->setParent( mParentWindow->activeFrameGraph() );
 
-  mSceneEntity = new Qt3DCore::QEntity( main3DScene );
-
-  mCamera = new Qt3DRender::QCamera();
-  mCamera->setParent( mSceneEntity );
-  mCamera->setProjectionType( Qt3DRender::QCameraLens::ProjectionType::OrthographicProjection );
-  mCamera->lens()->setOrthographicProjection(
-    -7.0f, 7.0f,
-    -7.0f, 7.0f,
-    -10.0f, 25.0f );
-  mCamera->setUpVector( -mMainCamera->upVector() );
-  mCamera->setViewCenter( QVector3D( 0.0f, 0.0f, 0.0f ) );
-  // position will be set later
+  mTwoDLabelViewport = constructLabelViewport( parent3DScene, QRectF( 0.0f, 0.0f, 1.0f, 1.0f ) );
+  mTwoDLabelViewport->setParent( mParentWindow->activeFrameGraph() );
 
   connect( cameraCtrl, &QgsCameraController::cameraChanged, this, &Qgs3DAxis::updateCamera );
-  connect( mMainWindow, &Qt3DExtras::Qt3DWindow::widthChanged, this, &Qgs3DAxis::updateViewportSize );
-  connect( mMainWindow, &Qt3DExtras::Qt3DWindow::heightChanged, this, &Qgs3DAxis::updateViewportSize );
+  connect( mParentWindow, &Qt3DExtras::Qt3DWindow::widthChanged, this, &Qgs3DAxis::updateAxisViewportSize );
+  connect( mParentWindow, &Qt3DExtras::Qt3DWindow::heightChanged, this, &Qgs3DAxis::updateAxisViewportSize );
 
-  mViewport = new Qt3DRender::QViewport( mainWindow->activeFrameGraph() );
+  updateAxisViewportSize();
 
-  Qt3DRender::QLayer *layer = new Qt3DRender::QLayer;
-  mSceneEntity->addComponent( layer );
-  layer->setRecursive( true );
-  Qt3DRender::QLayerFilter *layerFilter = new Qt3DRender::QLayerFilter( mViewport );
-  layerFilter->addLayer( layer );
-
-  Qt3DRender::QCameraSelector *cameraSelector = new Qt3DRender::QCameraSelector( layerFilter );
-  cameraSelector->setCamera( mCamera );
-  Qt3DRender::QClearBuffers *clearBuffers = new Qt3DRender::QClearBuffers( cameraSelector );
-
-  clearBuffers->setBuffers( Qt3DRender::QClearBuffers::DepthBuffer );
-
-  createScene();
+  createAxisScene();
 }
 
-void Qgs3DAxis::createScene()
+Qt3DRender::QViewport *Qgs3DAxis::constructAxisViewport( Qt3DCore::QEntity *parent3DScene )
+{
+  auto axisViewport = new Qt3DRender::QViewport;
+  // size will be set later
+
+  mAxisSceneEntity = new Qt3DCore::QEntity;
+  mAxisSceneEntity->setParent( parent3DScene );
+
+  mAxisCamera = new Qt3DRender::QCamera;
+  mAxisCamera->setParent( mAxisSceneEntity );
+  mAxisCamera->setProjectionType( mParentCamera->projectionType() );
+  // always ortho for now as it seem more "accurate"
+  if ( true || mParentCamera->projectionType() == Qt3DRender::QCameraLens::ProjectionType::OrthographicProjection )
+    mAxisCamera->lens()->setOrthographicProjection(
+      -mAxisViewportSize / 2.0f, mAxisViewportSize / 2.0f,
+      -mAxisViewportSize / 2.0f, mAxisViewportSize / 2.0f,
+      -100.0f, 500.0f );
+  else
+    mAxisCamera->lens()->setPerspectiveProjection(
+      mParentCamera->lens()->fieldOfView(), mParentCamera->lens()->aspectRatio(),
+      1.0f, -250.0f );
+
+  mAxisCamera->setUpVector( QVector3D( 0.0f, 0.0f, 1.0f ) );
+  mAxisCamera->setViewCenter( QVector3D( 0.0f, 0.0f, 0.0f ) );
+  // position will be set later
+
+  auto axisLayer = new Qt3DRender::QLayer;
+  axisLayer->setRecursive( true );
+  mAxisSceneEntity->addComponent( axisLayer );
+
+  auto axisLayerFilter = new Qt3DRender::QLayerFilter( axisViewport );
+  axisLayerFilter->addLayer( axisLayer );
+
+  auto axisCameraSelector = new Qt3DRender::QCameraSelector;
+  axisCameraSelector->setParent( axisLayerFilter );
+  axisCameraSelector->setCamera( mAxisCamera );
+
+  auto clearBuffers = new Qt3DRender::QClearBuffers( axisCameraSelector );
+  clearBuffers->setBuffers( Qt3DRender::QClearBuffers::DepthBuffer );
+
+  return axisViewport;
+}
+
+Qt3DRender::QViewport *Qgs3DAxis::constructLabelViewport( Qt3DCore::QEntity *parent3DScene, const QRectF &parentViewportSize )
+{
+  auto twoDViewport = new Qt3DRender::QViewport;
+  twoDViewport->setNormalizedRect( parentViewportSize );
+
+  mTwoDLabelSceneEntity = new Qt3DCore::QEntity;
+  mTwoDLabelSceneEntity->setParent( parent3DScene );
+  mTwoDLabelSceneEntity->setEnabled( true );
+
+  mTwoDLabelCamera = new Qt3DRender::QCamera;
+  mTwoDLabelCamera->setParent( mTwoDLabelSceneEntity );
+  mTwoDLabelCamera->setProjectionType( Qt3DRender::QCameraLens::ProjectionType::OrthographicProjection );
+  mTwoDLabelCamera->lens()->setOrthographicProjection(
+    -mParentWindow->width() / 2.0f, mParentWindow->width() / 2.0f,
+    -mParentWindow->height() / 2.0f, mParentWindow->height() / 2.0f,
+    -10.0f, 100.0f );
+
+  mTwoDLabelCamera->setUpVector( QVector3D( 0.0f, 0.0f, 1.0f ) );
+  mTwoDLabelCamera->setViewCenter( QVector3D( 0.0f, 0.0f, 0.0f ) );
+
+  mTwoDLabelCamera->setPosition( QVector3D( 0.0f, 0.0f, 100.0f ) );
+
+  auto twoDLayer = new Qt3DRender::QLayer;
+  twoDLayer->setRecursive( true );
+  mTwoDLabelSceneEntity->addComponent( twoDLayer );
+
+  auto twoDLayerFilter = new Qt3DRender::QLayerFilter( twoDViewport );
+  twoDLayerFilter->addLayer( twoDLayer );
+
+  auto twoDCameraSelector = new Qt3DRender::QCameraSelector;
+  twoDCameraSelector->setParent( twoDLayerFilter );
+  twoDCameraSelector->setCamera( mTwoDLabelCamera );
+
+  auto clearBuffers = new Qt3DRender::QClearBuffers( twoDCameraSelector );
+  clearBuffers->setBuffers( Qt3DRender::QClearBuffers::DepthBuffer );
+
+  return twoDViewport;
+}
+
+QVector3D Qgs3DAxis::from3dTo2dLabelPosition( const QVector3D &sourcePos,
+    Qt3DRender::QCamera *sourceCamera, Qt3DRender::QViewport *sourceViewport,
+    Qt3DRender::QCamera *destCamera, Qt3DRender::QViewport *destViewport,
+    const QSize &destSize )
+{
+  QVector3D destPos = sourcePos.project( sourceCamera->viewMatrix(),
+                                         destCamera->projectionMatrix(),
+                                         QRect( 0.0f, 0.0f,
+                                             destViewport->normalizedRect().width() * destSize.width(),
+                                             destViewport->normalizedRect().height() * destSize.height() ) );
+  QPointF axisCenter = sourceViewport->normalizedRect().center();
+  QPointF labelCenter = destViewport->normalizedRect().center();
+  //QVector3D parentWin (mParentWindow->width(), mParentWindow->height(), 0.0);
+  QVector3D viewTranslation = QVector3D( ( axisCenter - labelCenter ).x() * destSize.width(),
+                                         ( axisCenter - labelCenter ).y() * destSize.height(),
+                                         0.0 );
+  destPos -= QVector3D( labelCenter.x() * destSize.width(),
+                        labelCenter.y() * destSize.height(),
+                        0.0f );
+  destPos.setX( destPos.x() + viewTranslation.x() );
+  destPos.setY( destPos.y() - viewTranslation.y() );
+  destPos.setZ( 0.0f );
+
+#ifdef DEBUG
+  qDebug() << "sourcePos" << sourcePos << " with" << viewTranslation << "corrected destPos" << destPos;
+#endif
+  return destPos;
+}
+
+void Qgs3DAxis::createAxisScene()
 {
   if ( mAxisRoot == nullptr )
   {
+#ifdef DEBUG
     qDebug() << "Should recreate mAxisRoot" << mMode;
-    mAxisRoot = new Qt3DCore::QEntity( mSceneEntity );
+#endif
+    mAxisRoot = new Qt3DCore::QEntity;
+    mAxisRoot->setParent( mAxisSceneEntity );
     mAxisRoot->setObjectName( "3DAxisRoot" );
 
     createAxis( Axis::X );
@@ -82,37 +178,44 @@ void Qgs3DAxis::createScene()
   if ( mMode == OFF )
   {
     mAxisRoot->setEnabled( false );
+    mText_X->setEnabled( false );
+    mText_Y->setEnabled( false );
+    mText_Z->setEnabled( false );
   }
   else
   {
     mAxisRoot->setEnabled( true );
+    mText_X->setEnabled( true );
+    mText_Y->setEnabled( true );
+    mText_Z->setEnabled( true );
     if ( mMode == SRS )
     {
       if ( mCrs.isGeographic() )
       {
-        mTextWhite_X->setText( "Long" );
-        mTextWhite_Y->setText( "Lat" );
+        mText_X->setText( "Long" );
+        mText_Y->setText( "Lat" );
       }
       else
       {
-        mTextWhite_X->setText( "X" );
-        mTextWhite_Y->setText( "Y" );
+        mText_X->setText( "X" );
+        mText_Y->setText( "Y" );
       }
-      mTextWhite_Z->setText( "Z" );
+      mText_Z->setText( "Z" );
     }
     else if ( mMode == NEU )
     {
-      mTextWhite_X->setText( "East" );
-      mTextWhite_Y->setText( "North" );
-      mTextWhite_Z->setText( "Up" );
+      mText_X->setText( "East" );
+      mText_Y->setText( "North" );
+      mText_Z->setText( "Up" );
     }
     else
     {
-      mTextWhite_X->setText( "X?" );
-      mTextWhite_Y->setText( "Y?" );
-      mTextWhite_Z->setText( "Z?" );
+      mText_X->setText( "X?" );
+      mText_Y->setText( "Y?" );
+      mText_Z->setText( "Z?" );
     }
 
+    updateLabelPosition();
   }
 }
 
@@ -124,46 +227,57 @@ void Qgs3DAxis::createAxis( const Qgs3DAxis::Axis &axis )
 
   QQuaternion rotation;
   QColor color;
-  QVector3D textTranslation;
 
-  Qt3DExtras::QText2DEntity *textWhite;
+  Qt3DExtras::QText2DEntity *text;
   Qt3DCore::QTransform *textTransform;
 
   switch ( axis )
   {
     case Axis::X:
-      mTextWhite_X = new Qt3DExtras::QText2DEntity( );  // object initialization in two step:
-      mTextWhite_X->setParent( mAxisRoot ); // see https://bugreports.qt.io/browse/QTBUG-77139
+      mText_X = new Qt3DExtras::QText2DEntity( );  // object initialization in two step:
+      mText_X->setParent( mTwoDLabelSceneEntity ); // see https://bugreports.qt.io/browse/QTBUG-77139
+      connect( mText_X, &Qt3DExtras::QText2DEntity::textChanged, this, [this]( const QString & text )
+      {
+        mText_X->setWidth( mFontSize * text.length() );
+      } );
       mTextTransform_X = new Qt3DCore::QTransform();
+      mTextCoord_X = QVector3D( mCylinderLength + coneLength / 2.0, 0.0f, 0.0f );
 
       rotation = QQuaternion::fromAxisAndAngle( QVector3D( 0.0f, 0.0f, 1.0f ), -90.0f );
       color = Qt::red;
-      textWhite = mTextWhite_X;
-      textTranslation = QVector3D( mCylinderLength, -mCylinderLength / 4.0f, 0.0f );
+      text = mText_X;
       textTransform = mTextTransform_X;
       break;
 
     case Axis::Y:
-      mTextWhite_Y = new Qt3DExtras::QText2DEntity( );  // object initialization in two step:
-      mTextWhite_Y->setParent( mAxisRoot ); // see https://bugreports.qt.io/browse/QTBUG-77139
+      mText_Y = new Qt3DExtras::QText2DEntity( );  // object initialization in two step:
+      mText_Y->setParent( mTwoDLabelSceneEntity ); // see https://bugreports.qt.io/browse/QTBUG-77139
+      connect( mText_Y, &Qt3DExtras::QText2DEntity::textChanged, this, [this]( const QString & text )
+      {
+        mText_Y->setWidth( mFontSize * text.length() );
+      } );
       mTextTransform_Y = new Qt3DCore::QTransform();
+      mTextCoord_Y = QVector3D( 0.0f, mCylinderLength + coneLength / 2.0, 0.0f );
 
       rotation = QQuaternion::fromAxisAndAngle( QVector3D( 0.0f, 0.0f, 0.0f ), 0.0f );
       color = Qt::green;
-      textWhite = mTextWhite_Y;
-      textTranslation = QVector3D( coneBottomRadius, ( mCylinderLength + coneLength ) / 2.0, 0.0f );
+      text = mText_Y;
       textTransform = mTextTransform_Y;
       break;
 
     case Axis::Z:
-      mTextWhite_Z = new Qt3DExtras::QText2DEntity( );  // object initialization in two step:
-      mTextWhite_Z->setParent( mAxisRoot ); // see https://bugreports.qt.io/browse/QTBUG-77139
+      mText_Z = new Qt3DExtras::QText2DEntity( );  // object initialization in two step:
+      mText_Z->setParent( mTwoDLabelSceneEntity ); // see https://bugreports.qt.io/browse/QTBUG-77139
+      connect( mText_Z, &Qt3DExtras::QText2DEntity::textChanged, this, [this]( const QString & text )
+      {
+        mText_Z->setWidth( mFontSize * text.length() );
+      } );
       mTextTransform_Z = new Qt3DCore::QTransform();
+      mTextCoord_Z = QVector3D( 0.0f, 0.0f, mCylinderLength + coneLength / 2.0 );
 
       rotation = QQuaternion::fromAxisAndAngle( QVector3D( 1.0f, 0.0f, 0.0f ), 90.0f );
       color = Qt::blue;
-      textWhite = mTextWhite_Z;
-      textTranslation = QVector3D( 0.0f, -mCylinderLength / 4.0f, mCylinderLength + coneLength / 2.0 );
+      text = mText_Z;
       textTransform = mTextTransform_Z;
       break;
 
@@ -214,66 +328,112 @@ void Qgs3DAxis::createAxis( const Qgs3DAxis::Axis &axis )
   coneTransform->setMatrix( transformMatrixCone );
   coneEntity->addComponent( coneTransform );
 
-  // TODO must face the camera
-  // axis name
-  textTransform->setScale( 0.1f );
-  textTransform->setTranslation( textTranslation );
-
-  QFont f = QFont( "monospace", 12 );
+  // text
+  QFont f = QFont( "monospace", mFontSize ); // TODO: should use outlined font
   f.setWeight( QFont::Weight::Black );
   f.setStyleStrategy( QFont::StyleStrategy::ForceOutline );
-  textWhite->setFont( f );
-  textWhite->setHeight( 20 );
-  textWhite->setWidth( 50 );
-  textWhite->setColor( QColor( 192, 192, 192, 192 ) );
-  textWhite->addComponent( textTransform );
+  text->setFont( f );
+  text->setHeight( mFontSize * 1.5 );
+  text->setWidth( mFontSize );
+  text->setColor( QColor( 192, 192, 192, 192 ) );
+  text->addComponent( textTransform );
 }
 
 
-void Qgs3DAxis::updateViewportSize( int )
+void Qgs3DAxis::setAxisViewportPosition( int axisViewportSize, AxisViewportPosition axisViewportVertPos, AxisViewportPosition axisViewportHorizPos )
 {
-  float widthRatio = 150.0f / mMainWindow->width();
-  float heightRatio = 150.0f / mMainWindow->height();
+  mAxisViewportSize = axisViewportSize;
+  mAxisViewportVertPos = axisViewportVertPos;
+  mAxisViewportHorizPos = axisViewportHorizPos;
+  updateAxisViewportSize();
+}
 
-  qDebug() << "Axis, update viewport" << widthRatio << heightRatio;
-  mViewport->setNormalizedRect( QRectF( 1.0 - widthRatio, 1.0 - heightRatio, widthRatio, heightRatio ) );
+void Qgs3DAxis::updateAxisViewportSize( int )
+{
+  float widthRatio = ( float )mAxisViewportSize / mParentWindow->width();
+  float heightRatio = ( float )mAxisViewportSize / mParentWindow->height();
+
+  float xRatio;
+  float yRatio;
+  if ( mAxisViewportHorizPos == AxisViewportPosition::BEGIN )
+    xRatio = 0.0f;
+  else if ( mAxisViewportHorizPos == AxisViewportPosition::MIDDLE )
+    xRatio = 0.5 - widthRatio / 2.0;
+  else
+    xRatio = 1.0 - widthRatio;
+
+  if ( mAxisViewportVertPos == AxisViewportPosition::BEGIN )
+    yRatio = 0.0f;
+  else if ( mAxisViewportVertPos == AxisViewportPosition::MIDDLE )
+    yRatio = 0.5 - heightRatio / 2.0;
+  else
+    yRatio = 1.0 - heightRatio;
+
+#ifdef DEBUG
+  qDebug() << "Axis, update viewport" << xRatio << yRatio << widthRatio << heightRatio;
+#endif
+  mAxisViewport->setNormalizedRect( QRectF( xRatio, yRatio, widthRatio, heightRatio ) );
+
+  mTwoDLabelCamera->lens()->setOrthographicProjection(
+    -mParentWindow->width() / 2.0f, mParentWindow->width() / 2.0f,
+    -mParentWindow->height() / 2.0f, mParentWindow->height() / 2.0f,
+    -10.0f, 100.0f );
+
+  updateLabelPosition();
 }
 
 void Qgs3DAxis::updateCamera( /* const QVector3D & viewVector*/ )
 {
-  if ( mMainCamera->viewVector() != mPreviousVector
-       && mMainCamera->viewVector().x() == mMainCamera->viewVector().x()
-       && mMainCamera->viewVector().y() == mMainCamera->viewVector().y()
-       && mMainCamera->viewVector().z() == mMainCamera->viewVector().z() )
+  if ( mParentCamera->viewVector() != mPreviousVector
+       && !std::isnan( mParentCamera->viewVector().x() )
+       && !std::isnan( mParentCamera->viewVector().y() )
+       && !std::isnan( mParentCamera->viewVector().z() ) )
   {
-    mPreviousVector = mMainCamera->viewVector();
-    QVector3D mainCameraShift = mMainCamera->viewVector().normalized();
+    mPreviousVector = mParentCamera->viewVector();
+    QVector3D mainCameraShift = mParentCamera->viewVector().normalized();
     float zy_swap = mainCameraShift.y();
     mainCameraShift.setY( mainCameraShift.z() );
     mainCameraShift.setZ( -zy_swap );
     mainCameraShift.setX( -mainCameraShift.x() );
 
-    QQuaternion r = QQuaternion::rotationTo( QVector3D( 0.0, 0.0, -1.0 ), -mainCameraShift ).normalized();
-    mTextTransform_X->setRotation( r );
-    mTextTransform_Y->setRotation( r );
-    mTextTransform_Z->setRotation( r );
+    if ( mAxisCamera->projectionType() == Qt3DRender::QCameraLens::ProjectionType::OrthographicProjection )
+    {
+      mAxisCamera->setPosition( mainCameraShift );
+    }
+    else
+      mAxisCamera->setPosition( mainCameraShift * mCylinderLength * 5.0 );
 
-    mCamera->setPosition( mainCameraShift );
-
+    updateLabelPosition();
 #ifdef DEBUG
     qDebug() << std::time( nullptr ) << this << "update camera from" << mPreviousVector << "to" << mainCameraShift << " / r:" << r;
-    mTextWhite_X->dumpObjectTree();
-    mTextWhite_X->setFont( QFont( "monospace", 10 ) );
-    mTextWhite_X->setText( "TEST" );
+    mText_X->dumpObjectTree();
+    mText_X->setFont( QFont( "monospace", 10 ) );
+    mText_X->setText( "TEST" );
 #endif
   }
 }
 
-void Qgs3DAxis::updateMode( Mode axisMode )
+void Qgs3DAxis::updateLabelPosition()
+{
+  if ( mTextTransform_X && mTextTransform_Y && mTextTransform_Z )
+  {
+    mTextTransform_X->setTranslation( from3dTo2dLabelPosition( mTextCoord_X, mAxisCamera, mAxisViewport,
+                                      mTwoDLabelCamera, mTwoDLabelViewport,
+                                      mParentWindow->size() ) );
+    mTextTransform_Y->setTranslation( from3dTo2dLabelPosition( mTextCoord_Y, mAxisCamera, mAxisViewport,
+                                      mTwoDLabelCamera, mTwoDLabelViewport,
+                                      mParentWindow->size() ) );
+    mTextTransform_Z->setTranslation( from3dTo2dLabelPosition( mTextCoord_Z, mAxisCamera, mAxisViewport,
+                                      mTwoDLabelCamera, mTwoDLabelViewport,
+                                      mParentWindow->size() ) );
+  }
+}
+
+void Qgs3DAxis::setMode( Mode axisMode )
 {
   if ( mMode != axisMode )
   {
     mMode = axisMode;
-    createScene();
+    createAxisScene();
   }
 }
