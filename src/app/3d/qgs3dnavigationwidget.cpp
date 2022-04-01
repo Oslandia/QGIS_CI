@@ -215,7 +215,7 @@ void Qgs3DNavigationWidget::updateAxisMode( const QString &modeStr )
   else if ( modeStr.toUpper().startsWith( "NORTH" ) ) m = Qgs3DAxis::Mode::NEU;
   else m = Qgs3DAxis::Mode::OFF;
   if ( mParent3DMapCanvas->get3DAxis() )
-    mParent3DMapCanvas->get3DAxis()->updateMode( m );
+    mParent3DMapCanvas->get3DAxis()->setMode( m );
 }
 
 void Qgs3DNavigationWidget::updateFromCamera()
