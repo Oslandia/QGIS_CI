@@ -38,13 +38,13 @@ Qgs3DNavigationWidget::Qgs3DNavigationWidget( Qgs3DMapCanvas *parent ) : QWidget
 
   mParent3DMapCanvas = parent;
   // Zoom in button
-  zoomInButton->setToolTip( tr( "Zoom In" ) );
-  zoomInButton->setAutoRepeat( true );
-  zoomInButton->setIcon( QgsApplication::getThemeIcon( QStringLiteral( "/mActionZoomIn.svg" ) ) );
-  zoomInButton->setAutoRaise( true );
+  mZoomInButton->setToolTip( tr( "Zoom In" ) );
+  mZoomInButton->setAutoRepeat( true );
+  mZoomInButton->setIcon( QgsApplication::getThemeIcon( QStringLiteral( "/mActionZoomIn.svg" ) ) );
+  mZoomInButton->setAutoRaise( true );
 
   QObject::connect(
-    zoomInButton,
+    mZoomInButton,
     &QToolButton::clicked,
     parent,
     [ = ]
@@ -54,13 +54,13 @@ Qgs3DNavigationWidget::Qgs3DNavigationWidget( Qgs3DMapCanvas *parent ) : QWidget
   );
 
   // Zoom out button
-  zoomOutButton->setToolTip( tr( "Zoom Out" ) );
-  zoomOutButton->setAutoRepeat( true );
-  zoomOutButton->setIcon( QgsApplication::getThemeIcon( QStringLiteral( "/mActionZoomOut.svg" ) ) );
-  zoomOutButton->setAutoRaise( true );
+  mZoomOutButton->setToolTip( tr( "Zoom Out" ) );
+  mZoomOutButton->setAutoRepeat( true );
+  mZoomOutButton->setIcon( QgsApplication::getThemeIcon( QStringLiteral( "/mActionZoomOut.svg" ) ) );
+  mZoomOutButton->setAutoRaise( true );
 
   QObject::connect(
-    zoomOutButton,
+    mZoomOutButton,
     &QToolButton::clicked,
     parent,
     [ = ]
@@ -70,13 +70,13 @@ Qgs3DNavigationWidget::Qgs3DNavigationWidget( Qgs3DMapCanvas *parent ) : QWidget
   );
 
   // Tilt up button
-  tiltUpButton->setToolTip( tr( "Tilt Up" ) );
-  tiltUpButton->setAutoRepeat( true );
-  tiltUpButton->setIcon( QgsApplication::getThemeIcon( QStringLiteral( "/mActionTiltUp.svg" ) ) );
-  tiltUpButton->setAutoRaise( true );
+  mTiltUpButton->setToolTip( tr( "Tilt Up" ) );
+  mTiltUpButton->setAutoRepeat( true );
+  mTiltUpButton->setIcon( QgsApplication::getThemeIcon( QStringLiteral( "/mActionTiltUp.svg" ) ) );
+  mTiltUpButton->setAutoRaise( true );
 
   QObject::connect(
-    tiltUpButton,
+    mTiltUpButton,
     &QToolButton::clicked,
     parent,
     [ = ]
@@ -86,13 +86,13 @@ Qgs3DNavigationWidget::Qgs3DNavigationWidget( Qgs3DMapCanvas *parent ) : QWidget
   );
 
   // Tilt down button
-  tiltDownButton->setToolTip( tr( "Tilt Down" ) );
-  tiltDownButton->setAutoRepeat( true );
-  tiltDownButton->setIcon( QgsApplication::getThemeIcon( QStringLiteral( "/mActionTiltDown.svg" ) ) );
-  tiltDownButton->setAutoRaise( true );
+  mTiltDownButton->setToolTip( tr( "Tilt Down" ) );
+  mTiltDownButton->setAutoRepeat( true );
+  mTiltDownButton->setIcon( QgsApplication::getThemeIcon( QStringLiteral( "/mActionTiltDown.svg" ) ) );
+  mTiltDownButton->setAutoRaise( true );
 
   QObject::connect(
-    tiltDownButton,
+    mTiltDownButton,
     &QToolButton::clicked,
     parent,
     [ = ]
@@ -103,28 +103,28 @@ Qgs3DNavigationWidget::Qgs3DNavigationWidget( Qgs3DMapCanvas *parent ) : QWidget
 
   // Compas
   QwtCompassMagnetNeedle *compasNeedle = new QwtCompassMagnetNeedle();
-  compass->setToolTip( tr( "Rotate view" ) );
-  compass->setWrapping( true );
-  compass->setNeedle( compasNeedle );
+  mCompass->setToolTip( tr( "Rotate view" ) );
+  mCompass->setWrapping( true );
+  mCompass->setNeedle( compasNeedle );
 
   QObject::connect(
-    compass,
+    mCompass,
     &QwtDial::valueChanged,
     parent,
     [ = ]
   {
-    parent->cameraController()->setCameraHeadingAngle( float( compass->value() ) );
+    parent->cameraController()->setCameraHeadingAngle( float( mCompass->value() ) );
   }
   );
 
   // Move up button
-  moveUpButton->setToolTip( tr( "Move up" ) );
-  moveUpButton->setAutoRepeat( true );
-  moveUpButton->setIcon( QgsApplication::getThemeIcon( QStringLiteral( "/mActionArrowUp.svg" ) ) );
-  moveUpButton->setAutoRaise( true );
+  mMoveUpButton->setToolTip( tr( "Move up" ) );
+  mMoveUpButton->setAutoRepeat( true );
+  mMoveUpButton->setIcon( QgsApplication::getThemeIcon( QStringLiteral( "/mActionArrowUp.svg" ) ) );
+  mMoveUpButton->setAutoRaise( true );
 
   QObject::connect(
-    moveUpButton,
+    mMoveUpButton,
     &QToolButton::clicked,
     parent,
     [ = ]
@@ -134,13 +134,13 @@ Qgs3DNavigationWidget::Qgs3DNavigationWidget( Qgs3DMapCanvas *parent ) : QWidget
   );
 
   // Move right button
-  moveRightButton->setToolTip( tr( "Move right" ) );
-  moveRightButton->setAutoRepeat( true );
-  moveRightButton->setIcon( QgsApplication::getThemeIcon( QStringLiteral( "/mActionArrowRight.svg" ) ) );
-  moveRightButton->setAutoRaise( true );
+  mMoveRightButton->setToolTip( tr( "Move right" ) );
+  mMoveRightButton->setAutoRepeat( true );
+  mMoveRightButton->setIcon( QgsApplication::getThemeIcon( QStringLiteral( "/mActionArrowRight.svg" ) ) );
+  mMoveRightButton->setAutoRaise( true );
 
   QObject::connect(
-    moveRightButton,
+    mMoveRightButton,
     &QToolButton::clicked,
     parent,
     [ = ]
@@ -150,13 +150,13 @@ Qgs3DNavigationWidget::Qgs3DNavigationWidget( Qgs3DMapCanvas *parent ) : QWidget
   );
 
   // Move down button
-  moveDownButton->setToolTip( tr( "Move down" ) );
-  moveDownButton->setAutoRepeat( true );
-  moveDownButton->setIcon( QgsApplication::getThemeIcon( QStringLiteral( "/mActionArrowDown.svg" ) ) );
-  moveDownButton->setAutoRaise( true );
+  mMoveDownButton->setToolTip( tr( "Move down" ) );
+  mMoveDownButton->setAutoRepeat( true );
+  mMoveDownButton->setIcon( QgsApplication::getThemeIcon( QStringLiteral( "/mActionArrowDown.svg" ) ) );
+  mMoveDownButton->setAutoRaise( true );
 
   QObject::connect(
-    moveDownButton,
+    mMoveDownButton,
     &QToolButton::clicked,
     parent,
     [ = ]
@@ -166,13 +166,13 @@ Qgs3DNavigationWidget::Qgs3DNavigationWidget( Qgs3DMapCanvas *parent ) : QWidget
   );
 
   // Move left button
-  moveLeftButton->setToolTip( tr( "Move left" ) );
-  moveLeftButton->setAutoRepeat( true );
-  moveLeftButton->setIcon( QgsApplication::getThemeIcon( QStringLiteral( "/mActionArrowLeft.svg" ) ) );
-  moveLeftButton->setAutoRaise( true );
+  mMoveLeftButton->setToolTip( tr( "Move left" ) );
+  mMoveLeftButton->setAutoRepeat( true );
+  mMoveLeftButton->setIcon( QgsApplication::getThemeIcon( QStringLiteral( "/mActionArrowLeft.svg" ) ) );
+  mMoveLeftButton->setAutoRaise( true );
 
   QObject::connect(
-    moveLeftButton,
+    mMoveLeftButton,
     &QToolButton::clicked,
     parent,
     [ = ]
@@ -181,7 +181,7 @@ Qgs3DNavigationWidget::Qgs3DNavigationWidget( Qgs3DMapCanvas *parent ) : QWidget
   }
   );
 
-  cameraInfo->setEditTriggers( QAbstractItemView::NoEditTriggers );
+  mCameraInfo->setEditTriggers( QAbstractItemView::NoEditTriggers );
 
   mCameraInfoItemModel = new QStandardItemModel( this );
 
@@ -194,35 +194,41 @@ Qgs3DNavigationWidget::Qgs3DNavigationWidget( Qgs3DMapCanvas *parent ) : QWidget
   mCameraInfoItemModel->appendRow( QList<QStandardItem *> { new QStandardItem( QStringLiteral( "Looking at Y" ) ), new QStandardItem } );
   mCameraInfoItemModel->appendRow( QList<QStandardItem *> { new QStandardItem( QStringLiteral( "Looking at Z" ) ), new QStandardItem } );
 
-  cameraInfo->setModel( mCameraInfoItemModel );
-  cameraInfo->verticalHeader()->hide();
-  cameraInfo->horizontalHeader()->hide();
-  cameraInfo->horizontalHeader()->setSectionResizeMode( QHeaderView::ResizeMode::Stretch );
+  mCameraInfo->setModel( mCameraInfoItemModel );
+  mCameraInfo->verticalHeader()->hide();
+  mCameraInfo->horizontalHeader()->hide();
+  mCameraInfo->horizontalHeader()->setSectionResizeMode( QHeaderView::ResizeMode::Stretch );
 
-  cameraInfo->setVisible( false );
-  QObject::connect( cameraInfoCheckBox, &QCheckBox::clicked, parent, [ = ]( bool enabled ) { cameraInfo->setVisible( enabled ); } );
+  mCameraInfo->setVisible( false );
+  QObject::connect( mCameraInfoCheckBox, &QCheckBox::clicked, parent, [ = ]( bool enabled ) { mCameraInfo->setVisible( enabled ); } );
 
-  widgetLayout->setAlignment( Qt::AlignTop );
+  mWidgetLayout->setAlignment( Qt::AlignTop );
 
-  QObject::connect( cbo3DAxis, &QComboBox::currentTextChanged, this, &Qgs3DNavigationWidget::updateAxisMode );
-  cbo3DAxis->setCurrentIndex( 1 ); // not OFF
+  QObject::connect( mCbo3DAxis, &QComboBox::currentTextChanged, this, &Qgs3DNavigationWidget::updateAxisMode );
+  mCbo3DAxis->setCurrentIndex( 1 ); // not OFF
 }
 
 void Qgs3DNavigationWidget::updateAxisMode( const QString &modeStr )
 {
-  Qgs3DAxis::Mode m;
-  if ( modeStr.toUpper() == "SRS" ) m = Qgs3DAxis::Mode::SRS;
-  else if ( modeStr.toUpper().startsWith( "NORTH" ) ) m = Qgs3DAxis::Mode::NEU;
-  else if ( modeStr.toUpper().startsWith( "CUBE" ) ) m = Qgs3DAxis::Mode::CUBE;
-  else m = Qgs3DAxis::Mode::OFF;
   if ( mParent3DMapCanvas->get3DAxis() )
+  {
+    Qgs3DAxis::Mode m;
+    if ( modeStr.toUpper() == "SRS" )
+      m = Qgs3DAxis::Mode::SRS;
+    else if ( modeStr.toUpper().startsWith( "NORTH" ) )
+      m = Qgs3DAxis::Mode::NEU;
+    else if ( modeStr.toUpper().startsWith( "CUBE" ) )
+      m = Qgs3DAxis::Mode::CUBE;
+    else
+      m = Qgs3DAxis::Mode::OFF;
     mParent3DMapCanvas->get3DAxis()->setMode( m );
+  }
 }
 
 void Qgs3DNavigationWidget::updateFromCamera()
 {
   // Make sure the angle is between 0 - 359
-  whileBlocking( compass )->setValue( fmod( mParent3DMapCanvas->cameraController()->yaw() + 360, 360 ) );
+  whileBlocking( mCompass )->setValue( fmod( mParent3DMapCanvas->cameraController()->yaw() + 360, 360 ) );
 
   mCameraInfoItemModel->setData( mCameraInfoItemModel->index( 0, 1 ), QStringLiteral( "%1" ).arg( mParent3DMapCanvas->cameraController()->camera()->nearPlane() ) );
   mCameraInfoItemModel->setData( mCameraInfoItemModel->index( 1, 1 ), QStringLiteral( "%1" ).arg( mParent3DMapCanvas->cameraController()->camera()->farPlane() ) );
