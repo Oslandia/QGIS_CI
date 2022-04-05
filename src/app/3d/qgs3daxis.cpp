@@ -22,13 +22,16 @@
 #include <Qt3DRender/QLayer>
 #include <Qt3DRender/QLayerFilter>
 #include <Qt3DRender/qcameralens.h>
+#include <Qt3DRender/QPointLight>
+
+#include <qgschunkboundsentity_p.h>
 #include<ctime>
 
 #include "qgs3daxis.h"
 
 Qgs3DAxis::Qgs3DAxis( Qt3DExtras::Qt3DWindow *parentWindow, Qt3DCore::QEntity *parent3DScene, QgsCameraController *cameraCtrl, const Qgs3DMapSettings *map )
   : QObject( parentWindow ), mParentWindow( parentWindow ), mParentCamera( cameraCtrl->camera() ),
-    mCylinderLength( 40.0f ), mAxisViewportSize( 3.0 * mCylinderLength ),
+    mCylinderLength( 40.0f ), mAxisViewportSize( 3.5 * mCylinderLength ),
     mAxisViewportVertPos( AxisViewportPosition::END ), mAxisViewportHorizPos( AxisViewportPosition::END ),
     mFontSize( 10 ), mMode( Mode::SRS ), mAxisRoot( nullptr ), mTextTransform_X( nullptr ), mTextTransform_Y( nullptr ),
     mTextTransform_Z( nullptr ), mCrs( map->crs() )
@@ -142,7 +145,6 @@ QVector3D Qgs3DAxis::from3dTo2dLabelPosition( const QVector3D &sourcePos,
                                              destViewport->normalizedRect().height() * destSize.height() ) );
   QPointF axisCenter = sourceViewport->normalizedRect().center();
   QPointF labelCenter = destViewport->normalizedRect().center();
-  //QVector3D parentWin (mParentWindow->width(), mParentWindow->height(), 0.0);
   QVector3D viewTranslation = QVector3D( ( axisCenter - labelCenter ).x() * destSize.width(),
                                          ( axisCenter - labelCenter ).y() * destSize.height(),
                                          0.0 );
@@ -173,8 +175,14 @@ void Qgs3DAxis::createAxisScene()
     createAxis( Axis::X );
     createAxis( Axis::Y );
     createAxis( Axis::Z );
+    createCube( );
   }
 
+  mCube->setEnabled( false );
+  for ( auto l : qAsConst( mCubeLabels ) )
+  {
+    l->setEnabled( false );
+  }
   if ( mMode == OFF )
   {
     mAxisRoot->setEnabled( false );
@@ -208,6 +216,17 @@ void Qgs3DAxis::createAxisScene()
       mText_Y->setText( "North" );
       mText_Z->setText( "Up" );
     }
+    else if ( mMode == CUBE )
+    {
+      mCube->setEnabled( true );
+      mText_X->setEnabled( false );
+      mText_Y->setEnabled( false );
+      mText_Z->setEnabled( false );
+      for ( auto l : qAsConst( mCubeLabels ) )
+      {
+        l->setEnabled( true );
+      }
+    }
     else
     {
       mText_X->setText( "X?" );
@@ -215,8 +234,143 @@ void Qgs3DAxis::createAxisScene()
       mText_Z->setText( "Z?" );
     }
 
-    updateLabelPosition();
+    updateAxisLabelPosition();
   }
+}
+
+void Qgs3DAxis::createCube( )
+{
+  QVector3D minPos = QVector3D( mCylinderLength * 0.1f, mCylinderLength * 0.1f, mCylinderLength * 0.1f );
+
+  /*
+    AABBMesh *cubeLine = new AABBMesh;
+    cubeLine->setBoxes( {QgsAABB( mCylinderLength * 0.1f, mCylinderLength * 0.1f, mCylinderLength * 0.1f,
+                                  mCylinderLength * 0.1f, mCylinderLength * 0.1f, mCylinderLength * 0.1f )} );
+    cube->addComponent( cubeLine );*/
+  mCube = new Qt3DCore::QEntity( mAxisRoot );
+  auto cubeMesh = new Qt3DExtras::QCuboidMesh;
+  cubeMesh->setXExtent( mCylinderLength );
+  cubeMesh->setYExtent( mCylinderLength );
+  cubeMesh->setZExtent( mCylinderLength );
+  mCube->addComponent( cubeMesh );
+
+  auto cubeMaterial = new Qt3DExtras::QPhongMaterial( mCube );
+  cubeMaterial->setAmbient( QColor( 100, 100, 100 ) );
+  cubeMaterial->setShininess( 100 );
+  mCube->addComponent( cubeMaterial );
+
+  auto cubeTransform = new Qt3DCore::QTransform;
+  QMatrix4x4 transformMatrixcube;
+  //transformMatrixcube.rotate( rotation );
+  transformMatrixcube.translate( minPos + QVector3D( mCylinderLength * 0.5f, mCylinderLength * 0.5f, mCylinderLength * 0.5f ) );
+  cubeTransform->setMatrix( transformMatrixcube );
+  mCube->addComponent( cubeTransform );
+
+  // text
+  QString text;
+  int fontSize = 0.75 * mFontSize;
+  float textHeight = fontSize * 1.5;
+  float textWidth;
+  auto f = QFont( "monospace", fontSize );
+  f.setWeight( QFont::Weight::Black );
+  f.setStyleStrategy( QFont::StyleStrategy::ForceOutline );
+
+  {
+    text = "top";
+    textWidth = text.length() * fontSize * 0.75;
+    QVector3D translation = minPos + QVector3D(
+                              mCylinderLength * 0.5f - textWidth / 2.0f,
+                              mCylinderLength * 0.5f - textHeight / 2.0f,
+                              mCylinderLength * 1.01f );
+    QMatrix4x4 rotation;
+    mCubeLabels << addCubeText( text, textHeight, textWidth, f, rotation, translation );
+  }
+
+  {
+    text = "btm";
+    textWidth = text.length() * fontSize * 0.75;
+    QVector3D translation = minPos + QVector3D(
+                              mCylinderLength * 0.5f - textWidth / 2.0f,
+                              mCylinderLength * 0.5f + textHeight / 2.0f,
+                              -mCylinderLength * 0.01f );
+    QMatrix4x4 rotation;
+    rotation.rotate( 180.0f, QVector3D( 1.0, 0.0, 0.0 ).normalized() );
+    mCubeLabels << addCubeText( text, textHeight, textWidth, f, rotation, translation );
+  }
+
+  {
+    text = "left";
+    textWidth = text.length() * fontSize * 0.75;
+    QVector3D translation = minPos + QVector3D(
+                              - mCylinderLength * 0.01f,
+                              mCylinderLength * 0.5f + textWidth / 2.0f,
+                              mCylinderLength * 0.5f - textHeight / 2.0f );
+    QMatrix4x4 rotation;
+    rotation.rotate( 90.0f, QVector3D( 0.0, -1.0, 0.0 ).normalized() );
+    rotation.rotate( 90.0f, QVector3D( 0.0, 0.0, -1.0 ).normalized() );
+    mCubeLabels << addCubeText( text, textHeight, textWidth, f, rotation, translation );
+  }
+
+  {
+    text = "right";
+    textWidth = text.length() * fontSize * 0.75;
+    QVector3D translation = minPos + QVector3D(
+                              mCylinderLength * 1.01f,
+                              mCylinderLength * 0.5f - textWidth / 2.0f,
+                              mCylinderLength * 0.5f - textHeight / 2.0f );
+    QMatrix4x4 rotation;
+    rotation.rotate( 90.0f, QVector3D( 0.0, 1.0, 0.0 ).normalized() );
+    rotation.rotate( 90.0f, QVector3D( 0.0, 0.0, 1.0 ).normalized() );
+    mCubeLabels << addCubeText( text, textHeight, textWidth, f, rotation, translation );
+  }
+
+  {
+    text = "front";
+    textWidth = text.length() * fontSize * 0.75;
+    QVector3D translation = minPos + QVector3D(
+                              mCylinderLength * 0.5f - textWidth / 2.0f,
+                              - mCylinderLength * 0.01f,
+                              mCylinderLength * 0.5f - textHeight / 2.0f );
+    QMatrix4x4 rotation;
+    rotation.rotate( 90.0f, QVector3D( 1.0, 0.0, 0.0 ).normalized() );
+    mCubeLabels << addCubeText( text, textHeight, textWidth, f, rotation, translation );
+  }
+
+  {
+    text = "back";
+    textWidth = text.length() * fontSize * 0.75;
+    QVector3D translation = minPos + QVector3D(
+                              mCylinderLength * 0.5f + textWidth / 2.0f,
+                              mCylinderLength * 1.01f,
+                              mCylinderLength * 0.5f - textHeight / 2.0f );
+    QMatrix4x4 rotation;
+    rotation.rotate( 90.0f, QVector3D( -1.0, 0.0, 0.0 ).normalized() );
+    rotation.rotate( 180.0f, QVector3D( 0.0, 0.0, 1.0 ).normalized() );
+    mCubeLabels << addCubeText( text, textHeight, textWidth, f, rotation, translation );
+  }
+
+  for ( auto l : mCubeLabels )
+  {
+    l->setParent( mAxisRoot );
+  }
+}
+
+Qt3DExtras::QText2DEntity *Qgs3DAxis::addCubeText( const QString &text, float textHeight, float textWidth, const QFont &f, const QMatrix4x4 &rotation, const QVector3D &translation )
+{
+  auto  textEntity = new Qt3DExtras::QText2DEntity;
+  textEntity->setParent( mAxisRoot );
+  textEntity->setFont( f );
+  textEntity->setHeight( textHeight );
+  textEntity->setWidth( textWidth );
+  textEntity->setColor( QColor( 192, 192, 192, 255 ) );
+  textEntity->setText( text );
+
+  auto textFrontTransform = new Qt3DCore::QTransform();
+  textFrontTransform->setMatrix( rotation );
+  textFrontTransform->setTranslation( translation );
+  textEntity->addComponent( textFrontTransform );
+
+  return textEntity;
 }
 
 void Qgs3DAxis::createAxis( const Qgs3DAxis::Axis &axis )
@@ -290,8 +444,8 @@ void Qgs3DAxis::createAxis( const Qgs3DAxis::Axis &axis )
   Qt3DExtras::QCylinderMesh *cylinderMesh = new Qt3DExtras::QCylinderMesh;
   cylinderMesh->setRadius( cylinderRadius );
   cylinderMesh->setLength( mCylinderLength );
-  cylinderMesh->setRings( 100 );
-  cylinderMesh->setSlices( 20 );
+  cylinderMesh->setRings( 10 );
+  cylinderMesh->setSlices( 4 );
   cylinder->addComponent( cylinderMesh );
 
   Qt3DExtras::QPhongMaterial *cylinderMaterial = new Qt3DExtras::QPhongMaterial( cylinder );
@@ -312,8 +466,8 @@ void Qgs3DAxis::createAxis( const Qgs3DAxis::Axis &axis )
   coneMesh->setLength( coneLength );
   coneMesh->setBottomRadius( coneBottomRadius );
   coneMesh->setTopRadius( 0.0f );
-  coneMesh->setRings( 100 );
-  coneMesh->setSlices( 20 );
+  coneMesh->setRings( 10 );
+  coneMesh->setSlices( 4 );
   coneEntity->addComponent( coneMesh );
 
   Qt3DExtras::QPhongMaterial *coneMaterial = new Qt3DExtras::QPhongMaterial( coneEntity );
@@ -379,7 +533,7 @@ void Qgs3DAxis::updateAxisViewportSize( int )
     -mParentWindow->height() / 2.0f, mParentWindow->height() / 2.0f,
     -10.0f, 100.0f );
 
-  updateLabelPosition();
+  updateAxisLabelPosition();
 }
 
 void Qgs3DAxis::updateCamera( /* const QVector3D & viewVector*/ )
@@ -403,7 +557,7 @@ void Qgs3DAxis::updateCamera( /* const QVector3D & viewVector*/ )
     else
       mAxisCamera->setPosition( mainCameraShift * mCylinderLength * 5.0 );
 
-    updateLabelPosition();
+    updateAxisLabelPosition();
 #ifdef DEBUG
     qDebug() << std::time( nullptr ) << this << "update camera from" << mPreviousVector << "to" << mainCameraShift << " / r:" << r;
     mText_X->dumpObjectTree();
@@ -413,7 +567,7 @@ void Qgs3DAxis::updateCamera( /* const QVector3D & viewVector*/ )
   }
 }
 
-void Qgs3DAxis::updateLabelPosition()
+void Qgs3DAxis::updateAxisLabelPosition()
 {
   if ( mTextTransform_X && mTextTransform_Y && mTextTransform_Z )
   {
