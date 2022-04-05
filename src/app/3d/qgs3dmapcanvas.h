@@ -87,7 +87,7 @@ class Qgs3DMapCanvas : public QWidget
     /**
      * Returns the 3D engine.
      */
-    QgsWindow3DEngine *engine() { return mEngine; }
+    QgsWindow3DEngine *engine() const { return mEngine; }
 
     /**
      * Sets the visibility of on-screen navigation widget.
@@ -125,7 +125,7 @@ class Qgs3DMapCanvas : public QWidget
      *
      * \since QGIS 3.26
      */
-    Qgs3DAxis *get3DAxis() { return m3DAxis; };
+    Qgs3DAxis *get3DAxis() { return m3DAxis.get(); };
 
   signals:
     //! Emitted when the 3D map canvas was successfully saved as image
@@ -186,7 +186,7 @@ class Qgs3DMapCanvas : public QWidget
 
     QSplitter *mSplitter = nullptr;
 
-    Qgs3DAxis *m3DAxis = nullptr;
+    std::unique_ptr<Qgs3DAxis> m3DAxis;
 };
 
 #include "qgswindow3dengine.h"
