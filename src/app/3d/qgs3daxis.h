@@ -18,13 +18,13 @@
 
 #include "qgis_3d.h"
 
-#include <QVector3D>
-#include <Qt3DCore/QEntity>
-#include <Qt3DRender/QCamera>
-#include <Qt3DExtras/Qt3DWindow>
-#include <Qt3DRender/QViewport>
-#include <Qt3DExtras/QText2DEntity>
 #include "qgs3dmapsettings.h"
+#include <Qt3DCore/QEntity>
+#include <Qt3DExtras/Qt3DWindow>
+#include <Qt3DExtras/QText2DEntity>
+#include <Qt3DRender/QCamera>
+#include <Qt3DRender/QViewport>
+#include <QVector3D>
 
 #define SIP_NO_FILE
 
@@ -37,7 +37,7 @@
 
  * \note Not available in Python bindings
  *
- * \since QGIS 3.25
+ * \since QGIS 3.26
  */
 class Qgs3DAxis : public QObject
 {
@@ -62,6 +62,7 @@ class Qgs3DAxis : public QObject
       Y = 2,
       Z = 3
     };
+    Q_ENUM( Axis )
 
     /**
      * \brief The AxisViewportPosition enum
@@ -74,6 +75,7 @@ class Qgs3DAxis : public QObject
       //! bottom or right
       END = 3
     };
+    Q_ENUM( AxisViewportPosition )
 
     /**
      * \brief The Mode enum
@@ -89,6 +91,7 @@ class Qgs3DAxis : public QObject
       //! Cube with label
       CUBE = 4
     };
+    Q_ENUM( Mode )
 
     /**
      * \brief set axis representation mode
