@@ -160,13 +160,19 @@ Qgs3DNavigationWidget::Qgs3DNavigationWidget( Qgs3DMapCanvas *parent ) : QWidget
 
 void Qgs3DNavigationWidget::updateAxisMode( const QString &modeStr )
 {
-  Qgs3DAxis::Mode m;
-  if ( modeStr.toUpper() == "SRS" ) m = Qgs3DAxis::Mode::SRS;
-  else if ( modeStr.toUpper().startsWith( "NORTH" ) ) m = Qgs3DAxis::Mode::NEU;
-  else if ( modeStr.toUpper().startsWith( "CUBE" ) ) m = Qgs3DAxis::Mode::CUBE;
-  else m = Qgs3DAxis::Mode::OFF;
   if ( mParent3DMapCanvas->get3DAxis() )
+  {
+    Qgs3DAxis::Mode m;
+    if ( modeStr.toUpper() == "SRS" )
+      m = Qgs3DAxis::Mode::SRS;
+    else if ( modeStr.toUpper().startsWith( "NORTH" ) )
+      m = Qgs3DAxis::Mode::NEU;
+    else if ( modeStr.toUpper().startsWith( "CUBE" ) )
+      m = Qgs3DAxis::Mode::CUBE;
+    else
+      m = Qgs3DAxis::Mode::OFF;
     mParent3DMapCanvas->get3DAxis()->setMode( m );
+  }
 }
 
 void Qgs3DNavigationWidget::updateFromCamera()
