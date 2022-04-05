@@ -213,6 +213,7 @@ void Qgs3DNavigationWidget::updateAxisMode( const QString &modeStr )
   Qgs3DAxis::Mode m;
   if ( modeStr.toUpper() == "SRS" ) m = Qgs3DAxis::Mode::SRS;
   else if ( modeStr.toUpper().startsWith( "NORTH" ) ) m = Qgs3DAxis::Mode::NEU;
+  else if ( modeStr.toUpper().startsWith( "CUBE" ) ) m = Qgs3DAxis::Mode::CUBE;
   else m = Qgs3DAxis::Mode::OFF;
   if ( mParent3DMapCanvas->get3DAxis() )
     mParent3DMapCanvas->get3DAxis()->setMode( m );
