@@ -13,21 +13,20 @@
  *                                                                         *
  ***************************************************************************/
 
+#include "qgs3daxis.h"
+
 #include <Qt3DCore/QTransform>
 #include <Qt3DExtras/QConeMesh>
 #include <Qt3DExtras/QCylinderMesh>
 #include <Qt3DExtras/QPhongMaterial>
+#include <Qt3DRender/qcameralens.h>
 #include <Qt3DRender/QCameraSelector>
 #include <Qt3DRender/QClearBuffers>
 #include <Qt3DRender/QLayer>
 #include <Qt3DRender/QLayerFilter>
-#include <Qt3DRender/qcameralens.h>
 #include <Qt3DRender/QPointLight>
-
-#include <qgschunkboundsentity_p.h>
 #include<ctime>
 
-#include "qgs3daxis.h"
 
 Qgs3DAxis::Qgs3DAxis( Qt3DExtras::Qt3DWindow *parentWindow, Qt3DCore::QEntity *parent3DScene, QgsCameraController *cameraCtrl, const Qgs3DMapSettings *map )
   : QObject( parentWindow ), mParentWindow( parentWindow ), mParentCamera( cameraCtrl->camera() ),
