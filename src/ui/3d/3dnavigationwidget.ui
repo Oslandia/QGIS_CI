@@ -210,8 +210,22 @@
        </property>
       </widget>
      </item>
+    </layout>
+   </item>
+   <item>
+    <layout class="QHBoxLayout" name="mAxisLayout">
+     <property name="topMargin">
+      <number>0</number>
+     </property>
      <item>
-      <widget class="QComboBox" name="cbo3DAxis">
+      <widget class="QLabel" name="mLabel">
+       <property name="text">
+        <string>3D axis</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QComboBox" name="mCbo3DAxis">
        <item>
         <property name="text">
          <string>Off</string>
