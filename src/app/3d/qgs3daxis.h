@@ -85,7 +85,9 @@ class Qgs3DAxis : public QObject
       //! CRS specific. TODO: should handle up axis
       SRS = 2,
       //! Compass axis ie. North-East-Up
-      NEU = 3
+      NEU = 3,
+      //! Cube with label
+      CUBE = 4
     };
 
     /**
@@ -121,12 +123,15 @@ class Qgs3DAxis : public QObject
   private:
     void createAxisScene();
     void createAxis( const Axis &axis );
+    void createCube( );
     void updateCamera( );
     void updateAxisViewportSize( int val = 0 );
-    void updateLabelPosition();
+    void updateAxisLabelPosition();
 
     Qt3DRender::QViewport *constructAxisViewport( Qt3DCore::QEntity *parent3DScene );
     Qt3DRender::QViewport *constructLabelViewport( Qt3DCore::QEntity *parent3DScene, const QRectF &parentViewportSize );
+
+    Qt3DExtras::QText2DEntity *addCubeText( const QString &text, float textHeight, float textWidth, const QFont &f, const QMatrix4x4 &rotation, const QVector3D &translation );
 
     Qt3DExtras::Qt3DWindow *mParentWindow;
     Qt3DRender::QCamera *mParentCamera;
@@ -142,6 +147,8 @@ class Qgs3DAxis : public QObject
 
     Qgs3DAxis::Mode mMode;
     Qt3DCore::QEntity *mAxisRoot;
+    Qt3DCore::QEntity *mCube;
+    QList<Qt3DExtras::QText2DEntity *> mCubeLabels;
 
     Qt3DExtras::QText2DEntity *mText_X, *mText_Y, *mText_Z;
     QVector3D mTextCoord_X, mTextCoord_Y, mTextCoord_Z;
