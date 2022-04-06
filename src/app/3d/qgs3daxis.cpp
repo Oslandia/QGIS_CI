@@ -27,10 +27,11 @@
 #include <Qt3DRender/QPointLight>
 #include<ctime>
 
+#include <Qt3DRender/QAttribute>
 
 Qgs3DAxis::Qgs3DAxis( Qt3DExtras::Qt3DWindow *parentWindow, Qt3DCore::QEntity *parent3DScene, QgsCameraController *cameraCtrl, const Qgs3DMapSettings *map )
   : QObject( parentWindow ), mParentWindow( parentWindow ), mParentCamera( cameraCtrl->camera() ),
-    mCylinderLength( 40.0f ), mAxisViewportSize( 3.5 * mCylinderLength ),
+    mCylinderLength( 40.0f ), mAxisViewportSize( 4.0 * mCylinderLength ),
     mAxisViewportVertPos( AxisViewportPosition::END ), mAxisViewportHorizPos( AxisViewportPosition::END ),
     mFontSize( 10 ), mMode( Mode::SRS ), mAxisRoot( nullptr ), mTextTransform_X( nullptr ), mTextTransform_Y( nullptr ),
     mTextTransform_Z( nullptr ), mCrs( map->crs() )
@@ -241,12 +242,21 @@ void Qgs3DAxis::createCube( )
 {
   QVector3D minPos = QVector3D( mCylinderLength * 0.1f, mCylinderLength * 0.1f, mCylinderLength * 0.1f );
 
-  /*
-    AABBMesh *cubeLine = new AABBMesh;
-    cubeLine->setBoxes( {QgsAABB( mCylinderLength * 0.1f, mCylinderLength * 0.1f, mCylinderLength * 0.1f,
-                                  mCylinderLength * 0.1f, mCylinderLength * 0.1f, mCylinderLength * 0.1f )} );
-    cube->addComponent( cubeLine );*/
   mCube = new Qt3DCore::QEntity( mAxisRoot );
+
+  // cube outlines
+  auto cubeLineEntity = new Qt3DCore::QEntity( mCube );
+  Qgs3DWiredMesh *cubeLine = new Qgs3DWiredMesh;
+  auto box = QgsAABB( -mCylinderLength * 0.5f, -mCylinderLength * 0.5f, -mCylinderLength * 0.5f,
+                      mCylinderLength * 0.5f, mCylinderLength * 0.5f, mCylinderLength * 0.5f );
+  cubeLine->setVertices( box.verticesForLines() );
+  cubeLineEntity->addComponent( cubeLine );
+
+  auto cubeLineMaterial = new Qt3DExtras::QPhongMaterial;
+  cubeLineMaterial->setAmbient( Qt::white );
+  cubeLineEntity->addComponent( cubeLineMaterial );
+
+  // cube mesh
   auto cubeMesh = new Qt3DExtras::QCuboidMesh;
   cubeMesh->setXExtent( mCylinderLength );
   cubeMesh->setYExtent( mCylinderLength );
@@ -254,7 +264,7 @@ void Qgs3DAxis::createCube( )
   mCube->addComponent( cubeMesh );
 
   auto cubeMaterial = new Qt3DExtras::QPhongMaterial( mCube );
-  cubeMaterial->setAmbient( QColor( 100, 100, 100 ) );
+  cubeMaterial->setAmbient( QColor( 100, 100, 100, 50 ) );
   cubeMaterial->setShininess( 100 );
   mCube->addComponent( cubeMaterial );
 
@@ -590,3 +600,46 @@ void Qgs3DAxis::setMode( Mode axisMode )
     createAxisScene();
   }
 }
+
+
+// ----------------
+
+Qgs3DWiredMesh::Qgs3DWiredMesh( Qt3DCore::QNode *parent )
+  : Qt3DRender::QGeometryRenderer( parent ),
+    mPositionAttribute( new Qt3DRender::QAttribute( this ) ),
+    mVertexBuffer( new Qt3DRender::QBuffer( this ) )
+{
+  mPositionAttribute->setAttributeType( Qt3DRender::QAttribute::VertexAttribute );
+  mPositionAttribute->setBuffer( mVertexBuffer );
+  mPositionAttribute->setVertexBaseType( Qt3DRender::QAttribute::Float );
+  mPositionAttribute->setVertexSize( 3 );
+  mPositionAttribute->setName( Qt3DRender::QAttribute::defaultPositionAttributeName() );
+
+  mGeom = new Qt3DRender::QGeometry( this );
+  mGeom->addAttribute( mPositionAttribute );
+
+  setInstanceCount( 1 );
+  setIndexOffset( 0 );
+  setFirstInstance( 0 );
+  setPrimitiveType( Qt3DRender::QGeometryRenderer::Lines );
+  setGeometry( mGeom );
+}
+
+void Qgs3DWiredMesh::setVertices( const QList<QVector3D> &vertices )
+{
+  QByteArray vertexBufferData;
+  vertexBufferData.resize( vertices.size() * 3 * sizeof( float ) );
+  float *rawVertexArray = reinterpret_cast<float *>( vertexBufferData.data() );
+  int idx = 0;
+  for ( const auto &v : std::as_const( vertices ) )
+  {
+    rawVertexArray[idx++] = v.x();
+    rawVertexArray[idx++] = v.y();
+    rawVertexArray[idx++] = v.z();
+  }
+
+  mVertexBuffer->setData( vertexBufferData );
+  setVertexCount( vertices.count() );
+}
+
+// ----------------
