@@ -139,10 +139,10 @@ void Qgs3DMapCanvas::setMap( Qgs3DMapSettings *map )
 
   mScene->cameraController()->setViewport( viewportRect );
 
-  m3DAxis = std::make_unique<Qgs3DAxis>( static_cast<Qt3DExtras::Qt3DWindow *>( mEngine->window() ),
-                                         mEngine->root(),
-                                         mScene->cameraController(),
-                                         map );
+  m3DAxis = new Qgs3DAxis( static_cast<Qt3DExtras::Qt3DWindow *>( mEngine->window() ),
+                           mEngine->root(),
+                           mScene->cameraController(),
+                           map );
 
   resetView();
 
