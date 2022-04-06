@@ -222,7 +222,7 @@ void Qgs3DAxis::createAxisScene()
       mText_X->setEnabled( false );
       mText_Y->setEnabled( false );
       mText_Z->setEnabled( false );
-      for ( auto l : qAsConst( mCubeLabels ) )
+      for ( auto l : std::as_const( mCubeLabels ) )
       {
         l->setEnabled( true );
       }
@@ -358,7 +358,7 @@ void Qgs3DAxis::createCube( )
     mCubeLabels << addCubeText( text, textHeight, textWidth, f, rotation, translation );
   }
 
-  for ( auto l : mCubeLabels )
+  for ( auto l : std::as_const( mCubeLabels ) )
   {
     l->setParent( mAxisRoot );
   }
