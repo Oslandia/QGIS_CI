@@ -26,6 +26,8 @@
 #include <Qt3DRender/QViewport>
 #include <QVector3D>
 
+#include <Qt3DRender/QBuffer>
+
 #define SIP_NO_FILE
 
 /**
@@ -162,6 +164,25 @@ class Qgs3DAxis : public QObject
     Qt3DRender::QCamera *mTwoDLabelCamera;
     Qt3DCore::QEntity *mTwoDLabelSceneEntity;
     Qt3DRender::QViewport *mTwoDLabelViewport;
+};
+
+/**
+ * Geometry renderer for lines, draws a wired mesh
+ *
+ * \since QGIS 3.26
+ */
+class Qgs3DWiredMesh : public Qt3DRender::QGeometryRenderer
+{
+    Q_OBJECT
+
+  public:
+    Qgs3DWiredMesh( Qt3DCore::QNode *parent = nullptr );
+    void setVertices( const QList<QVector3D> &vertices );
+
+  private:
+    Qt3DRender::QGeometry *mGeom = nullptr;
+    Qt3DRender::QAttribute *mPositionAttribute = nullptr;
+    Qt3DRender::QBuffer *mVertexBuffer = nullptr;
 };
 
 #endif // QGS3DAXIS_H
