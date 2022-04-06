@@ -125,7 +125,7 @@ class Qgs3DMapCanvas : public QWidget
      *
      * \since QGIS 3.26
      */
-    Qgs3DAxis *get3DAxis() { return m3DAxis.get(); };
+    Qgs3DAxis *get3DAxis() { return m3DAxis; };
 
   signals:
     //! Emitted when the 3D map canvas was successfully saved as image
@@ -186,7 +186,7 @@ class Qgs3DMapCanvas : public QWidget
 
     QSplitter *mSplitter = nullptr;
 
-    std::unique_ptr<Qgs3DAxis> m3DAxis;
+    Qgs3DAxis *m3DAxis = nullptr;
 };
 
 #include "qgswindow3dengine.h"
