@@ -91,6 +91,7 @@ set(QGIS_3D_SRCS
   #terrain/quantizedmeshgeometry.cpp
   #terrain/quantizedmeshterraingenerator.cpp
 
+  mesh/qgs3dwiredmesh.cpp
   mesh/qgsmesh3dgeometry_p.cpp
   mesh/qgsmesh3dentity_p.cpp
   mesh/qgsmesh3dmaterial_p.cpp
@@ -157,6 +158,7 @@ set(QGIS_3D_HDRS
   chunks/qgschunkloader_p.h
   chunks/qgschunkqueuejob_p.h
 
+  mesh/qgs3dwiredmesh.h
   mesh/qgsmeshterraingenerator.h
 )
 
