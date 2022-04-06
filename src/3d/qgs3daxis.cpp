@@ -48,6 +48,7 @@ typedef Qt3DCore::QBuffer Qt3DQBuffer;
 
 #include "qgsmapsettings.h"
 #include "qgs3dmapscene.h"
+#include "qgs3dwiredmesh.h"
 #include "qgsterrainentity_p.h"
 #include "qgscoordinatereferencesystemutils.h"
 #include "qgscoordinatereferencesystem.h"
@@ -1201,48 +1202,4 @@ void Qgs3DAxis::onTextZChanged( const QString &text )
   mTextZ->setFont( f );
   mTextZ->setWidth( mAxisScaleFactor * mFontSize * text.length() );
   mTextZ->setHeight( mAxisScaleFactor * mFontSize * 1.5f );
-}
-
-//
-// Qgs3DWiredMesh
-//
-
-Qgs3DWiredMesh::Qgs3DWiredMesh( Qt3DCore::QNode *parent )
-  : Qt3DRender::QGeometryRenderer( parent )
-  , mPositionAttribute( new Qt3DQAttribute( this ) )
-  , mVertexBuffer( new Qt3DQBuffer( this ) )
-{
-  mPositionAttribute->setAttributeType( Qt3DQAttribute::VertexAttribute );
-  mPositionAttribute->setBuffer( mVertexBuffer );
-  mPositionAttribute->setVertexBaseType( Qt3DQAttribute::Float );
-  mPositionAttribute->setVertexSize( 3 );
-  mPositionAttribute->setName( Qt3DQAttribute::defaultPositionAttributeName() );
-
-  mGeom = new Qt3DQGeometry( this );
-  mGeom->addAttribute( mPositionAttribute );
-
-  setInstanceCount( 1 );
-  setIndexOffset( 0 );
-  setFirstInstance( 0 );
-  setPrimitiveType( Qt3DRender::QGeometryRenderer::Lines );
-  setGeometry( mGeom );
-}
-
-Qgs3DWiredMesh::~Qgs3DWiredMesh() = default;
-
-void Qgs3DWiredMesh::setVertices( const QList<QVector3D> &vertices )
-{
-  QByteArray vertexBufferData;
-  vertexBufferData.resize( vertices.size() * 3 * sizeof( float ) );
-  float *rawVertexArray = reinterpret_cast<float *>( vertexBufferData.data() );
-  int idx = 0;
-  for ( const QVector3D &v : std::as_const( vertices ) )
-  {
-    rawVertexArray[idx++] = v.x();
-    rawVertexArray[idx++] = v.y();
-    rawVertexArray[idx++] = v.z();
-  }
-
-  mVertexBuffer->setData( vertexBufferData );
-  setVertexCount( vertices.count() );
 }

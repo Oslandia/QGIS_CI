@@ -187,39 +187,4 @@ class _3D_EXPORT Qgs3DAxis : public QObject
 
 };
 
-/**
- * \ingroup 3d
- * \brief Geometry renderer for lines, draws a wired mesh
- *
- * \since QGIS 3.26
- */
-class Qgs3DWiredMesh : public Qt3DRender::QGeometryRenderer
-{
-    Q_OBJECT
-
-  public:
-
-    /**
-     * \brief Defaul Qgs3DWiredMesh constructor
-     */
-    Qgs3DWiredMesh( Qt3DCore::QNode *parent = nullptr );
-    ~Qgs3DWiredMesh() override;
-
-    /**
-     * \brief add or replace mesh vertices coordinates
-     */
-    void setVertices( const QList<QVector3D> &vertices );
-
-  private:
-#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
-    Qt3DRender::QGeometry *mGeom = nullptr;
-    Qt3DRender::QAttribute *mPositionAttribute = nullptr;
-    Qt3DRender::QBuffer *mVertexBuffer = nullptr;
-#else
-    Qt3DCore::QGeometry *mGeom = nullptr;
-    Qt3DCore::QAttribute *mPositionAttribute = nullptr;
-    Qt3DCore::QBuffer *mVertexBuffer = nullptr;
-#endif
-};
-
 #endif // QGS3DAXIS_H
