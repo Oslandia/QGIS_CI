@@ -598,6 +598,7 @@ void Qgs3DAxis::setMode( Mode axisMode )
   {
     mMode = axisMode;
     createAxisScene();
+    mParentWindow->requestUpdate();
   }
 }
 
