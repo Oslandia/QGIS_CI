@@ -58,7 +58,7 @@ class Qgs3DAxis : public QObject
     /**
      * \brief The Axis enum
      */
-    enum Axis
+    enum class Axis
     {
       X = 1,
       Y = 2,
@@ -69,29 +69,29 @@ class Qgs3DAxis : public QObject
     /**
      * \brief The AxisViewportPosition enum
      */
-    enum AxisViewportPosition
+    enum class AxisViewportPosition
     {
       //! top or left
-      BEGIN = 1,
-      MIDDLE = 2,
+      Begin = 1,
+      Middle = 2,
       //! bottom or right
-      END = 3
+      End = 3
     };
     Q_ENUM( AxisViewportPosition )
 
     /**
      * \brief The Mode enum
      */
-    enum Mode
+    enum class Mode
     {
       //! disabled
-      OFF = 1,
+      Off = 1,
       //! CRS specific. TODO: should handle up axis
-      SRS = 2,
+      Crs = 2,
       //! Compass axis ie. North-East-Up
-      NEU = 3,
+      NorthEastUp = 3,
       //! Cube with label
-      CUBE = 4
+      Cube = 4
     };
     Q_ENUM( Mode )
 
@@ -140,24 +140,24 @@ class Qgs3DAxis : public QObject
 
     Qt3DExtras::Qt3DWindow *mParentWindow;
     Qt3DRender::QCamera *mParentCamera;
-    float mCylinderLength;
-    int mAxisViewportSize;
-    AxisViewportPosition mAxisViewportVertPos;
-    AxisViewportPosition mAxisViewportHorizPos;
-    int mFontSize;
+    float mCylinderLength = 40.0f;
+    int mAxisViewportSize = 4.0 * mCylinderLength;
+    AxisViewportPosition mAxisViewportVertPos = AxisViewportPosition::End;
+    AxisViewportPosition mAxisViewportHorizPos = AxisViewportPosition::End;
+    int mFontSize = 10;
 
     Qt3DCore::QEntity *mAxisSceneEntity;
     Qt3DRender::QCamera *mAxisCamera;
     Qt3DRender::QViewport *mAxisViewport;
 
-    Qgs3DAxis::Mode mMode;
-    Qt3DCore::QEntity *mAxisRoot;
+    Qgs3DAxis::Mode mMode = Mode::Crs;
+    Qt3DCore::QEntity *mAxisRoot = nullptr;
     Qt3DCore::QEntity *mCube;
     QList<Qt3DExtras::QText2DEntity *> mCubeLabels;
 
     Qt3DExtras::QText2DEntity *mText_X, *mText_Y, *mText_Z;
     QVector3D mTextCoord_X, mTextCoord_Y, mTextCoord_Z;
-    Qt3DCore::QTransform *mTextTransform_X, *mTextTransform_Y, *mTextTransform_Z;
+    Qt3DCore::QTransform *mTextTransform_X = nullptr, *mTextTransform_Y = nullptr, *mTextTransform_Z = nullptr;
     QgsCoordinateReferenceSystem mCrs;
     QVector3D mPreviousVector;
 

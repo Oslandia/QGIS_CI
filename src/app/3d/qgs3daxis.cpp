@@ -31,10 +31,7 @@
 
 Qgs3DAxis::Qgs3DAxis( Qt3DExtras::Qt3DWindow *parentWindow, Qt3DCore::QEntity *parent3DScene, QgsCameraController *cameraCtrl, const Qgs3DMapSettings *map )
   : QObject( parentWindow ), mParentWindow( parentWindow ), mParentCamera( cameraCtrl->camera() ),
-    mCylinderLength( 40.0f ), mAxisViewportSize( 4.0 * mCylinderLength ),
-    mAxisViewportVertPos( AxisViewportPosition::END ), mAxisViewportHorizPos( AxisViewportPosition::END ),
-    mFontSize( 10 ), mMode( Mode::SRS ), mAxisRoot( nullptr ), mTextTransform_X( nullptr ), mTextTransform_Y( nullptr ),
-    mTextTransform_Z( nullptr ), mCrs( map->crs() )
+    mCrs( map->crs() )
 {
   mAxisViewport = constructAxisViewport( parent3DScene );
   mAxisViewport->setParent( mParentWindow->activeFrameGraph() );
@@ -183,7 +180,7 @@ void Qgs3DAxis::createAxisScene()
   {
     l->setEnabled( false );
   }
-  if ( mMode == OFF )
+  if ( mMode == Mode::Off )
   {
     mAxisRoot->setEnabled( false );
     mText_X->setEnabled( false );
@@ -196,7 +193,7 @@ void Qgs3DAxis::createAxisScene()
     mText_X->setEnabled( true );
     mText_Y->setEnabled( true );
     mText_Z->setEnabled( true );
-    if ( mMode == SRS )
+    if ( mMode == Mode::Crs )
     {
       if ( mCrs.isGeographic() )
       {
@@ -210,13 +207,13 @@ void Qgs3DAxis::createAxisScene()
       }
       mText_Z->setText( "Z" );
     }
-    else if ( mMode == NEU )
+    else if ( mMode == Mode::NorthEastUp )
     {
       mText_X->setText( "East" );
       mText_Y->setText( "North" );
       mText_Z->setText( "Up" );
     }
-    else if ( mMode == CUBE )
+    else if ( mMode == Mode::Cube )
     {
       mCube->setEnabled( true );
       mText_X->setEnabled( false );
@@ -518,16 +515,16 @@ void Qgs3DAxis::updateAxisViewportSize( int )
 
   float xRatio;
   float yRatio;
-  if ( mAxisViewportHorizPos == AxisViewportPosition::BEGIN )
+  if ( mAxisViewportHorizPos == AxisViewportPosition::Begin )
     xRatio = 0.0f;
-  else if ( mAxisViewportHorizPos == AxisViewportPosition::MIDDLE )
+  else if ( mAxisViewportHorizPos == AxisViewportPosition::Middle )
     xRatio = 0.5 - widthRatio / 2.0;
   else
     xRatio = 1.0 - widthRatio;
 
-  if ( mAxisViewportVertPos == AxisViewportPosition::BEGIN )
+  if ( mAxisViewportVertPos == AxisViewportPosition::Begin )
     yRatio = 0.0f;
-  else if ( mAxisViewportVertPos == AxisViewportPosition::MIDDLE )
+  else if ( mAxisViewportVertPos == AxisViewportPosition::Middle )
     yRatio = 0.5 - heightRatio / 2.0;
   else
     yRatio = 1.0 - heightRatio;

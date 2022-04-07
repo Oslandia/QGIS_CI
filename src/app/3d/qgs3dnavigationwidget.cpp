@@ -158,19 +158,27 @@ Qgs3DNavigationWidget::Qgs3DNavigationWidget( Qgs3DMapCanvas *parent ) : QWidget
   QObject::connect( mCameraInfoCheckBox, &QCheckBox::clicked, parent, [ = ]( bool enabled ) { mCameraInfo->setVisible( enabled ); } );
 }
 
-void Qgs3DNavigationWidget::updateAxisMode( const QString &modeStr )
+void Qgs3DNavigationWidget::updateAxisMode( int modeIndex )
 {
   if ( mParent3DMapCanvas->get3DAxis() )
   {
-    Qgs3DAxis::Mode m;
-    if ( modeStr.toUpper() == "SRS" )
-      m = Qgs3DAxis::Mode::SRS;
-    else if ( modeStr.toUpper().startsWith( "NORTH" ) )
-      m = Qgs3DAxis::Mode::NEU;
-    else if ( modeStr.toUpper().startsWith( "CUBE" ) )
-      m = Qgs3DAxis::Mode::CUBE;
-    else
-      m = Qgs3DAxis::Mode::OFF;
+    Qgs3DAxis::Mode m ;
+    switch ( modeIndex + 1 )
+    {
+      case ( int )Qgs3DAxis::Mode::Crs:
+        m = Qgs3DAxis::Mode::Crs;
+        break;
+      case ( int )Qgs3DAxis::Mode::NorthEastUp:
+        m = Qgs3DAxis::Mode::NorthEastUp;
+        break;
+      case ( int )Qgs3DAxis::Mode::Cube:
+        m = Qgs3DAxis::Mode::Cube;
+        break;
+      default:
+        m = Qgs3DAxis::Mode::Off;
+        break;
+    }
+
     mParent3DMapCanvas->get3DAxis()->setMode( m );
   }
 }

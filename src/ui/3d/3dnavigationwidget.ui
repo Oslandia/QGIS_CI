@@ -233,7 +233,7 @@
        </item>
        <item>
         <property name="text">
-         <string>SRS</string>
+         <string extracomment="Coordinate Reference System">Crs</string>
         </property>
        </item>
        <item>
