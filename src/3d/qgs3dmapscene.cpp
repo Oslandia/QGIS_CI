@@ -242,7 +242,7 @@ Qgs3DMapScene::Qgs3DMapScene( const Qgs3DMapSettings &map, QgsAbstract3DEngine *
   onCameraMovementSpeedChanged();
 
   // create bounding box entity
-  mBoundingBox = new Qgs3DBoundingBoxEntity( this );
+  mBoundingBox = new Qgs3DBoundingBoxEntity( this, mCameraController );
   onBoundingBoxSettingsChanged();
 }
 

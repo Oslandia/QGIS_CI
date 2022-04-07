@@ -23,8 +23,19 @@ namespace Qt3DCore
   class QEntity;
 }
 
+namespace Qt3DExtras
+{
+  class QText2DEntity;
+}
+
+namespace Qt3DRender
+{
+  class QCamera;
+}
+
 class Qgs3DWiredMesh;
 class QgsAABB;
+class QgsCameraController;
 
 #define SIP_NO_FILE
 
@@ -38,12 +49,32 @@ class _3D_EXPORT Qgs3DBoundingBoxEntity: public Qt3DCore::QEntity
     Q_OBJECT
 
   public:
-    Qgs3DBoundingBoxEntity( Qt3DCore::QNode *parent = nullptr );
+    Qgs3DBoundingBoxEntity( Qt3DCore::QEntity *parent, QgsCameraController *cameraCtrl );
     void setBox( const QgsAABB &box );
 
+    /**
+     * \brief The Direction enum
+     */
+    enum class Direction
+    {
+      X = 1,
+      Y = 2,
+      Z = 3
+    };
+    Q_ENUM( Direction )
+
+  private slots:
+    void onCameraChanged();
+
   private:
+    void createLabels( const Direction &direction, const QgsAABB &bbox, float maxExtent, QList<QVector3D> &vertices );
+
     Qgs3DWiredMesh *mBBMesh = nullptr;
+    QList<Qt3DExtras::QText2DEntity *> mLabels;
     QColor mColor = Qt::black;
+    QFont mLabelsFont;
+    QVector3D mInitialCameraPosition = QVector3D( 0, 0, 0 );
+    QgsCameraController *mCameraCtrl = nullptr;
 };
 
 #endif // QGS3DBOUNDINGBOXENTITY_H
