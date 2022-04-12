@@ -842,9 +842,13 @@ int QgsPoint::compareToSameClass( const QgsAbstractGeometry *other ) const
   }
 
   if ( isMeasure() && !otherPoint->isMeasure() )
+  {
     return 1;
+  }
   else if ( !isMeasure() && otherPoint->isMeasure() )
+  {
     return -1;
+  }
   else if ( isMeasure() && otherPoint->isMeasure() )
   {
     if ( mM < otherPoint->mM )
