@@ -23,9 +23,11 @@
 
 
 #include "qgscameracontroller.h"
+#include "qgs3daxis.h"
 #include "qgs3dmapsettings.h"
 #include "qgs3dmapscene.h"
 #include "qgs3dmaptool.h"
+#include "qgswindow3dengine.h"
 #include "qgs3dnavigationwidget.h"
 #include "qgsproject.h"
 #include "qgsprojectviewsettings.h"

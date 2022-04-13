@@ -59,16 +59,10 @@ Qt3DRender::QViewport *Qgs3DAxis::constructAxisViewport( Qt3DCore::QEntity *pare
   mAxisCamera = new Qt3DRender::QCamera;
   mAxisCamera->setParent( mAxisSceneEntity );
   mAxisCamera->setProjectionType( mParentCamera->projectionType() );
-  // always ortho for now as it seem more "accurate"
-  if ( true || mParentCamera->projectionType() == Qt3DRender::QCameraLens::ProjectionType::OrthographicProjection )
-    mAxisCamera->lens()->setOrthographicProjection(
-      -mAxisViewportSize / 2.0f, mAxisViewportSize / 2.0f,
-      -mAxisViewportSize / 2.0f, mAxisViewportSize / 2.0f,
-      -100.0f, 500.0f );
-  else
-    mAxisCamera->lens()->setPerspectiveProjection(
-      mParentCamera->lens()->fieldOfView(), mParentCamera->lens()->aspectRatio(),
-      1.0f, -250.0f );
+  mAxisCamera->lens()->setOrthographicProjection(
+              -mAxisViewportSize / 2.0f, mAxisViewportSize / 2.0f,
+              -mAxisViewportSize / 2.0f, mAxisViewportSize / 2.0f,
+              -100.0f, 500.0f );
 
   mAxisCamera->setUpVector( QVector3D( 0.0f, 0.0f, 1.0f ) );
   mAxisCamera->setViewCenter( QVector3D( 0.0f, 0.0f, 0.0f ) );
@@ -197,8 +191,8 @@ void Qgs3DAxis::createAxisScene()
     {
       if ( mCrs.isGeographic() )
       {
-        mText_X->setText( "Long" );
-        mText_Y->setText( "Lat" );
+        mText_X->setText( QStringLiteral( "Long" ) );
+        mText_Y->setText( QStringLiteral( "Lat" ) );
       }
       else
       {
@@ -209,9 +203,9 @@ void Qgs3DAxis::createAxisScene()
     }
     else if ( mMode == Mode::NorthEastUp )
     {
-      mText_X->setText( "East" );
-      mText_Y->setText( "North" );
-      mText_Z->setText( "Up" );
+      mText_X->setText( QStringLiteral( "East" ) );
+      mText_Y->setText( QStringLiteral( "North" ) );
+      mText_Z->setText( QStringLiteral( "Up" ) );
     }
     else if ( mMode == Mode::Cube )
     {
@@ -282,7 +276,7 @@ void Qgs3DAxis::createCube( )
   f.setStyleStrategy( QFont::StyleStrategy::ForceOutline );
 
   {
-    text = "top";
+    text = QStringLiteral( "top" );
     textWidth = text.length() * fontSize * 0.75;
     QVector3D translation = minPos + QVector3D(
                               mCylinderLength * 0.5f - textWidth / 2.0f,
@@ -293,7 +287,7 @@ void Qgs3DAxis::createCube( )
   }
 
   {
-    text = "btm";
+    text = QStringLiteral( "btm" );
     textWidth = text.length() * fontSize * 0.75;
     QVector3D translation = minPos + QVector3D(
                               mCylinderLength * 0.5f - textWidth / 2.0f,
@@ -305,7 +299,7 @@ void Qgs3DAxis::createCube( )
   }
 
   {
-    text = "left";
+    text = QStringLiteral( "left" );
     textWidth = text.length() * fontSize * 0.75;
     QVector3D translation = minPos + QVector3D(
                               - mCylinderLength * 0.01f,
@@ -318,7 +312,7 @@ void Qgs3DAxis::createCube( )
   }
 
   {
-    text = "right";
+    text = QStringLiteral( "right" );
     textWidth = text.length() * fontSize * 0.75;
     QVector3D translation = minPos + QVector3D(
                               mCylinderLength * 1.01f,
@@ -331,7 +325,7 @@ void Qgs3DAxis::createCube( )
   }
 
   {
-    text = "front";
+    text = QStringLiteral( "front" );
     textWidth = text.length() * fontSize * 0.75;
     QVector3D translation = minPos + QVector3D(
                               mCylinderLength * 0.5f - textWidth / 2.0f,
@@ -343,7 +337,7 @@ void Qgs3DAxis::createCube( )
   }
 
   {
-    text = "back";
+    text = QStringLiteral( "back" );
     textWidth = text.length() * fontSize * 0.75;
     QVector3D translation = minPos + QVector3D(
                               mCylinderLength * 0.5f + textWidth / 2.0f,

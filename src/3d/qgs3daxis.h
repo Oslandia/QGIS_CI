@@ -41,7 +41,7 @@
  *
  * \since QGIS 3.26
  */
-class Qgs3DAxis : public QObject
+class _3D_EXPORT Qgs3DAxis : public QObject
 {
     Q_OBJECT
   public:
@@ -142,7 +142,7 @@ class Qgs3DAxis : public QObject
     Qt3DRender::QCamera *mParentCamera;
     float mCylinderLength = 40.0f;
     int mAxisViewportSize = 4.0 * mCylinderLength;
-    AxisViewportPosition mAxisViewportVertPos = AxisViewportPosition::End;
+    AxisViewportPosition mAxisViewportVertPos = AxisViewportPosition::Begin;
     AxisViewportPosition mAxisViewportHorizPos = AxisViewportPosition::End;
     int mFontSize = 10;
 
