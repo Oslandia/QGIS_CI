@@ -60,9 +60,9 @@ Qt3DRender::QViewport *Qgs3DAxis::constructAxisViewport( Qt3DCore::QEntity *pare
   mAxisCamera->setParent( mAxisSceneEntity );
   mAxisCamera->setProjectionType( mParentCamera->projectionType() );
   mAxisCamera->lens()->setOrthographicProjection(
-              -mAxisViewportSize / 2.0f, mAxisViewportSize / 2.0f,
-              -mAxisViewportSize / 2.0f, mAxisViewportSize / 2.0f,
-              -100.0f, 500.0f );
+    -mAxisViewportSize / 2.0f, mAxisViewportSize / 2.0f,
+    -mAxisViewportSize / 2.0f, mAxisViewportSize / 2.0f,
+    -100.0f, 500.0f );
 
   mAxisCamera->setUpVector( QVector3D( 0.0f, 0.0f, 1.0f ) );
   mAxisCamera->setViewCenter( QVector3D( 0.0f, 0.0f, 0.0f ) );
