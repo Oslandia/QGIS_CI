@@ -31,6 +31,7 @@
 #define SIP_NO_FILE
 
 /**
+ * \ingroup 3d
  * Display 3D ortho axis in the main 3D view.
  *
  * Axis are displayed in a dedicated viewport which can be placed all around the main viewport.
@@ -167,6 +168,7 @@ class _3D_EXPORT Qgs3DAxis : public QObject
 };
 
 /**
+ * \ingroup 3d
  * Geometry renderer for lines, draws a wired mesh
  *
  * \since QGIS 3.26
@@ -176,7 +178,15 @@ class Qgs3DWiredMesh : public Qt3DRender::QGeometryRenderer
     Q_OBJECT
 
   public:
+
+    /**
+     * \brief Defaul Qgs3DWiredMesh constructor
+     */
     Qgs3DWiredMesh( Qt3DCore::QNode *parent = nullptr );
+
+    /**
+     * \brief add or replace mesh vertices coordinates
+     */
     void setVertices( const QList<QVector3D> &vertices );
 
   private:
