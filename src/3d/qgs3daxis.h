@@ -32,7 +32,7 @@
 
 /**
  * \ingroup 3d
- * Display 3D ortho axis in the main 3D view.
+ * \brief Display 3D ortho axis in the main 3D view.
  *
  * Axis are displayed in a dedicated viewport which can be placed all around the main viewport.
  * Axis labels are displayed in a dedicated viewport with a specific camera to act as a billboarding layer.
@@ -169,7 +169,7 @@ class _3D_EXPORT Qgs3DAxis : public QObject
 
 /**
  * \ingroup 3d
- * Geometry renderer for lines, draws a wired mesh
+ * \brief Geometry renderer for lines, draws a wired mesh
  *
  * \since QGIS 3.26
  */
