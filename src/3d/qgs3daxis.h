@@ -130,6 +130,8 @@ class _3D_EXPORT Qgs3DAxis : public QObject
     void createAxisScene();
     void createAxis( const Axis &axis );
     void createCube( );
+    void setEnableCube( bool show );
+    void setEnableAxis( bool show );
     void updateCamera( );
     void updateAxisViewportSize( int val = 0 );
     void updateAxisLabelPosition();
@@ -153,7 +155,7 @@ class _3D_EXPORT Qgs3DAxis : public QObject
 
     Qgs3DAxis::Mode mMode = Mode::Crs;
     Qt3DCore::QEntity *mAxisRoot = nullptr;
-    Qt3DCore::QEntity *mCube;
+    Qt3DCore::QEntity *mCubeRoot = nullptr;
     QList<Qt3DExtras::QText2DEntity *> mCubeLabels;
 
     Qt3DExtras::QText2DEntity *mText_X, *mText_Y, *mText_Z;
