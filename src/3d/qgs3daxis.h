@@ -18,7 +18,6 @@
 
 #include "qgis_3d.h"
 
-#include "qgs3dmapsettings.h"
 #include <Qt3DCore/QEntity>
 #include <Qt3DExtras/Qt3DWindow>
 #include <Qt3DExtras/QText2DEntity>
@@ -27,8 +26,13 @@
 #include <QVector3D>
 
 #include <Qt3DRender/QBuffer>
+#include <Qt3DRender/QGeometryRenderer>
 
 #define SIP_NO_FILE
+
+class QgsCameraController;
+class Qgs3DMapSettings;
+class QgsCoordinateReferenceSystem;
 
 /**
  * \ingroup 3d
@@ -109,6 +113,21 @@ class _3D_EXPORT Qgs3DAxis : public QObject
     void setAxisViewportPosition( int axisViewportSize, AxisViewportPosition axisViewportVertPos, AxisViewportPosition axisViewportHorizPos );
 
     /**
+     * \brief get axis viewport size
+     */
+    int axisViewportSize() const { return mAxisViewportSize;}
+
+    /**
+     * \brief get axis viewport horizontal position
+     */
+    AxisViewportPosition axisViewportHorizontalPosition() const { return mAxisViewportHorizPos;}
+
+    /**
+     * \brief get axis viewport vertical position
+     */
+    AxisViewportPosition axisViewportVerticalPosition() const { return mAxisViewportVertPos;}
+
+    /**
      * \brief project a 3D position from sourceCamera (in sourceViewport) to a 2D position for destCamera (in destViewport). destCamera and the destViewport act as a billboarding layer. The labels displayed by this process will always face the camera.
      *
      * \param sourcePos 3D label coordinates
@@ -159,7 +178,7 @@ class _3D_EXPORT Qgs3DAxis : public QObject
     Qt3DExtras::QText2DEntity *mText_X, *mText_Y, *mText_Z;
     QVector3D mTextCoord_X, mTextCoord_Y, mTextCoord_Z;
     Qt3DCore::QTransform *mTextTransform_X = nullptr, *mTextTransform_Y = nullptr, *mTextTransform_Z = nullptr;
-    QgsCoordinateReferenceSystem mCrs;
+    const QgsCoordinateReferenceSystem *mCrs;
     QVector3D mPreviousVector;
 
     Qt3DRender::QCamera *mTwoDLabelCamera;
@@ -183,6 +202,7 @@ class Qgs3DWiredMesh : public Qt3DRender::QGeometryRenderer
      * \brief Defaul Qgs3DWiredMesh constructor
      */
     Qgs3DWiredMesh( Qt3DCore::QNode *parent = nullptr );
+    ~Qgs3DWiredMesh();
 
     /**
      * \brief add or replace mesh vertices coordinates
