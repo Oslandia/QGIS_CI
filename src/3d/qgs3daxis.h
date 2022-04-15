@@ -87,12 +87,10 @@ class _3D_EXPORT Qgs3DAxis : public QObject
     {
       //! disabled
       Off = 1,
-      //! CRS specific. TODO: should handle up axis
+      //! CRS specific.
       Crs = 2,
-      //! Compass axis ie. North-East-Up
-      NorthEastUp = 3,
       //! Cube with label
-      Cube = 4
+      Cube = 3
     };
     Q_ENUM( Mode )
 

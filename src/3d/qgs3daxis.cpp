@@ -28,6 +28,7 @@
 #include<ctime>
 
 #include <Qt3DRender/QAttribute>
+#include "qgscoordinatereferencesystemutils.h"
 
 Qgs3DAxis::Qgs3DAxis( Qt3DExtras::Qt3DWindow *parentWindow, Qt3DCore::QEntity *parent3DScene, QgsCameraController *cameraCtrl, const Qgs3DMapSettings *map )
   : QObject( parentWindow ), mParentWindow( parentWindow ), mParentCamera( cameraCtrl->camera() ),
@@ -200,25 +201,20 @@ void Qgs3DAxis::createAxisScene()
     {
       setEnableCube( false );
       setEnableAxis( true );
-      if ( mCrs.isGeographic() )
-      {
-        mText_X->setText( QStringLiteral( "Long" ) );
-        mText_Y->setText( QStringLiteral( "Lat" ) );
-      }
+
+      auto axisDirections = mCrs.axisOrdering();
+
+      mText_X->setText( QgsCoordinateReferenceSystemUtils::axisDirectionToAbbreviatedString( axisDirections.at( 0 ) ) );
+
+      if ( axisDirections.length() > 1 )
+        mText_Y->setText( QgsCoordinateReferenceSystemUtils::axisDirectionToAbbreviatedString( axisDirections.at( 1 ) ) );
       else
-      {
-        mText_X->setText( "X" );
-        mText_Y->setText( "Y" );
-      }
-      mText_Z->setText( "Z" );
-    }
-    else if ( mMode == Mode::NorthEastUp )
-    {
-      setEnableCube( false );
-      setEnableAxis( true );
-      mText_X->setText( QStringLiteral( "East" ) );
-      mText_Y->setText( QStringLiteral( "North" ) );
-      mText_Z->setText( QStringLiteral( "Up" ) );
+        mText_Y->setText( "Y?" );
+
+      if ( axisDirections.length() > 2 )
+        mText_Z->setText( QgsCoordinateReferenceSystemUtils::axisDirectionToAbbreviatedString( axisDirections.at( 2 ) ) );
+      else
+        mText_Z->setText( QStringLiteral( "up" ) );
     }
     else if ( mMode == Mode::Cube )
     {
