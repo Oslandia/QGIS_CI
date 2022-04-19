@@ -99,6 +99,11 @@ class _3D_EXPORT Qgs3DAxis : public QObject
     Q_ENUM( Mode )
 
     /**
+     * \brief return axis mode
+     */
+    Qgs3DAxis::Mode mode() { return mMode; }
+
+    /**
      * \brief set axis representation mode
      * \param axisMode new node
      */
