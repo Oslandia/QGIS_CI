@@ -282,7 +282,6 @@ void Qgs3DAxis::createCube( )
   float textWidth;
   auto f = QFont( "monospace", fontSize );
   f.setWeight( QFont::Weight::Black );
-  f.setStyleStrategy( QFont::StyleStrategy::ForceOutline );
 
   {
     text = QStringLiteral( "top" );
@@ -371,7 +370,7 @@ Qt3DExtras::QText2DEntity *Qgs3DAxis::addCubeText( const QString &text, float te
   textEntity->setFont( f );
   textEntity->setHeight( textHeight );
   textEntity->setWidth( textWidth );
-  textEntity->setColor( QColor( 192, 192, 192, 255 ) );
+  textEntity->setColor( QColor( 192, 192, 192, 192 ) );
   textEntity->setText( text );
 
   auto textFrontTransform = new Qt3DCore::QTransform();
@@ -568,12 +567,6 @@ void Qgs3DAxis::updateCamera( /* const QVector3D & viewVector*/ )
       mAxisCamera->setPosition( mainCameraShift * mCylinderLength * 5.0 );
 
     updateAxisLabelPosition();
-#ifdef DEBUG
-    qDebug() << std::time( nullptr ) << this << "update camera from" << mPreviousVector << "to" << mainCameraShift << " / r:" << r;
-    mText_X->dumpObjectTree();
-    mText_X->setFont( QFont( "monospace", 10 ) );
-    mText_X->setText( "TEST" );
-#endif
   }
 }
 
