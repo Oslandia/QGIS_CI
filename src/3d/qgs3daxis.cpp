@@ -34,7 +34,7 @@
 
 Qgs3DAxis::Qgs3DAxis( Qt3DExtras::Qt3DWindow *parentWindow, Qt3DCore::QEntity *parent3DScene, QgsCameraController *cameraCtrl, const Qgs3DMapSettings *map )
   : QObject( parentWindow ), mParentWindow( parentWindow ), mParentCamera( cameraCtrl->camera() ),
-    mCrs( map->crsConstPtr() )
+    mCrs( map->crs() )
 {
   mAxisViewport = constructAxisViewport( parent3DScene );
   mAxisViewport->setParent( mParentWindow->activeFrameGraph() );
@@ -208,7 +208,7 @@ void Qgs3DAxis::createAxisScene()
       setEnableCube( false );
       setEnableAxis( true );
 
-      auto axisDirections = mCrs->axisOrdering();
+      auto axisDirections = mCrs.axisOrdering();
 
       mText_X->setText( QgsCoordinateReferenceSystemUtils::axisDirectionToAbbreviatedString( axisDirections.at( 0 ) ) );
 

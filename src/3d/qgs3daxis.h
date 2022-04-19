@@ -18,6 +18,7 @@
 
 #include "qgis_3d.h"
 
+#include "qgscoordinatereferencesystem.h"
 #include <Qt3DCore/QEntity>
 #include <Qt3DExtras/Qt3DWindow>
 #include <Qt3DExtras/QText2DEntity>
@@ -32,7 +33,6 @@
 
 class QgsCameraController;
 class Qgs3DMapSettings;
-class QgsCoordinateReferenceSystem;
 
 /**
  * \ingroup 3d
@@ -178,7 +178,7 @@ class _3D_EXPORT Qgs3DAxis : public QObject
     Qt3DExtras::QText2DEntity *mText_X, *mText_Y, *mText_Z;
     QVector3D mTextCoord_X, mTextCoord_Y, mTextCoord_Z;
     Qt3DCore::QTransform *mTextTransform_X = nullptr, *mTextTransform_Y = nullptr, *mTextTransform_Z = nullptr;
-    const QgsCoordinateReferenceSystem *mCrs;
+    QgsCoordinateReferenceSystem mCrs;
     QVector3D mPreviousVector;
 
     Qt3DRender::QCamera *mTwoDLabelCamera;

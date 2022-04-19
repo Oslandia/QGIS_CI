@@ -85,10 +85,6 @@ Sets coordinate reference system used in the 3D scene
 %Docstring
 Returns coordinate reference system used in the 3D scene
 %End
-    const QgsCoordinateReferenceSystem *crsConstPtr() const;
-%Docstring
-Returns coordinate reference system used in the 3D scene
-%End
 
     QgsCoordinateTransformContext transformContext() const;
 %Docstring

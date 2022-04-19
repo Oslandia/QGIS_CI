@@ -97,8 +97,6 @@ class _3D_EXPORT Qgs3DMapSettings : public QObject, public QgsTemporalRangeObjec
     void setCrs( const QgsCoordinateReferenceSystem &crs );
     //! Returns coordinate reference system used in the 3D scene
     QgsCoordinateReferenceSystem crs() const { return mCrs; }
-    //! Returns coordinate reference system used in the 3D scene
-    const QgsCoordinateReferenceSystem *crsConstPtr() const { return &mCrs; }
 
     /**
      * Returns the coordinate transform context, which stores various
