@@ -148,14 +148,16 @@ class _3D_EXPORT Qgs3DAxis : public QObject
                                        Qt3DRender::QCamera *destCamera, Qt3DRender::QViewport *destViewport,
                                        const QSize &destSize );
 
+  private slots:
+    void onCameraUpdate( );
+    void onAxisViewportSizeUpdate( int val = 0 );
+
   private:
     void createAxisScene();
     void createAxis( const Axis &axis );
     void createCube( );
     void setEnableCube( bool show );
     void setEnableAxis( bool show );
-    void updateCamera( );
-    void updateAxisViewportSize( int val = 0 );
     void updateAxisLabelPosition();
 
     Qt3DRender::QViewport *constructAxisViewport( Qt3DCore::QEntity *parent3DScene );
