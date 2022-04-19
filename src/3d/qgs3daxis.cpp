@@ -370,7 +370,7 @@ Qt3DExtras::QText2DEntity *Qgs3DAxis::addCubeText( const QString &text, float te
   textEntity->setFont( f );
   textEntity->setHeight( textHeight );
   textEntity->setWidth( textWidth );
-  textEntity->setColor( QColor( 192, 192, 192, 192 ) );
+  textEntity->setColor( QColor( 192, 192, 192 ) );
   textEntity->setText( text );
 
   auto textFrontTransform = new Qt3DCore::QTransform();
