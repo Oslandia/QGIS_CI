@@ -46,11 +46,11 @@ Qgs3DAxis::Qgs3DAxis( Qt3DExtras::Qt3DWindow *parentWindow, Qt3DCore::QEntity *p
   setAxisViewportPosition( mAxisViewportSize, s.verticalPosition(), s.horizontalPosition() );
   mMode = s.mode();
 
-  connect( cameraCtrl, &QgsCameraController::cameraChanged, this, &Qgs3DAxis::updateCamera );
-  connect( mParentWindow, &Qt3DExtras::Qt3DWindow::widthChanged, this, &Qgs3DAxis::updateAxisViewportSize );
-  connect( mParentWindow, &Qt3DExtras::Qt3DWindow::heightChanged, this, &Qgs3DAxis::updateAxisViewportSize );
+  connect( cameraCtrl, &QgsCameraController::cameraChanged, this, &Qgs3DAxis::onCameraUpdate );
+  connect( mParentWindow, &Qt3DExtras::Qt3DWindow::widthChanged, this, &Qgs3DAxis::onAxisViewportSizeUpdate );
+  connect( mParentWindow, &Qt3DExtras::Qt3DWindow::heightChanged, this, &Qgs3DAxis::onAxisViewportSizeUpdate );
 
-  updateAxisViewportSize();
+  onAxisViewportSizeUpdate();
 
   createAxisScene();
 }
@@ -507,11 +507,11 @@ void Qgs3DAxis::setAxisViewportPosition( int axisViewportSize, AxisViewportPosit
   mAxisViewportSize = axisViewportSize;
   mAxisViewportVertPos = axisViewportVertPos;
   mAxisViewportHorizPos = axisViewportHorizPos;
-  updateAxisViewportSize();
+  onAxisViewportSizeUpdate();
   mParentWindow->requestUpdate();
 }
 
-void Qgs3DAxis::updateAxisViewportSize( int )
+void Qgs3DAxis::onAxisViewportSizeUpdate( int )
 {
   float widthRatio = ( float )mAxisViewportSize / mParentWindow->width();
   float heightRatio = ( float )mAxisViewportSize / mParentWindow->height();
@@ -545,7 +545,7 @@ void Qgs3DAxis::updateAxisViewportSize( int )
   updateAxisLabelPosition();
 }
 
-void Qgs3DAxis::updateCamera( /* const QVector3D & viewVector*/ )
+void Qgs3DAxis::onCameraUpdate( )
 {
   if ( mParentCamera->viewVector() != mPreviousVector
        && !std::isnan( mParentCamera->viewVector().x() )
