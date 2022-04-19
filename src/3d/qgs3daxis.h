@@ -99,7 +99,7 @@ class _3D_EXPORT Qgs3DAxis : public QObject
     Q_ENUM( Mode )
 
     /**
-     * \brief return axis mode
+     * \brief Returns axis mode
      */
     Qgs3DAxis::Mode mode() { return mMode; }
 
@@ -118,17 +118,17 @@ class _3D_EXPORT Qgs3DAxis : public QObject
     void setAxisViewportPosition( int axisViewportSize, AxisViewportPosition axisViewportVertPos, AxisViewportPosition axisViewportHorizPos );
 
     /**
-     * \brief get axis viewport size
+     * \brief Returns axis viewport size
      */
     int axisViewportSize() const { return mAxisViewportSize;}
 
     /**
-     * \brief get axis viewport horizontal position
+     * \brief Returns axis viewport horizontal position
      */
     AxisViewportPosition axisViewportHorizontalPosition() const { return mAxisViewportHorizPos;}
 
     /**
-     * \brief get axis viewport vertical position
+     * \brief Returns axis viewport vertical position
      */
     AxisViewportPosition axisViewportVerticalPosition() const { return mAxisViewportVertPos;}
 
