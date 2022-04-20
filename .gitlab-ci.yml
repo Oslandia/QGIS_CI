@@ -3,21 +3,22 @@ stages:
 
 mirror_from_github:
   stage: mirror from github
+  tags:
+    - docker
   only:
     - schedules
   before_script:
-    - 'which ssh-agent || ( apt update -qq && apt install -y -qq git openssh-client )'
-    - eval $(ssh-agent -s)
-    - echo "${GIT_SSH_PRIVATE_KEY}" | tr -d '\r' | ssh-add -
-    - mkdir -p ~/.ssh
-    - chmod 700 ~/.ssh
-    - ssh-keyscan $GIT_LAB_HOST >> ~/.ssh/known_hosts
-    - chmod 644 ~/.ssh/known_hosts
+    - apt update -qq && apt install -y -qq git
     - git config --global user.name "${GITLAB_USER_NAME}"
     - git config --global user.email "${GITLAB_USER_EMAIL}"
   script:
-    - git checkout develop
-    - git pull
+# MASTER
     - git checkout master
+    - git reset --hard origin/master
+    - rm -fr ".git/rebase-merge"
     - git pull --ff-only "https://github.com/qgis/QGIS.git" master
-    - git push -f "git@gitlab.com:Oslandia/qgis/qgis.git" master
+    - git push -f "https://gitlab-ci-token:${GIT_TOKEN}@git.oslandia.net/Oslandia/Oslandia-3d/qgis.git" master
+# DEVELOP
+    - git checkout develop
+    - git pull --rebase origin master
+    - git push -f "https://gitlab-ci-token:${GIT_TOKEN}@git.oslandia.net/Oslandia/Oslandia-3d/qgis.git" develop
