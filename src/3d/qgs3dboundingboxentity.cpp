@@ -20,6 +20,7 @@
 #include <Qt3DRender/QCamera>
 
 #include "qgs3dboundingboxentity.h"
+#include "qgs3dboundingboxsettings.h"
 #include "qgs3dboundingboxutils.h"
 #include "qgs3dwiredmesh.h"
 #include "qgsaabb.h"
@@ -27,6 +28,7 @@
 
 Qgs3DBoundingBoxEntity::Qgs3DBoundingBoxEntity( Qt3DCore::QEntity *parent, QgsCameraController *cameraCtrl )
   : Qt3DCore::QEntity( parent )
+  , mSettings( new Qgs3DBoundingBoxSettings() )
   , mCameraCtrl( cameraCtrl )
 {
   mBBMesh = new Qgs3DWiredMesh( this );
@@ -44,9 +46,8 @@ Qgs3DBoundingBoxEntity::Qgs3DBoundingBoxEntity( Qt3DCore::QEntity *parent, QgsCa
   connect( mCameraCtrl, &QgsCameraController::cameraChanged, this, &Qgs3DBoundingBoxEntity::onCameraChanged );
 }
 
-void Qgs3DBoundingBoxEntity::createLabels( const Qgs3DBoundingBoxEntity::Direction &direction, const QgsAABB &bbox, float maxExtent, QList<QVector3D> &vertices )
+void Qgs3DBoundingBoxEntity::createLabels( const Qgs3DBoundingBoxEntity::Direction &direction, float maxExtent, QList<QVector3D> &vertices )
 {
-  int nbTicks = 7;
   int nbIncrD;
   float rangeIncr;
   float labelValue;
@@ -60,10 +61,13 @@ void Qgs3DBoundingBoxEntity::createLabels( const Qgs3DBoundingBoxEntity::Directi
   QVector3D pt3;
   QVector3D pt4;
 
+  QgsAABB bbox = mSettings->coords();
+  int nrTicks = mSettings->nrTicks();
+
   switch ( direction )
   {
     case Direction::X:
-      nbIncrD = std::max( ( int ) std::lround( nbTicks * bbox.xExtent() / maxExtent ), 3 );
+      nbIncrD = std::max( ( int ) std::lround( nrTicks * bbox.xExtent() / maxExtent ), 3 );
       QgsBoundingBoxUtils::extendedWilkinsonAlgorithm( bbox.xMin, bbox.xMax, nbIncrD, false, rangeMin, rangeMax, rangeIncr );
 
       incr = QVector3D( rangeIncr, 0.0f, 0.0f );
@@ -77,7 +81,7 @@ void Qgs3DBoundingBoxEntity::createLabels( const Qgs3DBoundingBoxEntity::Directi
       break;
 
     case Direction::Y:
-      nbIncrD = std::max( ( int ) std::lround( nbTicks * bbox.yExtent() / maxExtent ), 3 );
+      nbIncrD = std::max( ( int ) std::lround( nrTicks * bbox.yExtent() / maxExtent ), 3 );
       QgsBoundingBoxUtils::extendedWilkinsonAlgorithm( bbox.yMin, bbox.yMax, nbIncrD, false, rangeMin, rangeMax, rangeIncr );
 
       incr = QVector3D( 0.0f, rangeIncr, 0.0f );
@@ -91,7 +95,7 @@ void Qgs3DBoundingBoxEntity::createLabels( const Qgs3DBoundingBoxEntity::Directi
       break;
 
     case Direction::Z:
-      nbIncrD = std::max( ( int ) std::lround( nbTicks * bbox.zExtent() / maxExtent ), 3 );
+      nbIncrD = std::max( ( int ) std::lround( nrTicks * bbox.zExtent() / maxExtent ), 3 );
       QgsBoundingBoxUtils::extendedWilkinsonAlgorithm( bbox.zMin, bbox.zMax, nbIncrD, false, rangeMin, rangeMax, rangeIncr );
 
       incr = QVector3D( 0.0f, 0.0f, rangeIncr );
@@ -193,23 +197,29 @@ void Qgs3DBoundingBoxEntity::createLabels( const Qgs3DBoundingBoxEntity::Directi
   }
 }
 
-void Qgs3DBoundingBoxEntity::setBox( const QgsAABB &bbox )
+void Qgs3DBoundingBoxEntity::setParameters( Qgs3DBoundingBoxSettings const &settings )
 {
-  qDebug() << "setbox";
-  qDebug() << "bounding box" << bbox.xExtent()  << "x" << bbox.yExtent()  << "x" << bbox.zExtent();
-  QList<QVector3D> ticksVertices;
+  if ( settings != *mSettings )
+  {
+    delete mSettings;
+    mSettings = new Qgs3DBoundingBoxSettings( settings );
 
-  for ( auto *label : mLabels )
-    label->setParent( ( QEntity * ) nullptr );
+    QgsAABB bbox = settings.coords();
+    qDebug() << "set bounding box parameters";
+    QList<QVector3D> ticksVertices;
 
-  mLabels.clear();
+    for ( auto *label : mLabels )
+      label->setParent( ( QEntity * ) nullptr );
 
-  float maxExtent = std::max( std::max( bbox.xExtent(), bbox.yExtent() ), bbox.zExtent() );
+    mLabels.clear();
 
-  createLabels( Direction::X, bbox, maxExtent, ticksVertices );
-  createLabels( Direction::Y, bbox, maxExtent, ticksVertices );
-  createLabels( Direction::Z, bbox, maxExtent, ticksVertices );
-  mBBMesh->setVertices( bbox.verticesForLines() + ticksVertices );
+    float maxExtent = std::max( std::max( bbox.xExtent(), bbox.yExtent() ), bbox.zExtent() );
+
+    createLabels( Direction::X, maxExtent, ticksVertices );
+    createLabels( Direction::Y, maxExtent, ticksVertices );
+    createLabels( Direction::Z, maxExtent, ticksVertices );
+    mBBMesh->setVertices( bbox.verticesForLines() + ticksVertices );
+  }
 }
 
 void Qgs3DBoundingBoxEntity::onCameraChanged()
