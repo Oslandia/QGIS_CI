@@ -9,6 +9,7 @@ set(QGIS_3D_SRCS
   qgsabstract3dengine.cpp
   qgsabstractvectorlayer3drenderer.cpp
   qgs3danimationsettings.cpp
+  qgs3dbillboardlabel.cpp
   qgs3dboundingboxentity.cpp
   qgs3dboundingboxsettings.cpp
   qgs3dboundingboxlabels.cpp
@@ -113,6 +114,7 @@ set(QGIS_3D_HDRS
   qgs3danimationsettings.h
   qgs3daxis.h
   qgs3daxissettings.h
+  qgs3dbillboardlabel.h
   qgs3dboundingboxentity.h
   qgs3dboundingboxsettings.h
   qgs3dboundingboxlabels.h
