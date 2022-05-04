@@ -545,7 +545,6 @@ void Qgs3DMapConfigWidget::on3DAxisChanged()
   if ( m3DMapCanvas->scene()->get3DAxis() )
   {
     Qgs3DAxisSettings s = mMap->get3dAxisSettings();
-    bool asChanges = false;
     Qgs3DAxis::Mode m;
     if ( mGroupBox3dAxis->isChecked() )
       m = ( Qgs3DAxis::Mode )( mCbo3dAxisType->currentIndex() + 2 );
@@ -556,7 +555,6 @@ void Qgs3DMapConfigWidget::on3DAxisChanged()
     {
       m3DMapCanvas->scene()->get3DAxis()->setMode( m );
       s.setMode( m );
-      asChanges = true;
     }
     else
     {
@@ -569,10 +567,9 @@ void Qgs3DMapConfigWidget::on3DAxisChanged()
             vPos, hPos );
       s.setHorizontalPosition( hPos );
       s.setVerticalPosition( vPos );
-      asChanges = true;
     }
 
-    if ( asChanges )
+    if ( s != mMap->get3dAxisSettings() )
       mMap->set3dAxisSettings( s );
 
   }
