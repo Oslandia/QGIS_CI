@@ -523,10 +523,8 @@ void Qgs3DMapConfigWidget::init3DAxisPage()
     on3DAxisChanged();
   } );
 
-  connect( mCbo3dAxisVertPos, QOverload<int>::of( &QComboBox::currentIndexChanged ), this, [this]( int ) // skip-keyword-check
-  {
-    on3DAxisChanged();
-  } );
+  connect( mCbo3dAxisVertPos, QOverload<int>::of( &QComboBox::currentIndexChanged ), this, &Qgs3DMapConfigWidget::on3DAxisChanged );  // skip-keyword-check
+
 
   Qgs3DAxisSettings s = mMap->get3dAxisSettings();
 
