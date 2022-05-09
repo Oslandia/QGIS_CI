@@ -508,21 +508,9 @@ void Qgs3DMapConfigWidget::validate()
 
 void Qgs3DMapConfigWidget::init3DAxisPage()
 {
-  connect( mGroupBox3dAxis, &QGroupBox::toggled, this, [this]( bool )
-  {
-    on3DAxisChanged();
-  } );
-
-  connect( mCbo3dAxisType, QOverload<int>::of( &QComboBox::currentIndexChanged ), this, [this]( int ) // skip-keyword-check
-  {
-    on3DAxisChanged();
-  } );
-
-  connect( mCbo3dAxisHorizPos, QOverload<int>::of( &QComboBox::currentIndexChanged ), this, [this]( int ) // skip-keyword-check
-  {
-    on3DAxisChanged();
-  } );
-
+  connect( mGroupBox3dAxis, &QGroupBox::toggled, this, &Qgs3DMapConfigWidget::on3DAxisChanged ); // skip-keyword-check
+  connect( mCbo3dAxisType, QOverload<int>::of( &QComboBox::currentIndexChanged ), this, &Qgs3DMapConfigWidget::on3DAxisChanged ); // skip-keyword-check
+  connect( mCbo3dAxisHorizPos, QOverload<int>::of( &QComboBox::currentIndexChanged ), this, &Qgs3DMapConfigWidget::on3DAxisChanged ); // skip-keyword-check
   connect( mCbo3dAxisVertPos, QOverload<int>::of( &QComboBox::currentIndexChanged ), this, &Qgs3DMapConfigWidget::on3DAxisChanged );  // skip-keyword-check
 
 
