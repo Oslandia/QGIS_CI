@@ -27,6 +27,7 @@
 #include "qgs3dwiredmesh.h"
 #include "qgsaabb.h"
 #include "qgscameracontroller.h"
+#include "qgs3dbillboardlabel.h"
 
 Qgs3DBoundingBoxEntity::Qgs3DBoundingBoxEntity( Qt3DCore::QEntity *parent, Qgs3DMapSettings *mapSettings, QgsCameraController *cameraCtrl )
   : Qt3DCore::QEntity( parent )
@@ -49,7 +50,7 @@ Qgs3DBoundingBoxEntity::Qgs3DBoundingBoxEntity( Qt3DCore::QEntity *parent, Qgs3D
   mLabelsFont.setWeight( QFont::Weight::Black );
   mLabelsFont.setStyleStrategy( QFont::StyleStrategy::ForceOutline );
 
-  connect( mCameraCtrl, &QgsCameraController::cameraChanged, this, &Qgs3DBoundingBoxEntity::onCameraChanged );
+  // connect( mCameraCtrl, &QgsCameraController::cameraChanged, this, &Qgs3DBoundingBoxEntity::onCameraChanged );
 }
 
 Qgs3DBoundingBoxEntity::~Qgs3DBoundingBoxEntity()
@@ -156,56 +157,64 @@ void Qgs3DBoundingBoxEntity::createLabels( Qt::Axis axis, const QgsVector3D &bbo
 
     QString text = QString::number( int( labelValue ) );
 
-    Qt3DExtras::QText2DEntity *textX1 = new Qt3DExtras::QText2DEntity;
-    textX1->setParent( this );
+    // Qt3DExtras::QText2DEntity *textX1 = new Qt3DExtras::QText2DEntity;
+    // textX1->setParent( this );
+    Qgs3DBillboardLabel *textX1 = new Qgs3DBillboardLabel( mCameraCtrl, this );
     textX1->setFont( mLabelsFont );
     textX1->setHeight( 1.5 * mLabelsFont.pointSize() );
     textX1->setWidth( text.length() * mLabelsFont.pointSize() );
     textX1->setText( text );
     textX1->setColor( mColor );
 
-    Qt3DCore::QTransform *textTransform1 = new Qt3DCore::QTransform();
-    textTransform1->setTranslation( pt1 - delta1 );
-    textX1->addComponent( textTransform1 );
+    // Qt3DCore::QTransform *textTransform1 = new Qt3DCore::QTransform();
+    // textTransform1->setTranslation( pt1 );
+    // textX1->addComponent( textTransform1 );
+    textX1->setTranslation( pt1 - delta1 );
     mLabels.append( textX1 );
 
-    Qt3DExtras::QText2DEntity *textX2 = new Qt3DExtras::QText2DEntity;
-    textX2->setParent( this );
+    // Qt3DExtras::QText2DEntity *textX2 = new Qt3DExtras::QText2DEntity;
+    // textX2->setParent( this );
+    Qgs3DBillboardLabel *textX2 = new Qgs3DBillboardLabel( mCameraCtrl, this );
     textX2->setFont( mLabelsFont );
     textX2->setHeight( 1.5 * mLabelsFont.pointSize() );
     textX2->setWidth( text.length() * mLabelsFont.pointSize() );
     textX2->setText( text );
     textX2->setColor( mColor );
 
-    Qt3DCore::QTransform *textTransform2 = new Qt3DCore::QTransform();
-    textTransform2->setTranslation( pt2 - delta1 );
-    textX2->addComponent( textTransform2 );
+    // Qt3DCore::QTransform *textTransform2 = new Qt3DCore::QTransform();
+    // textTransform2->setTranslation( pt2 );
+    // textX2->addComponent( textTransform2 );
+    textX2->setTranslation( pt2 - delta1 );
     mLabels.append( textX2 );
 
-    Qt3DExtras::QText2DEntity *textX3 = new Qt3DExtras::QText2DEntity;
-    textX3->setParent( this );
+    // Qt3DExtras::QText2DEntity *textX3 = new Qt3DExtras::QText2DEntity;
+    // textX3->setParent( this );
+    Qgs3DBillboardLabel *textX3 = new Qgs3DBillboardLabel( mCameraCtrl, this );
     textX3->setFont( mLabelsFont );
     textX3->setHeight( 1.5 * mLabelsFont.pointSize() );
     textX3->setWidth( text.length() * mLabelsFont.pointSize() );
     textX3->setText( text );
     textX3->setColor( mColor );
 
-    Qt3DCore::QTransform *textTransform3 = new Qt3DCore::QTransform();
-    textTransform3->setTranslation( pt3 + delta1 );
-    textX3->addComponent( textTransform3 );
+    // Qt3DCore::QTransform *textTransform3 = new Qt3DCore::QTransform();
+    // textTransform3->setTranslation( pt3 );
+    // textX3->addComponent( textTransform3 );
+    textX3->setTranslation( pt3 + delta1 );
     mLabels.append( textX3 );
 
-    Qt3DExtras::QText2DEntity *textX4 = new Qt3DExtras::QText2DEntity;
-    textX4->setParent( this );
+    // Qt3DExtras::QText2DEntity *textX4 = new Qt3DExtras::QText2DEntity;
+    // textX4->setParent( this );
+    Qgs3DBillboardLabel *textX4 = new Qgs3DBillboardLabel( mCameraCtrl, this );
     textX4->setFont( mLabelsFont );
     textX4->setHeight( 1.5 * mLabelsFont.pointSize() );
     textX4->setWidth( text.length() * mLabelsFont.pointSize() );
     textX4->setText( text );
     textX4->setColor( mColor );
 
-    Qt3DCore::QTransform *textTransform4 = new Qt3DCore::QTransform();
-    textTransform4->setTranslation( pt4 + delta1 );
-    textX4->addComponent( textTransform4 );
+    // Qt3DCore::QTransform *textTransform4 = new Qt3DCore::QTransform();
+    // textTransform4->setTranslation( pt4 );
+    // textX4->addComponent( textTransform4 );
+    textX4->setTranslation( pt4 + delta1 );
     mLabels.append( textX4 );
 
     pt1 += incr;
