@@ -23,7 +23,8 @@ void Qgs3DBillboardLabel::setTranslation( const QVector3D &position )
 
 void Qgs3DBillboardLabel::onCameraViewChanged()
 {
-  QVector3D textPosition =  mTransform->rotation().rotatedVector( mTransform->translation() );
+  // QVector3D textPosition =  mTransform->rotation().rotatedVector( mTransform->translation() );
+  QVector3D textPosition =  mTransform->translation();
   QVector3D cameraPosition = mSceneCamera->position();
 
   QVector3D textToCamera = cameraPosition - textPosition;

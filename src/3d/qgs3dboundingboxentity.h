@@ -33,6 +33,7 @@ namespace Qt3DRender
   class QCamera;
 }
 
+class Qgs3DBillboardLabel;
 class Qgs3DBoundingBoxSettings;
 class Qgs3DWiredMesh;
 class QgsAABB;
@@ -72,7 +73,8 @@ class _3D_EXPORT Qgs3DBoundingBoxEntity: public Qt3DCore::QEntity
 
     Qgs3DBoundingBoxSettings *mSettings = nullptr;
     Qgs3DWiredMesh *mBBMesh = nullptr;
-    QList<Qt3DExtras::QText2DEntity *> mLabels;
+    // QList<Qt3DExtras::QText2DEntity *> mLabels;
+    QList<Qgs3DBillboardLabel *> mLabels;
     QColor mColor = Qt::black;
     QFont mLabelsFont;
     QVector3D mInitialCameraPosition = QVector3D( 0, 0, 0 );
