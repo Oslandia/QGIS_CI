@@ -40,8 +40,9 @@ Qgs3DAxis::Qgs3DAxis( Qt3DExtras::Qt3DWindow *parentWindow
   : QObject( parentWindow )
   , mMapSettings( map )
   , mParentWindow( parentWindow )
-  , mParentCamera( cameraCtrl->camera() )
+  , mCameraController( cameraCtrl )
   , mCrs( map.crs() )
+  , mPreviousCursor( mParentWindow->cursor() )
 {
   mAxisViewport = constructAxisViewport( parent3DScene );
   mAxisViewport->setParent( mParentWindow->activeFrameGraph() );
@@ -81,7 +82,7 @@ void Qgs3DAxis::init3DObjectPicking( )
   mParentWindow->installEventFilter( this );
 
   // create object picker to handle hover enter/leave events
-  Qt3DRender::QObjectPicker *picker = new Qt3DRender::QObjectPicker( mAxisSceneEntity );
+  Qt3DRender::QObjectPicker *picker = new Qt3DRender::QObjectPicker;
   picker->setHoverEnabled( true );
   picker->setDragEnabled( false );
   picker->setEnabled( true );
@@ -89,13 +90,22 @@ void Qgs3DAxis::init3DObjectPicking( )
   mAxisSceneEntity->addComponent( picker );
   connect( picker, &Qt3DRender::QObjectPicker::entered, this, [this]()
   {
-    mPreviousCursor = mParentWindow->cursor();
+    if ( mPreviousCursor != mParentWindow->cursor() )
+    {
+      mPreviousCursor = mParentWindow->cursor();
+    }
     mParentWindow->setCursor( Qt::ArrowCursor );
   } );
   connect( picker, &Qt3DRender::QObjectPicker::exited, this, [this]()
   {
     mParentWindow->setCursor( mPreviousCursor );
   } );
+#ifdef DEBUG
+  connect( picker, &Qt3DRender::QObjectPicker::clicked, this, []( Qt3DRender::QPickEvent * )
+  {
+    qDebug() << "PICKED!"; // works only for the center of the screen
+  } );
+#endif
 }
 
 bool Qgs3DAxis::eventFilter( QObject *watched, QEvent *event )
@@ -107,11 +117,19 @@ bool Qgs3DAxis::eventFilter( QObject *watched, QEvent *event )
   if ( event->type() == QEvent::MouseButtonRelease )
   {
     QMouseEvent *lastClickEvent = static_cast<QMouseEvent *>( event );
-    mLastClickedButton = lastClickEvent->button();
-    mLastClickedPos = lastClickEvent->pos();
+    // limit ray caster usage to the axis viewport
+    QPointF normalizedPos( ( float )lastClickEvent->pos().x() / mParentWindow->width(), ( float )lastClickEvent->pos().y() / mParentWindow->height() );
+#ifdef DEBUG
+    qDebug() << "normalized pos:" << normalizedPos << "/ viewport:" << mAxisViewport->normalizedRect();
+#endif
+    if ( mAxisViewport->normalizedRect().contains( normalizedPos ) )
+    {
+      mLastClickedButton = lastClickEvent->button();
+      mLastClickedPos = lastClickEvent->pos();
 
-    // if casted ray from pos matches an entity, call onTouchedByRay
-    mScreenRayCaster->trigger( mLastClickedPos );
+      // if casted ray from pos matches an entity, call onTouchedByRay
+      mScreenRayCaster->trigger( mLastClickedPos );
+    }
   }
 
   return false;
@@ -119,32 +137,33 @@ bool Qgs3DAxis::eventFilter( QObject *watched, QEvent *event )
 
 void Qgs3DAxis::onTouchedByRay( const Qt3DRender::QAbstractRayCaster::Hits &hits )
 {
-  bool mHitsFound = false;
+  int mHitsFound = -1;
   if ( hits.length() )
   {
 #ifdef DEBUG
     qDebug() << hits.length() << "hit(s) at " << mLastClickedPos << "with" << mLastClickedButton;
-
-    for ( int i = 0; i < hits.length() && !mHitsFound; ++i )
+    for ( int i = 0; i < hits.length(); ++i )
     {
       qDebug() << "\tHit Type: " << hits.at( i ).type();
+      qDebug() << "\tHit triangle id: " << hits.at( i ).primitiveIndex();
       qDebug() << "\tHit entity name: " << hits.at( i ).entity()->objectName();
     }
 #endif
-    for ( int i = 0; i < hits.length() && !mHitsFound; ++i )
+
+    for ( int i = 0; i < hits.length() && mHitsFound == -1; ++i )
     {
       if ( hits.at( i ).entity() == mCubeRoot || hits.at( i ).entity() == mAxisRoot || hits.at( i ).entity()->parent() == mCubeRoot || hits.at( i ).entity()->parent() == mAxisRoot )
       {
-        mHitsFound = true;
+        mHitsFound = i;
       }
     }
   }
 
-  if ( mLastClickedButton == Qt::MouseButton::RightButton && mHitsFound )
+  if ( mLastClickedButton == Qt::MouseButton::RightButton && mHitsFound != -1 )
   {
     displayMenuAt( mLastClickedPos );
   }
-  else if ( mLastClickedButton == Qt::MouseButton::LeftButton && mMenu->isVisible() )
+  else if ( mLastClickedButton == Qt::MouseButton::LeftButton )
   {
     hideMenu();
   }
@@ -162,8 +181,8 @@ Qt3DRender::QViewport *Qgs3DAxis::constructAxisViewport( Qt3DCore::QEntity *pare
 
   mAxisCamera = new Qt3DRender::QCamera;
   mAxisCamera->setParent( mAxisSceneEntity );
-  mAxisCamera->setProjectionType( mParentCamera->projectionType() );
-  mAxisCamera->lens()->setFieldOfView( mParentCamera->lens()->fieldOfView() * 0.5 );
+  mAxisCamera->setProjectionType( mCameraController->camera()->projectionType() );
+  mAxisCamera->lens()->setFieldOfView( mCameraController->camera()->lens()->fieldOfView() * 0.5 );
 
   mAxisCamera->setUpVector( QVector3D( 0.0f, 0.0f, 1.0f ) );
   mAxisCamera->setViewCenter( QVector3D( 0.0f, 0.0f, 0.0f ) );
@@ -189,6 +208,7 @@ Qt3DRender::QViewport *Qgs3DAxis::constructAxisViewport( Qt3DCore::QEntity *pare
 Qt3DRender::QViewport *Qgs3DAxis::constructLabelViewport( Qt3DCore::QEntity *parent3DScene, const QRectF &parentViewportSize )
 {
   auto twoDViewport = new Qt3DRender::QViewport;
+  // parent will be set later
   twoDViewport->setNormalizedRect( parentViewportSize );
 
   mTwoDLabelSceneEntity = new Qt3DCore::QEntity;
@@ -248,7 +268,7 @@ QVector3D Qgs3DAxis::from3dTo2dLabelPosition( const QVector3D &sourcePos,
   destPos.setZ( 0.0f );
 
 #ifdef DEBUG
-  qDebug() << "sourcePos" << sourcePos << " with" << viewTranslation << "corrected destPos" << destPos;
+  qDebug() << "from3dTo2dLabelPosition: sourcePos" << sourcePos << " with" << viewTranslation << "corrected destPos" << destPos;
 #endif
   return destPos;
 }
@@ -587,7 +607,6 @@ void Qgs3DAxis::createCube( )
 Qt3DExtras::QText2DEntity *Qgs3DAxis::addCubeText( const QString &text, float textHeight, float textWidth, const QFont &f, const QMatrix4x4 &rotation, const QVector3D &translation )
 {
   auto  textEntity = new Qt3DExtras::QText2DEntity;
-  textEntity->setParent( mCubeRoot );
   textEntity->setObjectName( "3DAxis_cube_label_" + text );
   textEntity->setFont( f );
   textEntity->setHeight( textHeight );
@@ -769,20 +788,22 @@ void Qgs3DAxis::onAxisViewportSizeUpdate( int )
   mTwoDLabelCamera->lens()->setOrthographicProjection(
     -mParentWindow->width() / 2.0f, mParentWindow->width() / 2.0f,
     -mParentWindow->height() / 2.0f, mParentWindow->height() / 2.0f,
-    -10.0f, 100.0f );
+    mTwoDLabelCamera->lens()->nearPlane(), mTwoDLabelCamera->lens()->farPlane() );
 
   updateAxisLabelPosition();
 }
 
 void Qgs3DAxis::onCameraUpdate( )
 {
-  if ( mParentCamera->viewVector() != mPreviousVector
-       && !std::isnan( mParentCamera->viewVector().x() )
-       && !std::isnan( mParentCamera->viewVector().y() )
-       && !std::isnan( mParentCamera->viewVector().z() ) )
+  Qt3DRender::QCamera *parentCamera = mCameraController->camera();
+
+  if ( parentCamera->viewVector() != mPreviousVector
+       && !std::isnan( parentCamera->viewVector().x() )
+       && !std::isnan( parentCamera->viewVector().y() )
+       && !std::isnan( parentCamera->viewVector().z() ) )
   {
-    mPreviousVector = mParentCamera->viewVector();
-    QVector3D mainCameraShift = mParentCamera->viewVector().normalized();
+    mPreviousVector = parentCamera->viewVector();
+    QVector3D mainCameraShift = parentCamera->viewVector().normalized();
     float zy_swap = mainCameraShift.y();
     mainCameraShift.setY( mainCameraShift.z() );
     mainCameraShift.setZ( -zy_swap );
@@ -797,7 +818,10 @@ void Qgs3DAxis::onCameraUpdate( )
       mAxisCamera->setPosition( mainCameraShift * mCylinderLength * 10.0 );
     }
 
-    updateAxisLabelPosition();
+    if ( mAxisRoot->isEnabled() )
+    {
+      updateAxisLabelPosition();
+    }
   }
 }
 
