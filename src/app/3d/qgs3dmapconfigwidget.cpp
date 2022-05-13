@@ -36,15 +36,15 @@
 #include "qgs3dmapcanvas.h"
 #include "qgs3dmapscene.h"
 
-Qgs3DMapConfigWidget::Qgs3DMapConfigWidget( Qgs3DMapSettings *map, QgsMapCanvas *mainCanvas, Qgs3DMapCanvas *mapCanvas3D, QWidget *parent )
+Qgs3DMapConfigWidget::Qgs3DMapConfigWidget( Qgs3DMapSettings *mapSettings, QgsMapCanvas *mainCanvas, Qgs3DMapCanvas *mapCanvas3D, QWidget *parent )
   : QWidget( parent )
-  , mMap( map )
+  , mMapSettings( mapSettings )
   , mMainCanvas( mainCanvas )
   , m3DMapCanvas( mapCanvas3D )
 {
   setupUi( this );
 
-  Q_ASSERT( map );
+  Q_ASSERT( mapSettings );
   Q_ASSERT( mainCanvas );
 
   const QgsSettings settings;
@@ -102,9 +102,9 @@ Qgs3DMapConfigWidget::Qgs3DMapConfigWidget( Qgs3DMapSettings *map, QgsMapCanvas 
   cboTerrainType->addItem( tr( "Online" ), QgsTerrainGenerator::Online );
   cboTerrainType->addItem( tr( "Mesh" ), QgsTerrainGenerator::Mesh );
 
-  groupTerrain->setChecked( mMap->terrainRenderingEnabled() );
+  groupTerrain->setChecked( mMapSettings->terrainRenderingEnabled() );
 
-  QgsTerrainGenerator *terrainGen = mMap->terrainGenerator();
+  QgsTerrainGenerator *terrainGen = mMapSettings->terrainGenerator();
   if ( terrainGen && terrainGen->type() == QgsTerrainGenerator::Dem )
   {
     cboTerrainType->setCurrentIndex( cboTerrainType->findData( QgsTerrainGenerator::Dem ) );
@@ -139,29 +139,29 @@ Qgs3DMapConfigWidget::Qgs3DMapConfigWidget( Qgs3DMapSettings *map, QgsMapCanvas 
     spinTerrainSkirtHeight->setValue( 10 );
   }
 
-  spinCameraFieldOfView->setValue( mMap->fieldOfView() );
-  cboCameraProjectionType->setCurrentIndex( cboCameraProjectionType->findData( mMap->projectionType() ) );
-  mCameraNavigationModeCombo->setCurrentIndex( mCameraNavigationModeCombo->findData( mMap->cameraNavigationMode() ) );
-  mCameraMovementSpeed->setValue( mMap->cameraMovementSpeed() );
-  spinTerrainScale->setValue( mMap->terrainVerticalScale() );
-  spinMapResolution->setValue( mMap->mapTileResolution() );
-  spinScreenError->setValue( mMap->maxTerrainScreenError() );
-  spinGroundError->setValue( mMap->maxTerrainGroundError() );
-  terrainElevationOffsetSpinBox->setValue( mMap->terrainElevationOffset() );
-  chkShowLabels->setChecked( mMap->showLabels() );
-  chkShowTileInfo->setChecked( mMap->showTerrainTilesInfo() );
-  chkShowBoundingBoxes->setChecked( mMap->showTerrainBoundingBoxes() );
-  chkShowCameraViewCenter->setChecked( mMap->showCameraViewCenter() );
-  chkShowCameraRotationCenter->setChecked( mMap->showCameraRotationCenter() );
-  chkShowLightSourceOrigins->setChecked( mMap->showLightSourceOrigins() );
-  mFpsCounterCheckBox->setChecked( mMap->isFpsCounterEnabled() );
+  spinCameraFieldOfView->setValue( mMapSettings->fieldOfView() );
+  cboCameraProjectionType->setCurrentIndex( cboCameraProjectionType->findData( mMapSettings->projectionType() ) );
+  mCameraNavigationModeCombo->setCurrentIndex( mCameraNavigationModeCombo->findData( mMapSettings->cameraNavigationMode() ) );
+  mCameraMovementSpeed->setValue( mMapSettings->cameraMovementSpeed() );
+  spinTerrainScale->setValue( mMapSettings->terrainVerticalScale() );
+  spinMapResolution->setValue( mMapSettings->mapTileResolution() );
+  spinScreenError->setValue( mMapSettings->maxTerrainScreenError() );
+  spinGroundError->setValue( mMapSettings->maxTerrainGroundError() );
+  terrainElevationOffsetSpinBox->setValue( mMapSettings->terrainElevationOffset() );
+  chkShowLabels->setChecked( mMapSettings->showLabels() );
+  chkShowTileInfo->setChecked( mMapSettings->showTerrainTilesInfo() );
+  chkShowBoundingBoxes->setChecked( mMapSettings->showTerrainBoundingBoxes() );
+  chkShowCameraViewCenter->setChecked( mMapSettings->showCameraViewCenter() );
+  chkShowCameraRotationCenter->setChecked( mMapSettings->showCameraRotationCenter() );
+  chkShowLightSourceOrigins->setChecked( mMapSettings->showLightSourceOrigins() );
+  mFpsCounterCheckBox->setChecked( mMapSettings->isFpsCounterEnabled() );
 
-  groupTerrainShading->setChecked( mMap->isTerrainShadingEnabled() );
+  groupTerrainShading->setChecked( mMapSettings->isTerrainShadingEnabled() );
   widgetTerrainMaterial->setTechnique( QgsMaterialSettingsRenderingTechnique::TrianglesWithFixedTexture );
-  QgsPhongMaterialSettings terrainShadingMaterial = mMap->terrainShadingMaterial();
+  QgsPhongMaterialSettings terrainShadingMaterial = mMapSettings->terrainShadingMaterial();
   widgetTerrainMaterial->setSettings( &terrainShadingMaterial, nullptr );
 
-  widgetLights->setLights( mMap->lightSources() );
+  widgetLights->setLights( mMapSettings->lightSources() );
 
   connect( cboTerrainType, static_cast<void ( QComboBox::* )( int )>( &QComboBox::currentIndexChanged ), this, &Qgs3DMapConfigWidget::onTerrainTypeChanged );
   connect( cboTerrainLayer, static_cast<void ( QComboBox::* )( int )>( &QgsMapLayerComboBox::currentIndexChanged ), this, &Qgs3DMapConfigWidget::onTerrainLayerChanged );
@@ -173,29 +173,29 @@ Qgs3DMapConfigWidget::Qgs3DMapConfigWidget( Qgs3DMapSettings *map, QgsMapCanvas 
   onTerrainTypeChanged();
 
   mSkyboxSettingsWidget = new QgsSkyboxRenderingSettingsWidget( this );
-  mSkyboxSettingsWidget->setSkyboxSettings( map->skyboxSettings() );
+  mSkyboxSettingsWidget->setSkyboxSettings( mapSettings->skyboxSettings() );
   groupSkyboxSettings->layout()->addWidget( mSkyboxSettingsWidget );
-  groupSkyboxSettings->setChecked( mMap->isSkyboxEnabled() );
+  groupSkyboxSettings->setChecked( mMapSettings->isSkyboxEnabled() );
 
   mShadowSettingsWidget = new QgsShadowRenderingSettingsWidget( this );
   mShadowSettingsWidget->onDirectionalLightsCountChanged( widgetLights->directionalLightCount() );
-  mShadowSettingsWidget->setShadowSettings( map->shadowSettings() );
+  mShadowSettingsWidget->setShadowSettings( mapSettings->shadowSettings() );
   groupShadowRendering->layout()->addWidget( mShadowSettingsWidget );
   connect( widgetLights, &QgsLightsWidget::directionalLightsCountChanged, mShadowSettingsWidget, &QgsShadowRenderingSettingsWidget::onDirectionalLightsCountChanged );
 
   connect( widgetLights, &QgsLightsWidget::lightsAdded, this, &Qgs3DMapConfigWidget::validate );
   connect( widgetLights, &QgsLightsWidget::lightsRemoved, this, &Qgs3DMapConfigWidget::validate );
 
-  groupShadowRendering->setChecked( map->shadowSettings().renderShadows() );
+  groupShadowRendering->setChecked( mapSettings->shadowSettings().renderShadows() );
 
-  edlGroupBox->setChecked( map->eyeDomeLightingEnabled() );
-  edlStrengthSpinBox->setValue( map->eyeDomeLightingStrength() );
-  edlDistanceSpinBox->setValue( map->eyeDomeLightingDistance() );
+  edlGroupBox->setChecked( mapSettings->eyeDomeLightingEnabled() );
+  edlStrengthSpinBox->setValue( mapSettings->eyeDomeLightingStrength() );
+  edlDistanceSpinBox->setValue( mapSettings->eyeDomeLightingDistance() );
 
 
-  mSync2DTo3DCheckbox->setChecked( map->viewSyncMode().testFlag( Qgis::ViewSyncModeFlag::Sync2DTo3D ) );
-  mSync3DTo2DCheckbox->setChecked( map->viewSyncMode().testFlag( Qgis::ViewSyncModeFlag::Sync3DTo2D ) );
-  mVisualizeExtentCheckBox->setChecked( map->viewFrustumVisualizationEnabled() );
+  mSync2DTo3DCheckbox->setChecked( mapSettings->viewSyncMode().testFlag( Qgis::ViewSyncModeFlag::Sync2DTo3D ) );
+  mSync3DTo2DCheckbox->setChecked( mapSettings->viewSyncMode().testFlag( Qgis::ViewSyncModeFlag::Sync3DTo2D ) );
+  mVisualizeExtentCheckBox->setChecked( mapSettings->viewFrustumVisualizationEnabled() );
 
   mDebugShadowMapCornerComboBox->addItem( tr( "Top Left" ) );
   mDebugShadowMapCornerComboBox->addItem( tr( "Top Right" ) );
@@ -207,14 +207,14 @@ Qgs3DMapConfigWidget::Qgs3DMapConfigWidget( Qgs3DMapSettings *map, QgsMapCanvas 
   mDebugDepthMapCornerComboBox->addItem( tr( "Bottom Left" ) );
   mDebugDepthMapCornerComboBox->addItem( tr( "Bottom Right" ) );
 
-  mDebugShadowMapGroupBox->setChecked( map->debugShadowMapEnabled() );
+  mDebugShadowMapGroupBox->setChecked( mapSettings->debugShadowMapEnabled() );
 
-  mDebugShadowMapCornerComboBox->setCurrentIndex( static_cast<int>( map->debugShadowMapCorner() ) );
-  mDebugShadowMapSizeSpinBox->setValue( map->debugShadowMapSize() );
+  mDebugShadowMapCornerComboBox->setCurrentIndex( static_cast<int>( mapSettings->debugShadowMapCorner() ) );
+  mDebugShadowMapSizeSpinBox->setValue( mapSettings->debugShadowMapSize() );
 
-  mDebugDepthMapGroupBox->setChecked( map->debugDepthMapEnabled() );
-  mDebugDepthMapCornerComboBox->setCurrentIndex( static_cast<int>( map->debugDepthMapCorner() ) );
-  mDebugDepthMapSizeSpinBox->setValue( map->debugDepthMapSize() );
+  mDebugDepthMapGroupBox->setChecked( mapSettings->debugDepthMapEnabled() );
+  mDebugDepthMapCornerComboBox->setCurrentIndex( static_cast<int>( mapSettings->debugDepthMapCorner() ) );
+  mDebugDepthMapSizeSpinBox->setValue( mapSettings->debugDepthMapSize() );
 }
 
 Qgs3DMapConfigWidget::~Qgs3DMapConfigWidget()
@@ -229,7 +229,7 @@ void Qgs3DMapConfigWidget::apply()
   bool needsUpdateOrigin = false;
 
   const QgsReferencedRectangle extent = QgsProject::instance()->viewSettings()->fullExtent();
-  QgsCoordinateTransform ct( extent.crs(), mMap->crs(), QgsProject::instance()->transformContext() );
+  QgsCoordinateTransform ct( extent.crs(), mMapSettings->crs(), QgsProject::instance()->transformContext() );
   ct.setBallparkTransformsAreAppropriate( true );
   QgsRectangle rect;
   try
@@ -243,15 +243,15 @@ void Qgs3DMapConfigWidget::apply()
 
   const QgsTerrainGenerator::Type terrainType = static_cast<QgsTerrainGenerator::Type>( cboTerrainType->currentData().toInt() );
 
-  mMap->setTerrainRenderingEnabled( groupTerrain->isChecked() );
+  mMapSettings->setTerrainRenderingEnabled( groupTerrain->isChecked() );
   switch ( terrainType )
   {
     case QgsTerrainGenerator::Flat:
     {
       QgsFlatTerrainGenerator *flatTerrainGen = new QgsFlatTerrainGenerator;
-      flatTerrainGen->setCrs( mMap->crs() );
+      flatTerrainGen->setCrs( mMapSettings->crs() );
       flatTerrainGen->setExtent( rect );
-      mMap->setTerrainGenerator( flatTerrainGen );
+      mMapSettings->setTerrainGenerator( flatTerrainGen );
       needsUpdateOrigin = true;
     }
     break;
@@ -260,10 +260,10 @@ void Qgs3DMapConfigWidget::apply()
       QgsRasterLayer *demLayer = qobject_cast<QgsRasterLayer *>( cboTerrainLayer->currentLayer() );
 
       bool tGenNeedsUpdate = true;
-      if ( mMap->terrainGenerator()->type() == QgsTerrainGenerator::Dem )
+      if ( mMapSettings->terrainGenerator()->type() == QgsTerrainGenerator::Dem )
       {
         // if we already have a DEM terrain generator, check whether there was actually any change
-        QgsDemTerrainGenerator *oldDemTerrainGen = static_cast<QgsDemTerrainGenerator *>( mMap->terrainGenerator() );
+        QgsDemTerrainGenerator *oldDemTerrainGen = static_cast<QgsDemTerrainGenerator *>( mMapSettings->terrainGenerator() );
         if ( oldDemTerrainGen->layer() == demLayer &&
              oldDemTerrainGen->resolution() == spinTerrainResolution->value() &&
              oldDemTerrainGen->skirtHeight() == spinTerrainSkirtHeight->value() )
@@ -273,11 +273,11 @@ void Qgs3DMapConfigWidget::apply()
       if ( tGenNeedsUpdate )
       {
         QgsDemTerrainGenerator *demTerrainGen = new QgsDemTerrainGenerator;
-        demTerrainGen->setCrs( mMap->crs(), QgsProject::instance()->transformContext() );
+        demTerrainGen->setCrs( mMapSettings->crs(), QgsProject::instance()->transformContext() );
         demTerrainGen->setLayer( demLayer );
         demTerrainGen->setResolution( spinTerrainResolution->value() );
         demTerrainGen->setSkirtHeight( spinTerrainSkirtHeight->value() );
-        mMap->setTerrainGenerator( demTerrainGen );
+        mMapSettings->setTerrainGenerator( demTerrainGen );
         needsUpdateOrigin = true;
       }
     }
@@ -285,9 +285,9 @@ void Qgs3DMapConfigWidget::apply()
     case QgsTerrainGenerator::Online:
     {
       bool tGenNeedsUpdate = true;
-      if ( mMap->terrainGenerator()->type() == QgsTerrainGenerator::Online )
+      if ( mMapSettings->terrainGenerator()->type() == QgsTerrainGenerator::Online )
       {
-        QgsOnlineTerrainGenerator *oldOnlineTerrainGen = static_cast<QgsOnlineTerrainGenerator *>( mMap->terrainGenerator() );
+        QgsOnlineTerrainGenerator *oldOnlineTerrainGen = static_cast<QgsOnlineTerrainGenerator *>( mMapSettings->terrainGenerator() );
         if ( oldOnlineTerrainGen->resolution() == spinTerrainResolution->value() &&
              oldOnlineTerrainGen->skirtHeight() == spinTerrainSkirtHeight->value() )
           tGenNeedsUpdate = false;
@@ -296,11 +296,11 @@ void Qgs3DMapConfigWidget::apply()
       if ( tGenNeedsUpdate )
       {
         QgsOnlineTerrainGenerator *onlineTerrainGen = new QgsOnlineTerrainGenerator;
-        onlineTerrainGen->setCrs( mMap->crs(), QgsProject::instance()->transformContext() );
+        onlineTerrainGen->setCrs( mMapSettings->crs(), QgsProject::instance()->transformContext() );
         onlineTerrainGen->setExtent( rect );
         onlineTerrainGen->setResolution( spinTerrainResolution->value() );
         onlineTerrainGen->setSkirtHeight( spinTerrainSkirtHeight->value() );
-        mMap->setTerrainGenerator( onlineTerrainGen );
+        mMapSettings->setTerrainGenerator( onlineTerrainGen );
         needsUpdateOrigin = true;
       }
     }
@@ -309,67 +309,67 @@ void Qgs3DMapConfigWidget::apply()
     {
       QgsMeshLayer *meshLayer = qobject_cast<QgsMeshLayer *>( cboTerrainLayer->currentLayer() );
       QgsMeshTerrainGenerator *newTerrainGenerator = new QgsMeshTerrainGenerator;
-      newTerrainGenerator->setCrs( mMap->crs(), QgsProject::instance()->transformContext() );
+      newTerrainGenerator->setCrs( mMapSettings->crs(), QgsProject::instance()->transformContext() );
       newTerrainGenerator->setLayer( meshLayer );
       std::unique_ptr< QgsMesh3DSymbol > symbol = mMeshSymbolWidget->symbol();
       symbol->setVerticalScale( spinTerrainScale->value() );
       newTerrainGenerator->setSymbol( symbol.release() );
-      mMap->setTerrainGenerator( newTerrainGenerator );
+      mMapSettings->setTerrainGenerator( newTerrainGenerator );
       needsUpdateOrigin = true;
     }
     break;
   }
 
-  if ( needsUpdateOrigin && mMap->terrainRenderingEnabled() && mMap->terrainGenerator() )
+  if ( needsUpdateOrigin && mMapSettings->terrainRenderingEnabled() && mMapSettings->terrainGenerator() )
   {
     const QgsRectangle te = m3DMapCanvas->scene()->sceneExtent();
 
     const QgsPointXY center = te.center();
-    mMap->setOrigin( QgsVector3D( center.x(), center.y(), 0 ) );
+    mMapSettings->setOrigin( QgsVector3D( center.x(), center.y(), 0 ) );
   }
 
-  mMap->setFieldOfView( spinCameraFieldOfView->value() );
-  mMap->setProjectionType( cboCameraProjectionType->currentData().value< Qt3DRender::QCameraLens::ProjectionType >() );
-  mMap->setCameraNavigationMode( static_cast<QgsCameraController::NavigationMode>( mCameraNavigationModeCombo->currentData().toInt() ) );
-  m3DMapCanvas->scene()->cameraController()->setCameraNavigationMode( mMap->cameraNavigationMode() );
-  mMap->setCameraMovementSpeed( mCameraMovementSpeed->value() );
-  mMap->setTerrainVerticalScale( spinTerrainScale->value() );
-  mMap->setMapTileResolution( spinMapResolution->value() );
-  mMap->setMaxTerrainScreenError( spinScreenError->value() );
-  mMap->setMaxTerrainGroundError( spinGroundError->value() );
-  mMap->setTerrainElevationOffset( terrainElevationOffsetSpinBox->value() );
-  mMap->setShowLabels( chkShowLabels->isChecked() );
-  mMap->setShowTerrainTilesInfo( chkShowTileInfo->isChecked() );
-  mMap->setShowTerrainBoundingBoxes( chkShowBoundingBoxes->isChecked() );
-  mMap->setShowCameraViewCenter( chkShowCameraViewCenter->isChecked() );
-  mMap->setShowCameraRotationCenter( chkShowCameraRotationCenter->isChecked() );
-  mMap->setShowLightSourceOrigins( chkShowLightSourceOrigins->isChecked() );
-  mMap->setIsFpsCounterEnabled( mFpsCounterCheckBox->isChecked() );
-  mMap->setTerrainShadingEnabled( groupTerrainShading->isChecked() );
+  mMapSettings->setFieldOfView( spinCameraFieldOfView->value() );
+  mMapSettings->setProjectionType( cboCameraProjectionType->currentData().value< Qt3DRender::QCameraLens::ProjectionType >() );
+  mMapSettings->setCameraNavigationMode( static_cast<QgsCameraController::NavigationMode>( mCameraNavigationModeCombo->currentData().toInt() ) );
+  m3DMapCanvas->scene()->cameraController()->setCameraNavigationMode( mMapSettings->cameraNavigationMode() );
+  mMapSettings->setCameraMovementSpeed( mCameraMovementSpeed->value() );
+  mMapSettings->setTerrainVerticalScale( spinTerrainScale->value() );
+  mMapSettings->setMapTileResolution( spinMapResolution->value() );
+  mMapSettings->setMaxTerrainScreenError( spinScreenError->value() );
+  mMapSettings->setMaxTerrainGroundError( spinGroundError->value() );
+  mMapSettings->setTerrainElevationOffset( terrainElevationOffsetSpinBox->value() );
+  mMapSettings->setShowLabels( chkShowLabels->isChecked() );
+  mMapSettings->setShowTerrainTilesInfo( chkShowTileInfo->isChecked() );
+  mMapSettings->setShowTerrainBoundingBoxes( chkShowBoundingBoxes->isChecked() );
+  mMapSettings->setShowCameraViewCenter( chkShowCameraViewCenter->isChecked() );
+  mMapSettings->setShowCameraRotationCenter( chkShowCameraRotationCenter->isChecked() );
+  mMapSettings->setShowLightSourceOrigins( chkShowLightSourceOrigins->isChecked() );
+  mMapSettings->setIsFpsCounterEnabled( mFpsCounterCheckBox->isChecked() );
+  mMapSettings->setTerrainShadingEnabled( groupTerrainShading->isChecked() );
 
   const std::unique_ptr< QgsAbstractMaterialSettings > terrainMaterial( widgetTerrainMaterial->settings() );
   if ( QgsPhongMaterialSettings *phongMaterial = dynamic_cast< QgsPhongMaterialSettings * >( terrainMaterial.get() ) )
-    mMap->setTerrainShadingMaterial( *phongMaterial );
+    mMapSettings->setTerrainShadingMaterial( *phongMaterial );
 
-  mMap->setLightSources( widgetLights->lightSources() );
-  mMap->setIsSkyboxEnabled( groupSkyboxSettings->isChecked() );
-  mMap->setSkyboxSettings( mSkyboxSettingsWidget->toSkyboxSettings() );
+  mMapSettings->setLightSources( widgetLights->lightSources() );
+  mMapSettings->setIsSkyboxEnabled( groupSkyboxSettings->isChecked() );
+  mMapSettings->setSkyboxSettings( mSkyboxSettingsWidget->toSkyboxSettings() );
   QgsShadowSettings shadowSettings = mShadowSettingsWidget->toShadowSettings();
   shadowSettings.setRenderShadows( groupShadowRendering->isChecked() );
-  mMap->setShadowSettings( shadowSettings );
+  mMapSettings->setShadowSettings( shadowSettings );
 
-  mMap->setEyeDomeLightingEnabled( edlGroupBox->isChecked() );
-  mMap->setEyeDomeLightingStrength( edlStrengthSpinBox->value() );
-  mMap->setEyeDomeLightingDistance( edlDistanceSpinBox->value() );
+  mMapSettings->setEyeDomeLightingEnabled( edlGroupBox->isChecked() );
+  mMapSettings->setEyeDomeLightingStrength( edlStrengthSpinBox->value() );
+  mMapSettings->setEyeDomeLightingDistance( edlDistanceSpinBox->value() );
 
   Qgis::ViewSyncModeFlags viewSyncMode;
   viewSyncMode.setFlag( Qgis::ViewSyncModeFlag::Sync2DTo3D, mSync2DTo3DCheckbox->isChecked() );
   viewSyncMode.setFlag( Qgis::ViewSyncModeFlag::Sync3DTo2D, mSync3DTo2DCheckbox->isChecked() );
-  mMap->setViewSyncMode( viewSyncMode );
-  mMap->setViewFrustumVisualizationEnabled( mVisualizeExtentCheckBox->isChecked() );
+  mMapSettings->setViewSyncMode( viewSyncMode );
+  mMapSettings->setViewFrustumVisualizationEnabled( mVisualizeExtentCheckBox->isChecked() );
 
-  mMap->setDebugDepthMapSettings( mDebugDepthMapGroupBox->isChecked(), static_cast<Qt::Corner>( mDebugDepthMapCornerComboBox->currentIndex() ), mDebugDepthMapSizeSpinBox->value() );
-  mMap->setDebugShadowMapSettings( mDebugShadowMapGroupBox->isChecked(), static_cast<Qt::Corner>( mDebugShadowMapCornerComboBox->currentIndex() ), mDebugShadowMapSizeSpinBox->value() );
+  mMapSettings->setDebugDepthMapSettings( mDebugDepthMapGroupBox->isChecked(), static_cast<Qt::Corner>( mDebugDepthMapCornerComboBox->currentIndex() ), mDebugDepthMapSizeSpinBox->value() );
+  mMapSettings->setDebugShadowMapSettings( mDebugShadowMapGroupBox->isChecked(), static_cast<Qt::Corner>( mDebugShadowMapCornerComboBox->currentIndex() ), mDebugShadowMapSizeSpinBox->value() );
 }
 
 void Qgs3DMapConfigWidget::onTerrainTypeChanged()
@@ -430,7 +430,7 @@ void Qgs3DMapConfigWidget::updateMaxZoomLevel()
     if ( QgsRasterLayer *demLayer = qobject_cast<QgsRasterLayer *>( cboTerrainLayer->currentLayer() ) )
     {
       te = demLayer->extent();
-      QgsCoordinateTransform terrainToMapTransform( demLayer->crs(), mMap->crs(), QgsProject::instance()->transformContext() );
+      QgsCoordinateTransform terrainToMapTransform( demLayer->crs(), mMapSettings->crs(), QgsProject::instance()->transformContext() );
       terrainToMapTransform.setBallparkTransformsAreAppropriate( true );
       te = terrainToMapTransform.transformBoundingBox( te );
     }
@@ -440,7 +440,7 @@ void Qgs3DMapConfigWidget::updateMaxZoomLevel()
     if ( QgsMeshLayer *meshLayer = qobject_cast<QgsMeshLayer *>( cboTerrainLayer->currentLayer() ) )
     {
       te = meshLayer->extent();
-      QgsCoordinateTransform terrainToMapTransform( meshLayer->crs(), mMap->crs(), QgsProject::instance()->transformContext() );
+      QgsCoordinateTransform terrainToMapTransform( meshLayer->crs(), mMapSettings->crs(), QgsProject::instance()->transformContext() );
       terrainToMapTransform.setBallparkTransformsAreAppropriate( true );
       te = terrainToMapTransform.transformBoundingBox( te );
     }
@@ -490,4 +490,3 @@ void Qgs3DMapConfigWidget::validate()
 
   emit isValidChanged( valid );
 }
-
