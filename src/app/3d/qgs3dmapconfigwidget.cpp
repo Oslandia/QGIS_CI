@@ -331,7 +331,6 @@ void Qgs3DMapConfigWidget::apply()
   mMapSettings->setFieldOfView( spinCameraFieldOfView->value() );
   mMapSettings->setProjectionType( cboCameraProjectionType->currentData().value< Qt3DRender::QCameraLens::ProjectionType >() );
   mMapSettings->setCameraNavigationMode( static_cast<QgsCameraController::NavigationMode>( mCameraNavigationModeCombo->currentData().toInt() ) );
-  m3DMapCanvas->scene()->cameraController()->setCameraNavigationMode( mMapSettings->cameraNavigationMode() );
   mMapSettings->setCameraMovementSpeed( mCameraMovementSpeed->value() );
   mMapSettings->setTerrainVerticalScale( spinTerrainScale->value() );
   mMapSettings->setMapTileResolution( spinMapResolution->value() );
