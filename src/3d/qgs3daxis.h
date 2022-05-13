@@ -189,7 +189,8 @@ class _3D_EXPORT Qgs3DAxis : public QObject
     // ========= private attributes
     Qgs3DMapSettings &mMapSettings;
     Qt3DExtras::Qt3DWindow *mParentWindow;
-    Qt3DRender::QCamera *mParentCamera;
+    QgsCameraController *mCameraController;
+
     float mCylinderLength = 40.0f;
     int mAxisViewportSize = 4.0 * mCylinderLength;
     AxisViewportPosition mAxisViewportVertPos = AxisViewportPosition::Begin;
