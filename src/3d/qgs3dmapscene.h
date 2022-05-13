@@ -71,7 +71,7 @@ class _3D_EXPORT Qgs3DMapScene : public Qt3DCore::QEntity
     Q_OBJECT
   public:
     //! Constructs a 3D scene based on map settings and Qt 3D renderer configuration
-    Qgs3DMapScene( const Qgs3DMapSettings &map, QgsAbstract3DEngine *engine );
+    Qgs3DMapScene( const Qgs3DMapSettings &mapSettings, QgsAbstract3DEngine *engine );
 
     //! Returns camera controller
     QgsCameraController *cameraController() { return mCameraController; }
@@ -204,7 +204,7 @@ class _3D_EXPORT Qgs3DMapScene : public Qt3DCore::QEntity
     int maximumTextureSize() const;
 
   private:
-    const Qgs3DMapSettings &mMap;
+    const Qgs3DMapSettings &mMapSettings;
     QgsAbstract3DEngine *mEngine = nullptr;
     //! Provides a way to have a synchronous function executed each frame
     Qt3DLogic::QFrameAction *mFrameAction = nullptr;
