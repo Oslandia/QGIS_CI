@@ -29,6 +29,7 @@
 #include <QVector3D>
 #include <QVector2D>
 
+#include <Qt3DRender/QLayer>
 #include <Qt3DRender/QBuffer>
 #include <Qt3DRender/QGeometryRenderer>
 
@@ -211,6 +212,7 @@ class _3D_EXPORT Qgs3DAxis : public QObject
     int mFontSize = 10;
 
     Qt3DCore::QEntity *mAxisSceneEntity;
+    Qt3DRender::QLayer *mAxisSceneLayer;
     Qt3DRender::QCamera *mAxisCamera;
     Qt3DRender::QViewport *mAxisViewport;
 
