@@ -26,7 +26,6 @@
 #include <Qt3DRender/QLayer>
 #include <Qt3DRender/QLayerFilter>
 #include <Qt3DRender/QPointLight>
-#include <Qt3DRender/QObjectPicker>
 #include <QShortcut>
 #include<ctime>
 
@@ -48,7 +47,7 @@ Qgs3DAxis::Qgs3DAxis( Qt3DExtras::Qt3DWindow *parentWindow
   , mMapScene( mapScene )
   , mCameraController( cameraCtrl )
   , mCrs( map.crs() )
-  , mPreviousCursor( mParentWindow->cursor() )
+  , mPreviousCursor( Qt::ArrowCursor )
 {
   mAxisViewport = constructAxisViewport( parent3DScene );
   mAxisViewport->setParent( mParentWindow->activeFrameGraph() );
@@ -80,38 +79,14 @@ void Qgs3DAxis::init3DObjectPicking( )
   //   2- connect screencaster results to onTouchedByRay
   //   3- screencaster will be triggered by EventFilter
   mScreenRayCaster = new Qt3DRender::QScreenRayCaster( mAxisSceneEntity );
+  mScreenRayCaster->addLayer( mAxisSceneLayer ); // to only filter on axis objects
+  mScreenRayCaster->setFilterMode( Qt3DRender::QScreenRayCaster::AcceptAllMatchingLayers );
   mScreenRayCaster->setRunMode( Qt3DRender::QAbstractRayCaster::SingleShot );
   mAxisSceneEntity->addComponent( mScreenRayCaster );
   QObject::connect( mScreenRayCaster, &Qt3DRender::QScreenRayCaster::hitsChanged, this, &Qgs3DAxis::onTouchedByRay );
 
   // we need event filter (see Qgs3DAxis::eventFilter) to handle the mouse click event as this event is not catchable via the Qt3DRender::QObjectPicker
   mParentWindow->installEventFilter( this );
-
-  // create object picker to handle hover enter/leave events
-  Qt3DRender::QObjectPicker *picker = new Qt3DRender::QObjectPicker;
-  picker->setHoverEnabled( true );
-  picker->setDragEnabled( false );
-  picker->setEnabled( true );
-
-  mAxisSceneEntity->addComponent( picker );
-  connect( picker, &Qt3DRender::QObjectPicker::entered, this, [this]()
-  {
-    if ( mPreviousCursor != mParentWindow->cursor() )
-    {
-      mPreviousCursor = mParentWindow->cursor();
-    }
-    mParentWindow->setCursor( Qt::ArrowCursor );
-  } );
-  connect( picker, &Qt3DRender::QObjectPicker::exited, this, [this]()
-  {
-    mParentWindow->setCursor( mPreviousCursor );
-  } );
-#ifdef DEBUG
-  connect( picker, &Qt3DRender::QObjectPicker::clicked, this, []( Qt3DRender::QPickEvent * )
-  {
-    qDebug() << "PICKED!"; // works only for the center of the screen
-  } );
-#endif
 }
 
 bool Qgs3DAxis::eventFilter( QObject *watched, QEvent *event )
@@ -119,15 +94,18 @@ bool Qgs3DAxis::eventFilter( QObject *watched, QEvent *event )
   if ( watched != mParentWindow )
     return false;
 
-  // only handle MouseButtonRelease as it represents the end of click. Events QEvent::HoverEnter and QEvent::HoverLeave are not catchable here but can be caught via Qt3DRender::QObjectPicker.
-  if ( event->type() == QEvent::MouseButtonRelease )
+  // handle QEvent::MouseButtonRelease as it represents the end of click and QEvent::MouseMove.
+  if ( event->type() == QEvent::MouseButtonRelease || event->type() == QEvent::MouseMove )
   {
     QMouseEvent *lastClickEvent = static_cast<QMouseEvent *>( event );
     // limit ray caster usage to the axis viewport
-    QPointF normalizedPos( ( float )lastClickEvent->pos().x() / mParentWindow->width(), ( float )lastClickEvent->pos().y() / mParentWindow->height() );
+    QPointF normalizedPos( ( float )lastClickEvent->pos().x() / mParentWindow->width(),
+                           ( float )lastClickEvent->pos().y() / mParentWindow->height() );
 #ifdef DEBUG
-    qDebug() << "normalized pos:" << normalizedPos << "/ viewport:" << mAxisViewport->normalizedRect();
+    if ( event->type() == QEvent::MouseButtonRelease )
+      qDebug() << "normalized pos:" << normalizedPos << "/ viewport:" << mAxisViewport->normalizedRect();
 #endif
+
     if ( mAxisViewport->normalizedRect().contains( normalizedPos ) )
     {
       mLastClickedButton = lastClickEvent->button();
@@ -135,6 +113,13 @@ bool Qgs3DAxis::eventFilter( QObject *watched, QEvent *event )
 
       // if casted ray from pos matches an entity, call onTouchedByRay
       mScreenRayCaster->trigger( mLastClickedPos );
+    }
+
+    // when we exit the viewport, reset the mouse cursor if needed
+    else if ( mPreviousCursor != Qt::ArrowCursor && mParentWindow->cursor() == Qt::ArrowCursor )
+    {
+      mParentWindow->setCursor( mPreviousCursor );
+      mPreviousCursor = Qt::ArrowCursor;
     }
   }
 
@@ -152,24 +137,38 @@ void Qgs3DAxis::onTouchedByRay( const Qt3DRender::QAbstractRayCaster::Hits &hits
     {
       qDebug() << "\tHit Type: " << hits.at( i ).type();
       qDebug() << "\tHit triangle id: " << hits.at( i ).primitiveIndex();
+      qDebug() << "\tHit distance: " << hits.at( i ).distance();
       qDebug() << "\tHit entity name: " << hits.at( i ).entity()->objectName();
     }
 #endif
 
     for ( int i = 0; i < hits.length() && mHitsFound == -1; ++i )
     {
-      if ( hits.at( i ).entity() == mCubeRoot || hits.at( i ).entity() == mAxisRoot || hits.at( i ).entity()->parent() == mCubeRoot || hits.at( i ).entity()->parent() == mAxisRoot )
+      if ( hits.at( i ).distance() < 500.0 && ( hits.at( i ).entity() == mCubeRoot || hits.at( i ).entity() == mAxisRoot || hits.at( i ).entity()->parent() == mCubeRoot || hits.at( i ).entity()->parent() == mAxisRoot ) )
       {
         mHitsFound = i;
       }
     }
   }
 
-  if ( mLastClickedButton == Qt::MouseButton::RightButton && mHitsFound != -1 )
+  if ( mLastClickedButton == Qt::NoButton )  // hover
+  {
+    if ( mHitsFound != -1 )
+    {
+      if ( mParentWindow->cursor() != Qt::ArrowCursor )
+      {
+        mPreviousCursor = mParentWindow->cursor();
+        mParentWindow->setCursor( Qt::ArrowCursor );
+      }
+    }
+  }
+
+  else if ( mLastClickedButton == Qt::MouseButton::RightButton && mHitsFound != -1 ) // show menu
   {
     displayMenuAt( mLastClickedPos );
   }
-  else if ( mLastClickedButton == Qt::MouseButton::LeftButton )
+
+  else if ( mLastClickedButton == Qt::MouseButton::LeftButton ) // handle cube face clicks
   {
     if ( mMenu->isVisible() )
       hideMenu();
@@ -246,6 +245,8 @@ Qt3DRender::QViewport *Qgs3DAxis::constructAxisViewport( Qt3DCore::QEntity *pare
   auto axisViewport = new Qt3DRender::QViewport;
   // parent will be set later
   // size will be set later
+
+  mAxisSceneLayer = new Qt3DRender::QLayer;
 
   mAxisSceneEntity = new Qt3DCore::QEntity;
   mAxisSceneEntity->setParent( parent3DScene );
@@ -368,6 +369,7 @@ void Qgs3DAxis::createAxisScene()
     mAxisRoot = new Qt3DCore::QEntity;
     mAxisRoot->setParent( mAxisSceneEntity );
     mAxisRoot->setObjectName( "3DAxis_AxisRoot" );
+    mAxisRoot->addComponent( mAxisSceneLayer );
 
     createAxis( Axis::X );
     createAxis( Axis::Y );
@@ -376,6 +378,7 @@ void Qgs3DAxis::createAxisScene()
     mCubeRoot = new Qt3DCore::QEntity;
     mCubeRoot->setParent( mAxisSceneEntity );
     mCubeRoot->setObjectName( "3DAxis_CubeRoot" );
+    mCubeRoot->addComponent( mAxisSceneLayer );
 
     createCube( );
   }
