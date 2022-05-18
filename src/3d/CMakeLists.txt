@@ -7,6 +7,7 @@ set(QGIS_3D_SRCS
   qgs3daxissettings.cpp
   qgsaabb.cpp
   qgsabstract3dengine.cpp
+  qgsabstractrenderview.cpp
   qgsabstractvectorlayer3drenderer.cpp
   qgs3danimationsettings.cpp
   qgs3dexportobject.cpp
@@ -116,6 +117,7 @@ set(QGIS_3D_HDRS
   qgs3dutils.h
   qgsaabb.h
   qgsabstract3dengine.h
+  qgsabstractrenderview.h
   qgsabstractvectorlayer3drenderer.h
   qgscameracontroller.h
   qgscamerapose.h

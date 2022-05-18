@@ -15,9 +15,13 @@
 
 #include "qgsshadowrenderingframegraph.h"
 #include "qgsdirectionallightsettings.h"
+#include "qgscameracontroller.h"
+#include "qgsrectangle.h"
 #include "qgspostprocessingentity.h"
 #include "qgspreviewquad.h"
 #include "qgs3dutils.h"
+#include "qgsabstractrenderview.h"
+
 #include "qgsambientocclusionrenderentity.h"
 #include "qgsambientocclusionblurentity.h"
 
@@ -579,6 +583,42 @@ QgsShadowRenderingFrameGraph::QgsShadowRenderingFrameGraph( QSurface *surface, Q
   mDepthRenderQuad->addComponent( mDepthRenderPassLayer );
   mDepthRenderQuad->setParent( mRootEntity );
 }
+
+void QgsShadowRenderingFrameGraph::unregisterRenderView( const QString &name )
+{
+  QgsAbstractRenderView *renderView = mRenderViewMap [name];
+  if ( renderView )
+  {
+    renderView->topGraphNode()->setParent( ( QNode * )nullptr );
+    mRenderViewMap.remove( name );
+  }
+}
+
+void QgsShadowRenderingFrameGraph::registerRenderView( QgsAbstractRenderView *renderView, const QString &name )
+{
+  if ( mRenderViewMap [name] == nullptr )
+  {
+    mRenderViewMap [name] = renderView;
+//    mShadowRendererEnabler = new Qt3DRender::QSubtreeEnabler;
+//    out = mShadowRendererEnabler;
+    renderView->topGraphNode()->setParent( mMainViewPort );
+  }
+
+}
+
+void QgsShadowRenderingFrameGraph::setEnableRenderView( const QString &name, bool enable )
+{
+  if ( mRenderViewMap [name] != nullptr )
+  {
+    mRenderViewMap [name]->enableSubTree( enable );
+  }
+}
+
+QgsAbstractRenderView *QgsShadowRenderingFrameGraph::renderView( const QString &name )
+{
+  return mRenderViewMap [name];
+}
+
 
 QgsPreviewQuad *QgsShadowRenderingFrameGraph::addTexturePreviewOverlay( Qt3DRender::QTexture2D *texture, const QPointF &centerTexCoords, const QSizeF &sizeTexCoords, QVector<Qt3DRender::QParameter *> additionalShaderParameters )
 {
