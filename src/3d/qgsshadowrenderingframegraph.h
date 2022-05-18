@@ -42,6 +42,7 @@ class QgsCameraController;
 class QgsRectangle;
 class QgsPostprocessingEntity;
 class QgsPreviewQuad;
+class QgsAbstractRenderView;
 
 #define SIP_NO_FILE
 
@@ -146,6 +147,12 @@ class QgsShadowRenderingFrameGraph : public Qt3DCore::QEntity
      * \since QGIS 3.18
      */
     bool renderCaptureEnabled() const { return mRenderCaptureEnabled; }
+
+    void registerRenderView( QgsAbstractRenderView *renderView, const QString &name );
+    void setEnableRenderView( const QString &name, bool enable );
+    QgsAbstractRenderView *renderView( const QString &name );
+    Qt3DRender::QLayer *filterLayer( const QString &name );
+
   private:
     Qt3DRender::QRenderSurfaceSelector *mRenderSurfaceSelector = nullptr;
     Qt3DRender::QViewport *mMainViewPort = nullptr;
@@ -241,6 +248,8 @@ class QgsShadowRenderingFrameGraph : public Qt3DCore::QEntity
     Qt3DCore::QEntity *constructDepthRenderQuad();
 
     bool mRenderCaptureEnabled = true;
+
+    QMap<QString, QgsAbstractRenderView *> mRenderViewMap;
 
     Q_DISABLE_COPY( QgsShadowRenderingFrameGraph )
 };
