@@ -211,6 +211,8 @@ class _3D_EXPORT Qgs3DMapScene : public Qt3DCore::QEntity
 
     void on3DAxisSettingsChanged();
 
+    void onBoundingBoxSettingsChanged();
+
     bool updateCameraNearFarPlanes();
 
   private:
