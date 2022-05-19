@@ -36,6 +36,17 @@ QgsAABB::QgsAABB( float xMin, float yMin, float zMin, float xMax, float yMax, fl
     std::swap( this->zMin, this->zMax );
 }
 
+QgsAABB::QgsAABB( const QgsAABB &other )
+  : xMin( other.xMin )
+  , yMin( other.yMin )
+  , zMin( other.zMin )
+  , xMax( other.xMax )
+  , yMax( other.yMax )
+  , zMax( other.zMax )
+{
+
+}
+
 bool QgsAABB::intersects( const QgsAABB &other ) const
 {
   return xMin < other.xMax && other.xMin < xMax &&
