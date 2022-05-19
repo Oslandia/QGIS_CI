@@ -10,6 +10,7 @@ set(QGIS_3D_SRCS
   qgsabstractvectorlayer3drenderer.cpp
   qgs3danimationsettings.cpp
   qgs3dboundingboxentity.cpp
+  qgs3dboundingboxsettings.cpp
   qgs3dexportobject.cpp
   qgs3dmapexportsettings.cpp
   qgs3dmapscene.cpp
@@ -112,6 +113,7 @@ set(QGIS_3D_HDRS
   qgs3daxis.h
   qgs3daxissettings.h
   qgs3dboundingboxentity.h
+  qgs3dboundingboxsettings.h
   qgs3dmapscene.h
   qgs3dmapsettings.h
   qgs3dsceneexporter.h
