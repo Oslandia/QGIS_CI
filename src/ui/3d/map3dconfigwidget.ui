@@ -136,6 +136,15 @@
          </item>
          <item>
           <property name="text">
+           <string>Bounding box</string>
+          </property>
+          <property name="icon">
+           <iconset resource="../../../images/images.qrc">
+            <normaloff>:/images/themes/default/3d.svg</normaloff>:/images/themes/default/3d.svg</iconset>
+          </property>
+         </item>
+         <item>
+          <property name="text">
            <string>Advanced</string>
           </property>
           <property name="toolTip">
@@ -761,6 +770,155 @@
                </item>
                <item>
                 <spacer name="verticalSpacerCameraSkybox">
+                 <property name="orientation">
+                  <enum>Qt::Vertical</enum>
+                 </property>
+                 <property name="sizeHint" stdset="0">
+                  <size>
+                   <width>20</width>
+                   <height>0</height>
+                  </size>
+                 </property>
+                </spacer>
+               </item>
+              </layout>
+             </widget>
+            </widget>
+           </item>
+          </layout>
+         </widget>
+         <widget class="QWidget" name="mPageBoundingBox">
+          <layout class="QVBoxLayout" name="gridLayoutBoundigBox">
+           <property name="topMargin">
+            <number>0</number>
+           </property>
+           <property name="rightMargin">
+            <number>0</number>
+           </property>
+           <property name="bottomMargin">
+            <number>0</number>
+           </property>
+           <item>
+            <widget class="QgsScrollArea" name="scrollAreaBoundingBox">
+             <property name="frameShape">
+              <enum>QFrame::NoFrame</enum>
+             </property>
+             <property name="widgetResizable">
+              <bool>true</bool>
+             </property>
+             <widget class="QWidget" name="scrollAreaBoundingBoxWidgetContents">
+              <property name="geometry">
+               <rect>
+                <x>0</x>
+                <y>0</y>
+                <width>711</width>
+                <height>604</height>
+               </rect>
+              </property>
+              <layout class="QVBoxLayout" name="verticalLayoutBoundingBox">
+               <property name="leftMargin">
+                <number>0</number>
+               </property>
+               <property name="topMargin">
+                <number>0</number>
+               </property>
+               <property name="rightMargin">
+                <number>0</number>
+               </property>
+               <property name="bottomMargin">
+                <number>0</number>
+               </property>
+               <item>
+                <widget class="QGroupBox" name="mGroupBoundingBox">
+                 <property name="title">
+                  <string>Show Bounding Box</string>
+                 </property>
+                 <property name="checkable">
+                  <bool>true</bool>
+                 </property>
+                 <property name="checked">
+                  <bool>false</bool>
+                 </property>
+                 <layout class="QGridLayout" name="gridLayoutBoundingBox" columnstretch="0,1,1">
+                  <property name="leftMargin">
+                   <number>0</number>
+                  </property>
+                  <property name="topMargin">
+                   <number>0</number>
+                  </property>
+                  <property name="rightMargin">
+                   <number>0</number>
+                  </property>
+                  <property name="bottomMargin">
+                   <number>0</number>
+                  </property>
+                  <item row="0" column="0">
+                   <widget class="QLabel" name="bbempty"/>
+                  </item>
+                  <item row="0" column="1">
+                   <widget class="QLabel" name="bbmin">
+                    <property name="text">
+                     <string>min</string>
+                    </property>
+                    <property name="alignment">
+                     <set>Qt::AlignCenter</set>
+                    </property>
+                   </widget>
+                  </item>
+                  <item row="0" column="2">
+                   <widget class="QLabel" name="bbmax">
+                    <property name="text">
+                     <string>max</string>
+                    </property>
+                    <property name="alignment">
+                     <set>Qt::AlignCenter</set>
+                    </property>
+                   </widget>
+                  </item>
+                  <item row="1" column="0">
+                   <widget class="QLabel" name="bbx">
+                    <property name="text">
+                     <string>X</string>
+                    </property>
+                   </widget>
+                  </item>
+                  <item row="1" column="1">
+                   <widget class="QDoubleSpinBox" name="mBoundingBoxXMin"/>
+                  </item>
+                  <item row="1" column="2">
+                   <widget class="QDoubleSpinBox" name="mBoundingBoxXMax"/>
+                  </item>
+                  <item row="2" column="0">
+                   <widget class="QLabel" name="bby">
+                    <property name="text">
+                     <string>Y</string>
+                    </property>
+                   </widget>
+                  </item>
+                  <item row="2" column="1">
+                   <widget class="QDoubleSpinBox" name="mBoundingBoxYMin"/>
+                  </item>
+                  <item row="2" column="2">
+                   <widget class="QDoubleSpinBox" name="mBoundingBoxYMax"/>
+                  </item>
+                  <item row="3" column="0">
+                   <widget class="QLabel" name="bbz">
+                    <property name="text">
+                     <string>Z</string>
+                    </property>
+                   </widget>
+                  </item>
+                  <item row="3" column="1">
+                   <widget class="QDoubleSpinBox" name="mBoundingBoxZMin"/>
+                  </item>
+                  <item row="3" column="2">
+                   <widget class="QDoubleSpinBox" name="mBoundingBoxZMax"/>
+                  </item>
+                 </layout>
+                </widget>
+               </item>
+               <item>
+                <spacer name="verticalSpacerBoundingBox">
                  <property name="orientation">
                   <enum>Qt::Vertical</enum>
                  </property>

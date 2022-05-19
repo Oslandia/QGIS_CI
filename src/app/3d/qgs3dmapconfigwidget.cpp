@@ -213,6 +213,9 @@ Qgs3DMapConfigWidget::Qgs3DMapConfigWidget( Qgs3DMapSettings *map, QgsMapCanvas 
 
   init3DAxisPage();
 
+  // Page: Bounding Box
+  initBoundingBoxPage();
+
   // ==================
   // Page: 2D/3D canvas sync
   mSync2DTo3DCheckbox->setChecked( map->viewSyncMode().testFlag( Qgis::ViewSyncModeFlag::Sync2DTo3D ) );
@@ -398,6 +401,19 @@ void Qgs3DMapConfigWidget::apply()
   mMap->setViewSyncMode( viewSyncMode );
   mMap->setViewFrustumVisualizationEnabled( mVisualizeExtentCheckBox->isChecked() );
 
+  // bounding box settings
+  // bounding box coordinates are displayed in the map coordinate System
+  // They neds to be used in the world coordinate system
+  QgsVector3D mapCoordsMin( mBoundingBoxXMin->value(), mBoundingBoxYMin->value(), mBoundingBoxZMin->value() );
+  QgsVector3D mapCoordsMax( mBoundingBoxXMax->value(), mBoundingBoxYMax->value(), mBoundingBoxZMax->value() );
+  QgsVector3D worldCoordsMin = mMap->mapToWorldCoordinates( mapCoordsMin );
+  QgsVector3D worldCoordsMax = mMap->mapToWorldCoordinates( mapCoordsMax );
+  QgsAABB boundingBox( worldCoordsMin.x(), worldCoordsMax.y(), worldCoordsMin.z(), worldCoordsMax.x(), worldCoordsMin.y(), worldCoordsMax.z() );
+  bool boundingBoxEnabled = mGroupBoundingBox->isChecked();
+  Qgs3DBoundingBoxSettings boundingBoxSettings = Qgs3DBoundingBoxSettings( boundingBoxEnabled, boundingBox );
+  if ( boundingBoxSettings != mMap->getBoundingBoxSettings() )
+    mMap->setBoundingBoxSettings( boundingBoxSettings );
+
   mMap->setDebugDepthMapSettings( mDebugDepthMapGroupBox->isChecked(), static_cast<Qt::Corner>( mDebugDepthMapCornerComboBox->currentIndex() ), mDebugDepthMapSizeSpinBox->value() );
   mMap->setDebugShadowMapSettings( mDebugShadowMapGroupBox->isChecked(), static_cast<Qt::Corner>( mDebugShadowMapCornerComboBox->currentIndex() ), mDebugShadowMapSizeSpinBox->value() );
 }
@@ -574,4 +590,32 @@ void Qgs3DMapConfigWidget::on3DAxisChanged()
     if ( s != mMap->get3dAxisSettings() )
       mMap->set3dAxisSettings( s );
   }
+}
+
+void Qgs3DMapConfigWidget::initBoundingBoxPage()
+{
+  QList<QDoubleSpinBox *> spinBoxes = {mBoundingBoxXMin, mBoundingBoxXMax, mBoundingBoxYMin, mBoundingBoxYMax, mBoundingBoxZMin, mBoundingBoxZMax};
+  for ( QDoubleSpinBox *spinBox : spinBoxes )
+  {
+    spinBox->setMinimum( std::numeric_limits<double>::lowest() );
+    spinBox->setMaximum( std::numeric_limits<double>::max() );
+  }
+
+  Qgs3DBoundingBoxSettings boundingBoxSettings = mMap->getBoundingBoxSettings();
+  QgsAABB boundingBoxCoords = boundingBoxSettings.coords();
+
+  // bounding box coordinates are stored in the world coordinate System
+  // They neds to be displayed in the map coordinate system
+  QgsVector3D boundingBoxCoordsWorldMin( boundingBoxCoords.xMin, boundingBoxCoords.yMin, boundingBoxCoords.zMin );
+  QgsVector3D boundingBoxCoordsMapMin = mMap->worldToMapCoordinates( boundingBoxCoordsWorldMin );
+  QgsVector3D boundingBoxCoordsWorldMax( boundingBoxCoords.xMax, boundingBoxCoords.yMax, boundingBoxCoords.zMax );
+  QgsVector3D boundingBoxCoordsMapMax = mMap->worldToMapCoordinates( boundingBoxCoordsWorldMax );
+
+  mGroupBoundingBox->setChecked( boundingBoxSettings.isEnabled() );
+  mBoundingBoxXMin->setValue( boundingBoxCoordsMapMin.x() );
+  mBoundingBoxYMin->setValue( boundingBoxCoordsMapMax.y() );
+  mBoundingBoxZMin->setValue( boundingBoxCoordsMapMin.z() );
+  mBoundingBoxXMax->setValue( boundingBoxCoordsMapMax.x() );
+  mBoundingBoxYMax->setValue( boundingBoxCoordsMapMin.y() );
+  mBoundingBoxZMax->setValue( boundingBoxCoordsMapMax.z() );
 }
