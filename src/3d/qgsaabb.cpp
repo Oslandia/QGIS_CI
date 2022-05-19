@@ -47,6 +47,23 @@ QgsAABB::QgsAABB( const QgsAABB &other )
 
 }
 
+bool QgsAABB::operator==( QgsAABB const &rhs ) const
+{
+  bool out = true;
+  out &= this->xMin == rhs.xMin;
+  out &= this->yMin == rhs.yMin;
+  out &= this->zMin == rhs.zMin;
+  out &= this->xMax == rhs.xMax;
+  out &= this->yMax == rhs.yMax;
+  out &= this->zMax == rhs.zMax;
+  return out;
+}
+
+bool QgsAABB::operator!=( QgsAABB const &rhs ) const
+{
+  return ! this->operator==( rhs );
+}
+
 bool QgsAABB::intersects( const QgsAABB &other ) const
 {
   return xMin < other.xMax && other.xMin < xMax &&
