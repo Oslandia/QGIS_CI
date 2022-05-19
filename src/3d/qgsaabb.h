@@ -36,6 +36,9 @@ class _3D_EXPORT QgsAABB
     //! Constructs bounding box with null coordinates
     QgsAABB() = default;
 
+    //! copy constructor
+    QgsAABB( const QgsAABB &other );
+
     //! Constructs bounding box
     QgsAABB( float xMin, float yMin, float zMin, float xMax, float yMax, float zMax );
 
