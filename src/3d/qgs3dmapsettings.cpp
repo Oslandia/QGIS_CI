@@ -91,6 +91,7 @@ Qgs3DMapSettings::Qgs3DMapSettings( const Qgs3DMapSettings &other )
   , mDebugDepthMapSize( other.mDebugDepthMapSize )
   , mTerrainRenderingEnabled( other.mTerrainRenderingEnabled )
   , mRendererUsage( other.mRendererUsage )
+  , mBoundingBoxSettings( other.mBoundingBoxSettings )
 {
   for ( QgsAbstract3DRenderer *renderer : std::as_const( other.mRenderers ) )
   {
@@ -318,6 +319,9 @@ void Qgs3DMapSettings::readXml( const QDomElement &elem, const QgsReadWriteConte
   QDateTime start = QDateTime::fromString( elemTemporalRange.attribute( QStringLiteral( "start" ) ), Qt::ISODate );
   QDateTime end = QDateTime::fromString( elemTemporalRange.attribute( QStringLiteral( "end" ) ), Qt::ISODate );
   setTemporalRange( QgsDateTimeRange( start, end ) );
+
+  QDomElement elemBoundingBox = elem.firstChildElement( QStringLiteral( "bounding-box" ) );
+  mBoundingBoxSettings.readXml( elemBoundingBox, context );
 }
 
 QDomElement Qgs3DMapSettings::writeXml( QDomDocument &doc, const QgsReadWriteContext &context ) const
@@ -445,6 +449,10 @@ QDomElement Qgs3DMapSettings::writeXml( QDomDocument &doc, const QgsReadWriteCon
   QDomElement elemTemporalRange = doc.createElement( QStringLiteral( "temporal-range" ) );
   elemTemporalRange.setAttribute( QStringLiteral( "start" ), temporalRange().begin().toString( Qt::ISODate ) );
   elemTemporalRange.setAttribute( QStringLiteral( "end" ), temporalRange().end().toString( Qt::ISODate ) );
+
+  QDomElement elemBoundingBox = doc.createElement( QStringLiteral( "bounding-box" ) );
+  mBoundingBoxSettings.writeXml( elemBoundingBox, context );
+  elem.appendChild( elemBoundingBox );
 
   return elem;
 }
@@ -905,6 +913,12 @@ void Qgs3DMapSettings::setViewFrustumVisualizationEnabled( bool enabled )
     mVisualizeViewFrustum = enabled;
     emit viewFrustumVisualizationEnabledChanged();
   }
+}
+
+void Qgs3DMapSettings::setBoundingBoxSettings( const Qgs3DBoundingBoxSettings &boundingBoxSettings )
+{
+  mBoundingBoxSettings = boundingBoxSettings;
+  emit boundingBoxSettingsChanged();
 }
 
 
