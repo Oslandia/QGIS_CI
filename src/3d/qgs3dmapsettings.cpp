@@ -92,6 +92,7 @@ Qgs3DMapSettings::Qgs3DMapSettings( const Qgs3DMapSettings &other )
   , mTerrainRenderingEnabled( other.mTerrainRenderingEnabled )
   , mRendererUsage( other.mRendererUsage )
   , m3dAxisSettings( other.m3dAxisSettings )
+  , mBoundingBoxSettings( other.mBoundingBoxSettings )
   , mIsDebugOverlayEnabled( other.mIsDebugOverlayEnabled )
 {
   for ( QgsAbstract3DRenderer *renderer : std::as_const( other.mRenderers ) )
@@ -324,6 +325,8 @@ void Qgs3DMapSettings::readXml( const QDomElement &elem, const QgsReadWriteConte
   QDomElement elem3dAxis = elem.firstChildElement( QStringLiteral( "axis3d" ) );
   m3dAxisSettings.readXml( elem3dAxis, context );
 
+  QDomElement elemBoundingBox = elem.firstChildElement( QStringLiteral( "bounding-box" ) );
+  mBoundingBoxSettings.readXml( elemBoundingBox, context );
 }
 
 QDomElement Qgs3DMapSettings::writeXml( QDomDocument &doc, const QgsReadWriteContext &context ) const
@@ -455,6 +458,10 @@ QDomElement Qgs3DMapSettings::writeXml( QDomDocument &doc, const QgsReadWriteCon
   QDomElement elem3dAxis = doc.createElement( QStringLiteral( "axis3d" ) );
   m3dAxisSettings.writeXml( elem3dAxis, context );
   elem.appendChild( elem3dAxis );
+
+  QDomElement elemBoundingBox = doc.createElement( QStringLiteral( "bounding-box" ) );
+  mBoundingBoxSettings.writeXml( elemBoundingBox, context );
+  elem.appendChild( elemBoundingBox );
 
   return elem;
 }
@@ -924,6 +931,12 @@ void Qgs3DMapSettings::setIsDebugOverlayEnabled( bool debugOverlayEnabled )
 
   mIsDebugOverlayEnabled = debugOverlayEnabled;
   emit debugOverlayEnabledChanged( mIsDebugOverlayEnabled );
+}
+
+void Qgs3DMapSettings::setBoundingBoxSettings( const Qgs3DBoundingBoxSettings &boundingBoxSettings )
+{
+  mBoundingBoxSettings = boundingBoxSettings;
+  emit boundingBoxSettingsChanged();
 }
 
 
