@@ -192,6 +192,8 @@ Qgs3DMapConfigWidget::Qgs3DMapConfigWidget( Qgs3DMapSettings *map, QgsMapCanvas 
   edlStrengthSpinBox->setValue( map->eyeDomeLightingStrength() );
   edlDistanceSpinBox->setValue( map->eyeDomeLightingDistance() );
 
+  // Page: Bounding Box
+  initBoundingBoxPage();
 
   mSync2DTo3DCheckbox->setChecked( map->viewSyncMode().testFlag( Qgis::ViewSyncModeFlag::Sync2DTo3D ) );
   mSync3DTo2DCheckbox->setChecked( map->viewSyncMode().testFlag( Qgis::ViewSyncModeFlag::Sync3DTo2D ) );
@@ -367,6 +369,13 @@ void Qgs3DMapConfigWidget::apply()
   mMap->setViewSyncMode( viewSyncMode );
   mMap->setViewFrustumVisualizationEnabled( mVisualizeExtentCheckBox->isChecked() );
 
+  // bounding box settings
+  QgsAABB boundingBox( mBoundingBoxXMin->value(), mBoundingBoxYMin->value(), mBoundingBoxZMin->value(), mBoundingBoxXMax->value(), mBoundingBoxYMax->value(), mBoundingBoxZMax->value() ) ;
+  bool boundingBoxEnabled = mGroupBoundingBox->isChecked();
+  Qgs3DBoundingBoxSettings boundingBoxSettings = Qgs3DBoundingBoxSettings( boundingBoxEnabled, boundingBox );
+  if ( boundingBoxSettings != mMap->getBoundingBoxSettings() )
+    mMap->setBoundingBoxSettings( boundingBoxSettings );
+
   mMap->setDebugDepthMapSettings( mDebugDepthMapGroupBox->isChecked(), static_cast<Qt::Corner>( mDebugDepthMapCornerComboBox->currentIndex() ), mDebugDepthMapSizeSpinBox->value() );
   mMap->setDebugShadowMapSettings( mDebugShadowMapGroupBox->isChecked(), static_cast<Qt::Corner>( mDebugShadowMapCornerComboBox->currentIndex() ), mDebugShadowMapSizeSpinBox->value() );
 }
@@ -488,4 +497,25 @@ void Qgs3DMapConfigWidget::validate()
   }
 
   emit isValidChanged( valid );
+}
+
+void Qgs3DMapConfigWidget::initBoundingBoxPage()
+{
+  QList<QDoubleSpinBox *> spinBoxes = {mBoundingBoxXMin, mBoundingBoxXMax, mBoundingBoxYMin, mBoundingBoxYMax, mBoundingBoxZMin, mBoundingBoxZMax};
+  for ( QDoubleSpinBox *spinBox : spinBoxes )
+  {
+    spinBox->setMinimum( std::numeric_limits<double>::lowest() );
+    spinBox->setMaximum( std::numeric_limits<double>::max() );
+  }
+
+  Qgs3DBoundingBoxSettings boundingBoxSettings = mMap->getBoundingBoxSettings();
+  QgsAABB boundingBoxCoords = boundingBoxSettings.coords();
+
+  mGroupBoundingBox->setChecked( boundingBoxSettings.isEnabled() );
+  mBoundingBoxXMin->setValue( boundingBoxCoords.xMin );
+  mBoundingBoxYMin->setValue( boundingBoxCoords.yMin );
+  mBoundingBoxZMin->setValue( boundingBoxCoords.zMin );
+  mBoundingBoxXMax->setValue( boundingBoxCoords.xMax );
+  mBoundingBoxYMax->setValue( boundingBoxCoords.yMax );
+  mBoundingBoxZMax->setValue( boundingBoxCoords.zMax );
 }

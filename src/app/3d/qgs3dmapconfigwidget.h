@@ -50,6 +50,8 @@ class Qgs3DMapConfigWidget : public QWidget, private Ui::Map3DConfigWidget
     void validate();
 
   private:
+    void initBoundingBoxPage();
+
     Qgs3DMapSettings *mMap = nullptr;
     QgsMapCanvas *mMainCanvas = nullptr;
     Qgs3DMapCanvas *m3DMapCanvas = nullptr;
