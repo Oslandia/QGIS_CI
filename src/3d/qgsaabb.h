@@ -78,6 +78,9 @@ class _3D_EXPORT QgsAABB
     //! Returns text representation of the bounding box
     QString toString() const;
 
+    //! Create a bounding box from its text representation
+    static QgsAABB fromString( const QString &string );
+
     float xMin = 0.0f;
     float yMin = 0.0f;
     float zMin = 0.0f;
