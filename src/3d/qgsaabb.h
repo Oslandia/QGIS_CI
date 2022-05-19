@@ -42,6 +42,12 @@ class _3D_EXPORT QgsAABB
     //! Constructs bounding box
     QgsAABB( float xMin, float yMin, float zMin, float xMax, float yMax, float zMax );
 
+    //! Returns true if both objects are equal
+    bool operator==( QgsAABB const &other ) const;
+
+    //! Returns true if objects are not equal
+    bool operator!=( QgsAABB const &other ) const;
+
     //! Returns box width in X axis
     float xExtent() const { return xMax - xMin; }
     //! Returns box width in Y axis
