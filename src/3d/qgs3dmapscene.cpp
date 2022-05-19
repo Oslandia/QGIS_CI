@@ -149,6 +149,7 @@ Qgs3DMapScene::Qgs3DMapScene( Qgs3DMapSettings &map, QgsAbstract3DEngine *engine
   connect( &map, &Qgs3DMapSettings::cameraMovementSpeedChanged, this, &Qgs3DMapScene::onCameraMovementSpeedChanged );
   connect( &map, &Qgs3DMapSettings::cameraNavigationModeChanged, this, &Qgs3DMapScene::onCameraNavigationModeChanged );
   connect( &map, &Qgs3DMapSettings::debugOverlayEnabledChanged, this, &Qgs3DMapScene::onDebugOverlayEnabledChanged );
+  connect( &map, &Qgs3DMapSettings::boundingBoxSettingsChanged, this, &Qgs3DMapScene::onBoundingBoxSettingsChanged );
 
   connect( &map, &Qgs3DMapSettings::axisSettingsChanged, this, &Qgs3DMapScene::on3DAxisSettingsChanged );
 
@@ -246,6 +247,10 @@ Qgs3DMapScene::Qgs3DMapScene( Qgs3DMapSettings &map, QgsAbstract3DEngine *engine
   onCameraMovementSpeedChanged();
 
   on3DAxisSettingsChanged();
+
+  // create bounding box entity
+  mBoundingBox = new Qgs3DBoundingBoxEntity( this );
+  onBoundingBoxSettingsChanged();
 }
 
 void Qgs3DMapScene::viewZoomFull()
@@ -628,8 +633,7 @@ void Qgs3DMapScene::createTerrainDeferred()
     float rootError = mMap.terrainGenerator()->rootChunkError( mMap );
     mMap.terrainGenerator()->setupQuadtree( rootBbox, rootError, maxZoomLevel );
 
-    mBoundingBox = new Qgs3DBoundingBoxEntity( this );
-    mBoundingBox->setBox( rootBbox );
+    qDebug() << "root bbox x :" << rootBbox.xMin << "x" << rootBbox.xMax << "y:" << rootBbox.yMin << "x" << rootBbox.yMax << "z :" << rootBbox.zMin << "x" << rootBbox.zMax;
 
     mTerrain = new QgsTerrainEntity( mMap );
     mTerrain->setParent( this );
@@ -1156,6 +1160,15 @@ void Qgs3DMapScene::onCameraMovementSpeedChanged()
 void Qgs3DMapScene::onCameraNavigationModeChanged()
 {
   mCameraController->setCameraNavigationMode( mMap.cameraNavigationMode() );
+}
+
+void Qgs3DMapScene::onBoundingBoxSettingsChanged()
+{
+  Qgs3DBoundingBoxSettings boundingBoxSettings = mMap.getBoundingBoxSettings();
+  mBoundingBox->setEnabled( boundingBoxSettings.isEnabled() );
+
+  if ( boundingBoxSettings.isEnabled() )
+    mBoundingBox->setBox( boundingBoxSettings.coords() );
 }
 
 void Qgs3DMapScene::exportScene( const Qgs3DMapExportSettings &exportSettings )
