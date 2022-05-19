@@ -13,7 +13,11 @@
  *                                                                         *
  ***************************************************************************/
 
+#include <QRegularExpression>
+#include <QVector>
+
 #include "qgsaabb.h"
+#include "qgslogger.h"
 
 QgsAABB::QgsAABB( float xMin, float yMin, float zMin, float xMax, float yMax, float zMax )
   : xMin( xMin )
@@ -96,4 +100,29 @@ QList<QVector3D> QgsAABB::verticesForLines() const
 QString QgsAABB::toString() const
 {
   return QStringLiteral( "X %1 - %2  Y %3 - %4  Z %5 - %6" ).arg( xMin ).arg( xMax ).arg( yMin ).arg( yMax ).arg( zMin ).arg( zMax );
+}
+
+QgsAABB QgsAABB::fromString( const QString &string )
+{
+  if ( string.isEmpty() )
+    return QgsAABB();
+
+  QVector<float> coords;
+  QRegularExpression re( "[X-Z] (?<min>[+-]?([0-9]*[.])?[0-9]+) - (?<max>[+-]?([0-9]*[.])?[0-9]+)" );
+  QRegularExpressionMatchIterator iter = re.globalMatch( string );
+
+  while ( iter.hasNext() )
+  {
+    QRegularExpressionMatch match = iter.next();
+    coords.append( match.captured( "min" ).toFloat() );
+    coords.append( match.captured( "max" ).toFloat() );
+  }
+
+  if ( coords.size() != 6 )
+  {
+    QgsDebugMsgLevel( QStringLiteral( "QgsAABB: error, unable to create bounding box from string" ), 2 );
+    return QgsAABB();
+  }
+
+  return QgsAABB( coords[0], coords[2], coords[4], coords[1], coords[3], coords[5] );
 }
