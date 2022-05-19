@@ -32,6 +32,7 @@
 #include "qgsterraingenerator.h"
 #include "qgsvector3d.h"
 #include "qgs3daxissettings.h"
+#include "qgs3dboundingboxsettings.h"
 #include "qgsskyboxsettings.h"
 #include "qgsshadowsettings.h"
 #include "qgscameracontroller.h"
@@ -670,6 +671,18 @@ class _3D_EXPORT Qgs3DMapSettings : public QObject, public QgsTemporalRangeObjec
      */
     void setIsDebugOverlayEnabled( bool debugOverlayEnabled );
 
+    /**
+     * Returns the current configuration of bounding box
+     * \return QGIS 3.26
+     */
+    Qgs3DBoundingBoxSettings getBoundingBoxSettings() const SIP_SKIP { return mBoundingBoxSettings; }
+
+    /**
+     * Sets the current configuration of bounding box
+     * \since QGIS 3.26
+     */
+    void setBoundingBoxSettings( const Qgs3DBoundingBoxSettings &boundingBoxSettings ) SIP_SKIP;
+
   signals:
 
     /**
@@ -869,6 +882,12 @@ class _3D_EXPORT Qgs3DMapSettings : public QObject, public QgsTemporalRangeObjec
      */
     void debugOverlayEnabledChanged( bool debugOverlayEnabled );
 
+    /**
+     * Emitted when bounding box rendering  settings are changed
+     * \since QGIS 3.26
+     */
+    void boundingBoxSettingsChanged();
+
   private:
 #ifdef SIP_RUN
     Qgs3DMapSettings &operator=( const Qgs3DMapSettings & );
@@ -938,6 +957,8 @@ class _3D_EXPORT Qgs3DMapSettings : public QObject, public QgsTemporalRangeObjec
     Qgis::RendererUsage mRendererUsage;
 
     Qgs3DAxisSettings m3dAxisSettings; //!< 3d axis related configuration
+
+    Qgs3DBoundingBoxSettings mBoundingBoxSettings; // Bounding box related configuration
 
     bool mIsDebugOverlayEnabled = false;
 
