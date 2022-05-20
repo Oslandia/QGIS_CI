@@ -16,6 +16,7 @@
 #ifndef QGS3DBOUNDINGBOXSETTINGS_H
 #define QGS3DBOUNDINGBOXSETTINGS_H
 
+#include <QColor>
 #include <QString>
 
 #include "qgis_3d.h"
@@ -38,7 +39,7 @@ class _3D_EXPORT Qgs3DBoundingBoxSettings
     //! default constructor
     Qgs3DBoundingBoxSettings() = default;
     // constructor
-    Qgs3DBoundingBoxSettings( bool enabled, const QgsAABB &boundingBox, int nrTicks = 7 );
+    Qgs3DBoundingBoxSettings( bool enabled, const QgsAABB &boundingBox, int nrTicks = 7, QColor color = Qt::black );
     //! copy constructor
     Qgs3DBoundingBoxSettings( const Qgs3DBoundingBoxSettings &other );
     //! delete assignment operator
@@ -66,10 +67,14 @@ class _3D_EXPORT Qgs3DBoundingBoxSettings
     //! Returns bounding box number of ticks
     int nrTicks() const { return mNrTicks; }
 
+    //! Returns bounding box color
+    QColor color() const { return mColor; }
+
   private:
     bool mEnabled = false;
     QgsAABB mBoundingBox;
     int mNrTicks = 7;
+    QColor mColor = Qt::black;
 };
 
 #endif // QGS3DBOUNDINGBOXSETTINGS_H
