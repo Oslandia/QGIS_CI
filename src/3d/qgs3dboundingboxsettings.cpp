@@ -23,13 +23,15 @@
 Qgs3DBoundingBoxSettings::Qgs3DBoundingBoxSettings( const Qgs3DBoundingBoxSettings &other )
   : mEnabled( other.mEnabled )
   , mBoundingBox( other.mBoundingBox )
+  , mNrTicks( other.mNrTicks )
 {
 
 }
 
-Qgs3DBoundingBoxSettings::Qgs3DBoundingBoxSettings( bool enabled, const QgsAABB &boundingBox )
+Qgs3DBoundingBoxSettings::Qgs3DBoundingBoxSettings( bool enabled, const QgsAABB &boundingBox, int nrTicks )
   : mEnabled( enabled )
   , mBoundingBox( boundingBox )
+  , mNrTicks( nrTicks )
 {
 
 }
@@ -38,6 +40,7 @@ Qgs3DBoundingBoxSettings &Qgs3DBoundingBoxSettings::operator=( Qgs3DBoundingBoxS
 {
   this->mEnabled = rhs.mEnabled;
   this->mBoundingBox = rhs.mBoundingBox;
+  this->mNrTicks = rhs.mNrTicks;
   return *this;
 }
 
@@ -46,6 +49,7 @@ bool Qgs3DBoundingBoxSettings::operator==( Qgs3DBoundingBoxSettings const &rhs )
   bool out = true;
   out &= this->mEnabled == rhs.mEnabled;
   out &= this->mBoundingBox == rhs.mBoundingBox;
+  out &= this->mNrTicks == rhs.mNrTicks;
   return out;
 }
 
@@ -61,6 +65,9 @@ void Qgs3DBoundingBoxSettings::readXml( const QDomElement &element, const QgsRea
 
   const QString extentString = element.attribute( QStringLiteral( "extent" ) );
   mBoundingBox = QgsAABB::fromString( extentString );
+
+  const QString nrTicks = element.attribute( QStringLiteral( "nr-ticks" ), QString::number( 7 ) );
+  mNrTicks = nrTicks.toInt();
 }
 
 QDomElement Qgs3DBoundingBoxSettings::writeXml( QDomElement &element, const QgsReadWriteContext &context ) const
@@ -72,5 +79,6 @@ QDomElement Qgs3DBoundingBoxSettings::writeXml( QDomElement &element, const QgsR
   QString enabled = mEnabled ? QStringLiteral( "1" ) : QStringLiteral( "0" );
   element.setAttribute( QStringLiteral( "enabled" ), enabled );
   element.setAttribute( QStringLiteral( "extent" ), mBoundingBox.toString() );
+  element.setAttribute( QStringLiteral( "nr-ticks" ),  QString::number( mNrTicks ) );
   return element;
 }

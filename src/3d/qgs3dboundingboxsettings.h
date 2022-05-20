@@ -38,7 +38,7 @@ class _3D_EXPORT Qgs3DBoundingBoxSettings
     //! default constructor
     Qgs3DBoundingBoxSettings() = default;
     // constructor
-    Qgs3DBoundingBoxSettings( bool enabled, const QgsAABB &boundingBox );
+    Qgs3DBoundingBoxSettings( bool enabled, const QgsAABB &boundingBox, int nrTicks = 7 );
     //! copy constructor
     Qgs3DBoundingBoxSettings( const Qgs3DBoundingBoxSettings &other );
     //! delete assignment operator
@@ -63,9 +63,13 @@ class _3D_EXPORT Qgs3DBoundingBoxSettings
     //! Returns bounding box coordinates
     QgsAABB coords() const { return mBoundingBox; }
 
+    //! Returns bounding box number of ticks
+    int nrTicks() const { return mNrTicks; }
+
   private:
     bool mEnabled = false;
     QgsAABB mBoundingBox;
+    int mNrTicks = 7;
 };
 
 #endif // QGS3DBOUNDINGBOXSETTINGS_H
