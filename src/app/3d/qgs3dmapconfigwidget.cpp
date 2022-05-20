@@ -410,7 +410,7 @@ void Qgs3DMapConfigWidget::apply()
   QgsVector3D worldCoordsMax = mMap->mapToWorldCoordinates( mapCoordsMax );
   QgsAABB boundingBox( worldCoordsMin.x(), worldCoordsMax.y(), worldCoordsMin.z(), worldCoordsMax.x(), worldCoordsMin.y(), worldCoordsMax.z() );
   bool boundingBoxEnabled = mGroupBoundingBox->isChecked();
-  Qgs3DBoundingBoxSettings boundingBoxSettings = Qgs3DBoundingBoxSettings( boundingBoxEnabled, boundingBox );
+  Qgs3DBoundingBoxSettings boundingBoxSettings = Qgs3DBoundingBoxSettings( boundingBoxEnabled, boundingBox, mBoundingBoxNrTicks->value() );
   if ( boundingBoxSettings != mMap->getBoundingBoxSettings() )
     mMap->setBoundingBoxSettings( boundingBoxSettings );
 
@@ -618,4 +618,6 @@ void Qgs3DMapConfigWidget::initBoundingBoxPage()
   mBoundingBoxXMax->setValue( boundingBoxCoordsMapMax.x() );
   mBoundingBoxYMax->setValue( boundingBoxCoordsMapMin.y() );
   mBoundingBoxZMax->setValue( boundingBoxCoordsMapMax.z() );
+
+  mBoundingBoxNrTicks->setValue( boundingBoxSettings.nrTicks() );
 }

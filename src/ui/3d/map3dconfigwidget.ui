@@ -815,7 +815,7 @@
                 <height>604</height>
                </rect>
               </property>
-              <layout class="QVBoxLayout" name="verticalLayoutBoundingBox">
+              <layout class="QVBoxLayout" name="mainVerticalLayoutBoundingBox">
                <property name="leftMargin">
                 <number>0</number>
                </property>
@@ -839,80 +839,110 @@
                  <property name="checked">
                   <bool>false</bool>
                  </property>
-                 <layout class="QGridLayout" name="gridLayoutBoundingBox" columnstretch="0,1,1">
-                  <property name="leftMargin">
-                   <number>0</number>
+                 <layout class="QVBoxLayout" name="groupVerticalLayoutBoundingBox">
+                  <property name="spacing">
+                   <number>20</number>
                   </property>
-                  <property name="topMargin">
-                   <number>0</number>
-                  </property>
-                  <property name="rightMargin">
-                   <number>0</number>
-                  </property>
-                  <property name="bottomMargin">
-                   <number>0</number>
-                  </property>
-                  <item row="0" column="0">
-                   <widget class="QLabel" name="bbempty"/>
-                  </item>
-                  <item row="0" column="1">
-                   <widget class="QLabel" name="bbmin">
-                    <property name="text">
-                     <string>min</string>
-                    </property>
-                    <property name="alignment">
-                     <set>Qt::AlignCenter</set>
-                    </property>
+                  <item>
+                   <widget class="QWidget" name="dimensions">
+                    <layout class="QGridLayout" name="gridLayoutBoundingBox" columnstretch="0,1,1">
+                     <item row="0" column="0" colspan="3">
+                      <widget class="QLabel" name="dimensionsLabel">
+                       <property name="text">
+                        <string>Dimensions</string>
+                       </property>
+                      </widget>
+                     </item>
+                     <item row="1" column="0">
+                      <widget class="QLabel" name="bbempty"/>
+                     </item>
+                     <item row="1" column="1">
+                      <widget class="QLabel" name="bbmin">
+                       <property name="text">
+                        <string>min</string>
+                       </property>
+                       <property name="alignment">
+                        <set>Qt::AlignCenter</set>
+                       </property>
+                      </widget>
+                     </item>
+                     <item row="1" column="2">
+                      <widget class="QLabel" name="bbmax">
+                       <property name="text">
+                        <string>max</string>
+                       </property>
+                       <property name="alignment">
+                        <set>Qt::AlignCenter</set>
+                       </property>
+                      </widget>
+                     </item>
+                     <item row="2" column="0">
+                      <widget class="QLabel" name="bbx">
+                       <property name="text">
+                        <string>X</string>
+                       </property>
+                      </widget>
+                     </item>
+                     <item row="2" column="1">
+                      <widget class="QDoubleSpinBox" name="mBoundingBoxXMin"/>
+                     </item>
+                     <item row="2" column="2">
+                      <widget class="QDoubleSpinBox" name="mBoundingBoxXMax"/>
+                     </item>
+                     <item row="3" column="0">
+                      <widget class="QLabel" name="bby">
+                       <property name="text">
+                        <string>Y</string>
+                       </property>
+                      </widget>
+                     </item>
+                     <item row="3" column="1">
+                      <widget class="QDoubleSpinBox" name="mBoundingBoxYMin"/>
+                     </item>
+                     <item row="3" column="2">
+                      <widget class="QDoubleSpinBox" name="mBoundingBoxYMax"/>
+                     </item>
+                     <item row="4" column="0">
+                      <widget class="QLabel" name="bbz">
+                       <property name="text">
+                        <string>Z</string>
+                       </property>
+                      </widget>
+                     </item>
+                     <item row="4" column="1">
+                      <widget class="QDoubleSpinBox" name="mBoundingBoxZMin"/>
+                     </item>
+                     <item row="4" column="2">
+                      <widget class="QDoubleSpinBox" name="mBoundingBoxZMax"/>
+                     </item>
+                    </layout>
                    </widget>
                   </item>
-                  <item row="0" column="2">
-                   <widget class="QLabel" name="bbmax">
-                    <property name="text">
-                     <string>max</string>
-                    </property>
-                    <property name="alignment">
-                     <set>Qt::AlignCenter</set>
-                    </property>
+                  <item>
+                   <widget class="QWidget" name="ticks">
+                    <layout class="QGridLayout" name="gridLayoutBoundingBoxTicks" columnstretch="0,1">
+                     <item row="0" column="0">
+                      <widget class="QLabel" name="nrTicksLabel">
+                       <property name="text">
+                        <string>Number of ticks</string>
+                       </property>
+                      </widget>
+                     </item>
+                     <item row="0" column="1">
+                      <widget class="QgsSpinBox" name="mBoundingBoxNrTicks">
+                       <property name="minimum">
+                        <number>3</number>
+                       </property>
+                       <property name="value">
+                        <number>7</number>
+                       </property>
+                       <property name="clearValue">
+                        <number>7</number>
+                       </property>
+                      </widget>
+                     </item>
+                    </layout>
                    </widget>
-                  </item>
-                  <item row="1" column="0">
-                   <widget class="QLabel" name="bbx">
-                    <property name="text">
-                     <string>X</string>
-                    </property>
-                   </widget>
-                  </item>
-                  <item row="1" column="1">
-                   <widget class="QDoubleSpinBox" name="mBoundingBoxXMin"/>
-                  </item>
-                  <item row="1" column="2">
-                   <widget class="QDoubleSpinBox" name="mBoundingBoxXMax"/>
-                  </item>
-                  <item row="2" column="0">
-                   <widget class="QLabel" name="bby">
-                    <property name="text">
-                     <string>Y</string>
-                    </property>
-                   </widget>
-                  </item>
-                  <item row="2" column="1">
-                   <widget class="QDoubleSpinBox" name="mBoundingBoxYMin"/>
-                  </item>
-                  <item row="2" column="2">
-                   <widget class="QDoubleSpinBox" name="mBoundingBoxYMax"/>
-                  </item>
-                  <item row="3" column="0">
-                   <widget class="QLabel" name="bbz">
-                    <property name="text">
-                     <string>Z</string>
-                    </property>
-                   </widget>
-                  </item>
-                  <item row="3" column="1">
-                   <widget class="QDoubleSpinBox" name="mBoundingBoxZMin"/>
-                  </item>
-                  <item row="3" column="2">
-                   <widget class="QDoubleSpinBox" name="mBoundingBoxZMax"/>
                   </item>
                  </layout>
                 </widget>
