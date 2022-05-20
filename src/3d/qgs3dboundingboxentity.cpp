@@ -36,7 +36,7 @@ Qgs3DBoundingBoxEntity::Qgs3DBoundingBoxEntity( Qt3DCore::QEntity *parent, QgsCa
   addComponent( mBBMesh );
 
   Qt3DExtras::QPhongMaterial *bboxMaterial = new Qt3DExtras::QPhongMaterial;
-  bboxMaterial->setAmbient( mColor );
+  bboxMaterial->setAmbient( mSettings->color() );
   addComponent( bboxMaterial );
 
   // int fontSize = (int) std::lround( mCameraCtrl->distance() * 0.01 );
@@ -145,7 +145,7 @@ void Qgs3DBoundingBoxEntity::createLabels( const Qgs3DBoundingBoxEntity::Directi
     textX1->setHeight( 1.5 * mLabelsFont.pointSize() );
     textX1->setWidth( text.length() * mLabelsFont.pointSize() );
     textX1->setText( text );
-    textX1->setColor( mColor );
+    textX1->setColor( mSettings->color() );
 
     // Qt3DCore::QTransform *textTransform1 = new Qt3DCore::QTransform();
     // textTransform1->setTranslation( pt1 );
@@ -160,7 +160,7 @@ void Qgs3DBoundingBoxEntity::createLabels( const Qgs3DBoundingBoxEntity::Directi
     textX2->setHeight( 1.5 * mLabelsFont.pointSize() );
     textX2->setWidth( text.length() * mLabelsFont.pointSize() );
     textX2->setText( text );
-    textX2->setColor( mColor );
+    textX2->setColor( mSettings->color() );
 
     // Qt3DCore::QTransform *textTransform2 = new Qt3DCore::QTransform();
     // textTransform2->setTranslation( pt2 );
@@ -175,7 +175,7 @@ void Qgs3DBoundingBoxEntity::createLabels( const Qgs3DBoundingBoxEntity::Directi
     textX3->setHeight( 1.5 * mLabelsFont.pointSize() );
     textX3->setWidth( text.length() * mLabelsFont.pointSize() );
     textX3->setText( text );
-    textX3->setColor( mColor );
+    textX3->setColor( mSettings->color() );
 
     // Qt3DCore::QTransform *textTransform3 = new Qt3DCore::QTransform();
     // textTransform3->setTranslation( pt3 );
@@ -190,7 +190,7 @@ void Qgs3DBoundingBoxEntity::createLabels( const Qgs3DBoundingBoxEntity::Directi
     textX4->setHeight( 1.5 * mLabelsFont.pointSize() );
     textX4->setWidth( text.length() * mLabelsFont.pointSize() );
     textX4->setText( text );
-    textX4->setColor( mColor );
+    textX4->setColor( mSettings->color() );
 
     // Qt3DCore::QTransform *textTransform4 = new Qt3DCore::QTransform();
     // textTransform4->setTranslation( pt4 );
@@ -210,24 +210,44 @@ void Qgs3DBoundingBoxEntity::setParameters( Qgs3DBoundingBoxSettings const &sett
 {
   if ( settings != *mSettings )
   {
+    bool changedColor = mSettings->color() != settings.color();
+    bool changedLabels = ( mSettings->coords() != settings.coords() ) || ( mSettings->nrTicks() != settings.nrTicks() );
+
     delete mSettings;
     mSettings = new Qgs3DBoundingBoxSettings( settings );
 
-    QgsAABB bbox = settings.coords();
-    qDebug() << "set bounding box parameters";
-    QList<QVector3D> ticksVertices;
+    if ( changedLabels )
+    {
+      QgsAABB bbox = settings.coords();
+      qDebug() << "set bounding box parameters";
+      QList<QVector3D> ticksVertices;
 
-    for ( auto *label : mLabels )
-      label->setParent( ( QEntity * ) nullptr );
+      for ( auto *label : mLabels )
+        label->setParent( ( QEntity * ) nullptr );
 
-    mLabels.clear();
+      mLabels.clear();
 
-    float maxExtent = std::max( std::max( bbox.xExtent(), bbox.yExtent() ), bbox.zExtent() );
+      float maxExtent = std::max( std::max( bbox.xExtent(), bbox.yExtent() ), bbox.zExtent() );
 
-    createLabels( Direction::X, maxExtent, ticksVertices );
-    createLabels( Direction::Y, maxExtent, ticksVertices );
-    createLabels( Direction::Z, maxExtent, ticksVertices );
-    mBBMesh->setVertices( bbox.verticesForLines() + ticksVertices );
+      createLabels( Direction::X, maxExtent, ticksVertices );
+      createLabels( Direction::Y, maxExtent, ticksVertices );
+      createLabels( Direction::Z, maxExtent, ticksVertices );
+      mBBMesh->setVertices( bbox.verticesForLines() + ticksVertices );
+    }
+
+    if ( changedColor )
+    {
+      Qt3DExtras::QPhongMaterial *material = this->componentsOfType<Qt3DExtras::QPhongMaterial>()[0];
+      material->setAmbient( mSettings->color() );
+
+      if ( !changedLabels )
+      {
+        for ( auto *label : mLabels )
+        {
+          label->setColor( mSettings->color() );
+        }
+      }
+    }
   }
 }
 
