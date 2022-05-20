@@ -18,20 +18,23 @@
 #include <QDomDocument>
 
 #include "qgsreadwritecontext.h"
+#include "qgssymbollayerutils.h"
 #include "qgsaabb.h"
 
 Qgs3DBoundingBoxSettings::Qgs3DBoundingBoxSettings( const Qgs3DBoundingBoxSettings &other )
   : mEnabled( other.mEnabled )
   , mBoundingBox( other.mBoundingBox )
   , mNrTicks( other.mNrTicks )
+  , mColor( other.mColor )
 {
 
 }
 
-Qgs3DBoundingBoxSettings::Qgs3DBoundingBoxSettings( bool enabled, const QgsAABB &boundingBox, int nrTicks )
+Qgs3DBoundingBoxSettings::Qgs3DBoundingBoxSettings( bool enabled, const QgsAABB &boundingBox, int nrTicks, QColor color )
   : mEnabled( enabled )
   , mBoundingBox( boundingBox )
   , mNrTicks( nrTicks )
+  , mColor( color )
 {
 
 }
@@ -41,6 +44,7 @@ Qgs3DBoundingBoxSettings &Qgs3DBoundingBoxSettings::operator=( Qgs3DBoundingBoxS
   this->mEnabled = rhs.mEnabled;
   this->mBoundingBox = rhs.mBoundingBox;
   this->mNrTicks = rhs.mNrTicks;
+  this->mColor = rhs.mColor;
   return *this;
 }
 
@@ -50,6 +54,7 @@ bool Qgs3DBoundingBoxSettings::operator==( Qgs3DBoundingBoxSettings const &rhs )
   out &= this->mEnabled == rhs.mEnabled;
   out &= this->mBoundingBox == rhs.mBoundingBox;
   out &= this->mNrTicks == rhs.mNrTicks;
+  out &= this->mColor == rhs.mColor;
   return out;
 }
 
@@ -68,6 +73,8 @@ void Qgs3DBoundingBoxSettings::readXml( const QDomElement &element, const QgsRea
 
   const QString nrTicks = element.attribute( QStringLiteral( "nr-ticks" ), QString::number( 7 ) );
   mNrTicks = nrTicks.toInt();
+
+  mColor = QgsSymbolLayerUtils::decodeColor( element.attribute( QStringLiteral( "color" ), QStringLiteral( "0,0,0,255" ) ) );
 }
 
 QDomElement Qgs3DBoundingBoxSettings::writeXml( QDomElement &element, const QgsReadWriteContext &context ) const
@@ -80,5 +87,6 @@ QDomElement Qgs3DBoundingBoxSettings::writeXml( QDomElement &element, const QgsR
   element.setAttribute( QStringLiteral( "enabled" ), enabled );
   element.setAttribute( QStringLiteral( "extent" ), mBoundingBox.toString() );
   element.setAttribute( QStringLiteral( "nr-ticks" ),  QString::number( mNrTicks ) );
+  element.setAttribute( QStringLiteral( "color" ), QgsSymbolLayerUtils::encodeColor( mColor ) );
   return element;
 }
