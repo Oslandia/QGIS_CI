@@ -416,7 +416,7 @@ void Qgs3DMapConfigWidget::apply()
   QgsVector3D worldCoordsMax = mMap->mapToWorldCoordinates( mapCoordsMax );
   QgsAABB boundingBox( worldCoordsMin.x(), worldCoordsMin.y(), worldCoordsMax.z(), worldCoordsMax.x(), worldCoordsMax.y(), worldCoordsMin.z() );
   bool boundingBoxEnabled = mGroupBoundingBox->isChecked();
-  Qgs3DBoundingBoxSettings boundingBoxSettings = Qgs3DBoundingBoxSettings( boundingBoxEnabled, boundingBox );
+  Qgs3DBoundingBoxSettings boundingBoxSettings = Qgs3DBoundingBoxSettings( boundingBoxEnabled, boundingBox, mBoundingBoxNrTicks->value() );
   if ( boundingBoxSettings != mMap->getBoundingBoxSettings() )
     mMap->setBoundingBoxSettings( boundingBoxSettings );
 
@@ -656,6 +656,7 @@ void Qgs3DMapConfigWidget::initBoundingBoxPage()
   }
 
   mGroupBoundingBox->setChecked( boundingBoxSettings.isEnabled() );
+  mBoundingBoxNrTicks->setValue( boundingBoxSettings.nrTicks() );
 
   connect( mBoundingBoxXMin, static_cast<void ( QDoubleSpinBox::* )( double )>( &QDoubleSpinBox::valueChanged ), this, &Qgs3DMapConfigWidget::validate );
   connect( mBoundingBoxXMax, static_cast<void ( QDoubleSpinBox::* )( double )>( &QDoubleSpinBox::valueChanged ), this, &Qgs3DMapConfigWidget::validate );
