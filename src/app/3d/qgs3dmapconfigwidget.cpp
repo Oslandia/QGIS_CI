@@ -372,7 +372,7 @@ void Qgs3DMapConfigWidget::apply()
   // bounding box settings
   QgsAABB boundingBox( mBoundingBoxXMin->value(), mBoundingBoxYMin->value(), mBoundingBoxZMin->value(), mBoundingBoxXMax->value(), mBoundingBoxYMax->value(), mBoundingBoxZMax->value() ) ;
   bool boundingBoxEnabled = mGroupBoundingBox->isChecked();
-  Qgs3DBoundingBoxSettings boundingBoxSettings = Qgs3DBoundingBoxSettings( boundingBoxEnabled, boundingBox, mBoundingBoxNrTicks->value() );
+  Qgs3DBoundingBoxSettings boundingBoxSettings = Qgs3DBoundingBoxSettings( boundingBoxEnabled, boundingBox, mBoundingBoxNrTicks->value(), mBoundingBoxColor->color() );
   if ( boundingBoxSettings != mMap->getBoundingBoxSettings() )
     mMap->setBoundingBoxSettings( boundingBoxSettings );
 
@@ -512,6 +512,7 @@ void Qgs3DMapConfigWidget::initBoundingBoxPage()
   QgsAABB boundingBoxCoords = boundingBoxSettings.coords();
 
   mBoundingBoxNrTicks->setValue( boundingBoxSettings.nrTicks() );
+  mBoundingBoxColor->setColor( boundingBoxSettings.color() );
 
   mGroupBoundingBox->setChecked( boundingBoxSettings.isEnabled() );
   mBoundingBoxXMin->setValue( boundingBoxCoords.xMin );
