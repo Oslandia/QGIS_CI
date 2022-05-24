@@ -37,6 +37,7 @@ namespace Qt3DRender
   class QCamera;
   class QFrameGraphNode;
   class QLayer;
+  class QViewport;
 }
 
 class QgsShadowRenderingFrameGraph;
@@ -44,6 +45,8 @@ class QgsShadowRenderingFrameGraph;
 /**
  * \ingroup 3d
  * \brief Base class for 3D render view
+ *
+ * Will be used with QgsShadowRenderingFrameGraph::registerRenderView
  *
  * \note Not available in Python bindings
  * \since QGIS 3.26
@@ -61,21 +64,17 @@ class _3D_EXPORT QgsAbstractRenderView : public QObject
     //! Sets root entity of the 3D scene
     virtual void setRootEntity( Qt3DCore::QEntity *root ) = 0;
 
+    //! Returns the layer to be used by entities to be included in this renderview
     virtual Qt3DRender::QLayer *layerToFilter() = 0;
 
+    //! Returns the viewport associated to this renderview
+    virtual Qt3DRender::QViewport *viewport() = 0;
+
+    //! Returns the top node of this renderview branch. Should be a QSubtreeEnabler. Will be used to register the renderview.
     virtual Qt3DRender::QFrameGraphNode *topGraphNode() = 0;
 
-    virtual enableSubTree( bool enable ) = 0;
-
-    /**
-     * Returns the shadow rendering frame graph object used to render the scene
-     *
-     * \since QGIS 3.18
-     */
-    QgsShadowRenderingFrameGraph *frameGraph() { return mFrameGraph; }
-
-  protected:
-    QgsShadowRenderingFrameGraph *mFrameGraph = nullptr;
+    //! Enable or disable via \a enable the renderview sub tree
+    virtual void enableSubTree( bool enable ) = 0;
 };
 
 

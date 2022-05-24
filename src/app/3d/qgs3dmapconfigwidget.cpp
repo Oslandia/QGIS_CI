@@ -530,7 +530,8 @@ void Qgs3DMapConfigWidget::init3DAxisPage()
 
 void Qgs3DMapConfigWidget::on3DAxisChanged()
 {
-  if ( m3DMapCanvas->scene()->get3DAxis() )
+  Qgs3DAxis *axis = m3DMapCanvas->scene()->get3DAxis();
+  if ( axis )
   {
     Qgs3DAxisSettings s = mMap->get3dAxisSettings();
     Qgs3DAxis::Mode m;
@@ -539,20 +540,20 @@ void Qgs3DMapConfigWidget::on3DAxisChanged()
     else
       m = Qgs3DAxis::Mode::Off;
 
-    if ( m3DMapCanvas->scene()->get3DAxis()->mode() != m )
+    if ( axis->mode() != m )
     {
-      m3DMapCanvas->scene()->get3DAxis()->setMode( m );
+      axis->setMode( m );
       s.setMode( m );
     }
     else
     {
-      Qgs3DAxis::AxisViewportPosition hPos = ( Qgs3DAxis::AxisViewportPosition )( mCbo3dAxisHorizPos->currentIndex() + 1 );
-      Qgs3DAxis::AxisViewportPosition vPos = ( Qgs3DAxis::AxisViewportPosition )( mCbo3dAxisVertPos->currentIndex() + 1 );
+      Qgs3DAxisRenderView::AxisViewportPosition hPos = ( Qgs3DAxisRenderView::AxisViewportPosition )( mCbo3dAxisHorizPos->currentIndex() + 1 );
+      Qgs3DAxisRenderView::AxisViewportPosition vPos = ( Qgs3DAxisRenderView::AxisViewportPosition )( mCbo3dAxisVertPos->currentIndex() + 1 );
 
-      if ( m3DMapCanvas->scene()->get3DAxis()->axisViewportHorizontalPosition() != hPos
-           || m3DMapCanvas->scene()->get3DAxis()->axisViewportVerticalPosition() != vPos )
-        m3DMapCanvas->scene()->get3DAxis()->setAxisViewportPosition( m3DMapCanvas->scene()->get3DAxis()->axisViewportSize(),
-            vPos, hPos );
+      if ( axis->axisViewportHorizontalPosition() != hPos
+           || axis->axisViewportVerticalPosition() != vPos )
+        axis->setAxisViewportPosition( axis->axisViewportSize(),
+                                       vPos, hPos );
       s.setHorizontalPosition( hPos );
       s.setVerticalPosition( vPos );
     }

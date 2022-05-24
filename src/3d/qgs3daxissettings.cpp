@@ -62,19 +62,19 @@ void Qgs3DAxisSettings::readXml( const QDomElement &element, const QgsReadWriteC
 
   const QString horizontalStr = element.attribute( QStringLiteral( "horizontal" ) );
   if ( horizontalStr == QLatin1String( "Begin" ) )
-    mHorizontalPosition = Qgs3DAxis::AxisViewportPosition::Begin;
+    mHorizontalPosition = Qgs3DAxisRenderView::AxisViewportPosition::Begin;
   else if ( horizontalStr == QLatin1String( "Middle" ) )
-    mHorizontalPosition = Qgs3DAxis::AxisViewportPosition::Middle;
+    mHorizontalPosition = Qgs3DAxisRenderView::AxisViewportPosition::Middle;
   else if ( horizontalStr == QLatin1String( "End" ) )
-    mHorizontalPosition = Qgs3DAxis::AxisViewportPosition::End;
+    mHorizontalPosition = Qgs3DAxisRenderView::AxisViewportPosition::End;
 
   const QString verticalStr = element.attribute( QStringLiteral( "vertical" ) );
   if ( verticalStr == QLatin1String( "Begin" ) )
-    mVerticalPosition = Qgs3DAxis::AxisViewportPosition::Begin;
+    mVerticalPosition = Qgs3DAxisRenderView::AxisViewportPosition::Begin;
   else if ( verticalStr == QLatin1String( "Middle" ) )
-    mVerticalPosition = Qgs3DAxis::AxisViewportPosition::Middle;
+    mVerticalPosition = Qgs3DAxisRenderView::AxisViewportPosition::Middle;
   else if ( verticalStr == QLatin1String( "End" ) )
-    mVerticalPosition = Qgs3DAxis::AxisViewportPosition::End;
+    mVerticalPosition = Qgs3DAxisRenderView::AxisViewportPosition::End;
 }
 
 void Qgs3DAxisSettings::writeXml( QDomElement &element, const QgsReadWriteContext & ) const
@@ -98,13 +98,13 @@ void Qgs3DAxisSettings::writeXml( QDomElement &element, const QgsReadWriteContex
 
   switch ( mHorizontalPosition )
   {
-    case Qgs3DAxis::AxisViewportPosition::Begin:
+    case Qgs3DAxisRenderView::AxisViewportPosition::Begin:
       str = QLatin1String( "Begin" );
       break;
-    case Qgs3DAxis::AxisViewportPosition::Middle:
+    case Qgs3DAxisRenderView::AxisViewportPosition::Middle:
       str = QLatin1String( "Middle" );
       break;
-    case Qgs3DAxis::AxisViewportPosition::End:
+    case Qgs3DAxisRenderView::AxisViewportPosition::End:
     default:
       str = QLatin1String( "End" );
       break;
@@ -113,13 +113,13 @@ void Qgs3DAxisSettings::writeXml( QDomElement &element, const QgsReadWriteContex
 
   switch ( mVerticalPosition )
   {
-    case Qgs3DAxis::AxisViewportPosition::Begin:
+    case Qgs3DAxisRenderView::AxisViewportPosition::Begin:
       str = QLatin1String( "Begin" );
       break;
-    case Qgs3DAxis::AxisViewportPosition::Middle:
+    case Qgs3DAxisRenderView::AxisViewportPosition::Middle:
       str = QLatin1String( "Middle" );
       break;
-    case Qgs3DAxis::AxisViewportPosition::End:
+    case Qgs3DAxisRenderView::AxisViewportPosition::End:
     default:
       str = QLatin1String( "End" );
       break;
