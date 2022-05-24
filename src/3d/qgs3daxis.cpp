@@ -49,23 +49,26 @@ Qgs3DAxis::Qgs3DAxis( Qt3DExtras::Qt3DWindow *parentWindow
   , mCrs( map.crs() )
   , mPreviousCursor( Qt::ArrowCursor )
 {
-  mAxisViewport = constructAxisViewport( parent3DScene );
-  mAxisViewport->setParent( mParentWindow->activeFrameGraph() );
+  Qgs3DAxisSettings s = mMapSettings.get3dAxisSettings();
+  mMode = s.mode();
+
+  constructAxisScene( parent3DScene );
+
+  mRenderView = new Qgs3DAxisRenderView( this, mParentWindow, mAxisCamera, mMapSettings );
+  mMapScene->engine()->frameGraph()->registerRenderView( mRenderView, "3daxis" );
+  mAxisSceneEntity->addComponent( mRenderView->layerToFilter() );
+
 
   mTwoDLabelViewport = constructLabelViewport( parent3DScene, QRectF( 0.0f, 0.0f, 1.0f, 1.0f ) );
   mTwoDLabelViewport->setParent( mParentWindow->activeFrameGraph() );
 
-  Qgs3DAxisSettings s = mMapSettings.get3dAxisSettings();
-  setAxisViewportPosition( mAxisViewportSize, s.verticalPosition(), s.horizontalPosition() );
-  mMode = s.mode();
-
   connect( cameraCtrl, &QgsCameraController::cameraChanged, this, &Qgs3DAxis::onCameraUpdate );
-  connect( mParentWindow, &Qt3DExtras::Qt3DWindow::widthChanged, this, &Qgs3DAxis::onAxisViewportSizeUpdate );
-  connect( mParentWindow, &Qt3DExtras::Qt3DWindow::heightChanged, this, &Qgs3DAxis::onAxisViewportSizeUpdate );
+  connect( mParentWindow, &Qt3DExtras::Qt3DWindow::widthChanged, this, &Qgs3DAxis::onViewportSizeUpdate );
+  connect( mParentWindow, &Qt3DExtras::Qt3DWindow::heightChanged, this, &Qgs3DAxis::onViewportSizeUpdate );
 
-  onAxisViewportSizeUpdate();
+  onViewportSizeUpdate();
 
-  createAxisScene();
+  createAxisEntities();
 
   createMenu();
 
@@ -79,7 +82,7 @@ void Qgs3DAxis::init3DObjectPicking( )
   //   2- connect screencaster results to onTouchedByRay
   //   3- screencaster will be triggered by EventFilter
   mScreenRayCaster = new Qt3DRender::QScreenRayCaster( mAxisSceneEntity );
-  mScreenRayCaster->addLayer( mAxisSceneLayer ); // to only filter on axis objects
+  mScreenRayCaster->addLayer( mRenderView->layerToFilter() ); // to only filter on axis objects
   mScreenRayCaster->setFilterMode( Qt3DRender::QScreenRayCaster::AcceptAllMatchingLayers );
   mScreenRayCaster->setRunMode( Qt3DRender::QAbstractRayCaster::SingleShot );
   mAxisSceneEntity->addComponent( mScreenRayCaster );
@@ -106,7 +109,7 @@ bool Qgs3DAxis::eventFilter( QObject *watched, QEvent *event )
       qDebug() << "normalized pos:" << normalizedPos << "/ viewport:" << mAxisViewport->normalizedRect();
 #endif
 
-    if ( mAxisViewport->normalizedRect().contains( normalizedPos ) )
+    if ( mRenderView->viewport()->normalizedRect().contains( normalizedPos ) )
     {
       mLastClickedButton = lastClickEvent->button();
       mLastClickedPos = lastClickEvent->pos();
@@ -240,14 +243,8 @@ void Qgs3DAxis::onTouchedByRay( const Qt3DRender::QAbstractRayCaster::Hits &hits
 
 }
 
-Qt3DRender::QViewport *Qgs3DAxis::constructAxisViewport( Qt3DCore::QEntity *parent3DScene )
+void Qgs3DAxis::constructAxisScene( Qt3DCore::QEntity *parent3DScene )
 {
-  auto axisViewport = new Qt3DRender::QViewport;
-  // parent will be set later
-  // size will be set later
-
-  mAxisSceneLayer = new Qt3DRender::QLayer;
-
   mAxisSceneEntity = new Qt3DCore::QEntity;
   mAxisSceneEntity->setParent( parent3DScene );
   mAxisSceneEntity->setObjectName( "3DAxis_SceneEntity" );
@@ -260,22 +257,6 @@ Qt3DRender::QViewport *Qgs3DAxis::constructAxisViewport( Qt3DCore::QEntity *pare
   mAxisCamera->setUpVector( QVector3D( 0.0f, 0.0f, 1.0f ) );
   mAxisCamera->setViewCenter( QVector3D( 0.0f, 0.0f, 0.0f ) );
   // position will be set later
-
-  auto axisLayer = new Qt3DRender::QLayer;
-  axisLayer->setRecursive( true );
-  mAxisSceneEntity->addComponent( axisLayer );
-
-  auto axisLayerFilter = new Qt3DRender::QLayerFilter( axisViewport );
-  axisLayerFilter->addLayer( axisLayer );
-
-  auto axisCameraSelector = new Qt3DRender::QCameraSelector;
-  axisCameraSelector->setParent( axisLayerFilter );
-  axisCameraSelector->setCamera( mAxisCamera );
-
-  auto clearBuffers = new Qt3DRender::QClearBuffers( axisCameraSelector );
-  clearBuffers->setBuffers( Qt3DRender::QClearBuffers::DepthBuffer );
-
-  return axisViewport;
 }
 
 Qt3DRender::QViewport *Qgs3DAxis::constructLabelViewport( Qt3DCore::QEntity *parent3DScene, const QRectF &parentViewportSize )
@@ -359,7 +340,7 @@ void Qgs3DAxis::setEnableAxis( bool show )
   mText_Z->setEnabled( show );
 }
 
-void Qgs3DAxis::createAxisScene()
+void Qgs3DAxis::createAxisEntities()
 {
   if ( mAxisRoot == nullptr || mCubeRoot == nullptr )
   {
@@ -369,7 +350,7 @@ void Qgs3DAxis::createAxisScene()
     mAxisRoot = new Qt3DCore::QEntity;
     mAxisRoot->setParent( mAxisSceneEntity );
     mAxisRoot->setObjectName( "3DAxis_AxisRoot" );
-    mAxisRoot->addComponent( mAxisSceneLayer );
+    mAxisRoot->addComponent( mRenderView->layerToFilter() );
 
     createAxis( Axis::X );
     createAxis( Axis::Y );
@@ -378,7 +359,7 @@ void Qgs3DAxis::createAxisScene()
     mCubeRoot = new Qt3DCore::QEntity;
     mCubeRoot->setParent( mAxisSceneEntity );
     mCubeRoot->setObjectName( "3DAxis_CubeRoot" );
-    mCubeRoot->addComponent( mAxisSceneLayer );
+    mCubeRoot->addComponent( mRenderView->layerToFilter() );
 
     createCube( );
   }
@@ -388,9 +369,11 @@ void Qgs3DAxis::createAxisScene()
     mAxisSceneEntity->setEnabled( false );
     setEnableAxis( false );
     setEnableCube( false );
+    mRenderView->enableSubTree( false );
   }
   else
   {
+    mRenderView->enableSubTree( true );
     mAxisSceneEntity->setEnabled( true );
     if ( mMode == Mode::Crs )
     {
@@ -466,24 +449,36 @@ void Qgs3DAxis::createMenu()
   // ============== horizontal position menu
   auto hPosLeftAct = new QAction( tr( "&Left" ), this );
   hPosLeftAct->setCheckable( true );
-  if ( mAxisViewportVertPos == AxisViewportPosition::Begin ) hPosLeftAct->setChecked( true );
+  if ( axisViewportHorizontalPosition() == Qgs3DAxisRenderView::AxisViewportPosition::Begin )
+    hPosLeftAct->setChecked( true );
 
   auto hPosMiddleAct = new QAction( tr( "&Middle" ), this );
   hPosMiddleAct->setCheckable( true );
-  if ( mAxisViewportVertPos == AxisViewportPosition::Middle ) hPosMiddleAct->setChecked( true );
+  if ( axisViewportHorizontalPosition() == Qgs3DAxisRenderView::AxisViewportPosition::Middle )
+    hPosMiddleAct->setChecked( true );
 
   auto hPosRightAct = new QAction( tr( "&Right" ), this );
   hPosRightAct->setCheckable( true );
-  if ( mAxisViewportVertPos == AxisViewportPosition::End ) hPosRightAct->setChecked( true );
+  if ( axisViewportHorizontalPosition() == Qgs3DAxisRenderView::AxisViewportPosition::End )
+    hPosRightAct->setChecked( true );
 
   auto hPosGroup = new QActionGroup( this );
   hPosGroup->addAction( hPosLeftAct );
   hPosGroup->addAction( hPosMiddleAct );
   hPosGroup->addAction( hPosRightAct );
 
-  connect( hPosLeftAct, &QAction::triggered, this, [this]( bool ) {onAxisHorizPositionChanged( AxisViewportPosition::Begin );} );
-  connect( hPosMiddleAct, &QAction::triggered, this, [this]( bool ) {onAxisHorizPositionChanged( AxisViewportPosition::Middle );} );
-  connect( hPosRightAct, &QAction::triggered, this, [this]( bool ) {onAxisHorizPositionChanged( AxisViewportPosition::End );} );
+  connect( hPosLeftAct, &QAction::triggered, this, [this]( bool )
+  {
+    mRenderView->onAxisHorizPositionChanged( Qgs3DAxisRenderView::AxisViewportPosition::Begin );
+  } );
+  connect( hPosMiddleAct, &QAction::triggered, this, [this]( bool )
+  {
+    mRenderView->onAxisHorizPositionChanged( Qgs3DAxisRenderView::AxisViewportPosition::Middle );
+  } );
+  connect( hPosRightAct, &QAction::triggered, this, [this]( bool )
+  {
+    mRenderView->onAxisHorizPositionChanged( Qgs3DAxisRenderView::AxisViewportPosition::End );
+  } );
 
   auto horizPosMenu = new QMenu( QStringLiteral( "Horizontal position" ) );
   horizPosMenu->addAction( hPosLeftAct );
@@ -494,24 +489,36 @@ void Qgs3DAxis::createMenu()
   // ============== vertical position menu
   auto vPosTopAct = new QAction( tr( "&Top" ), this );
   vPosTopAct->setCheckable( true );
-  if ( mAxisViewportVertPos == AxisViewportPosition::Begin ) vPosTopAct->setChecked( true );
+  if ( axisViewportVerticalPosition() == Qgs3DAxisRenderView::AxisViewportPosition::Begin )
+    vPosTopAct->setChecked( true );
 
   auto vPosMiddleAct = new QAction( tr( "&Middle" ), this );
   vPosMiddleAct->setCheckable( true );
-  if ( mAxisViewportVertPos == AxisViewportPosition::Middle ) vPosMiddleAct->setChecked( true );
+  if ( axisViewportVerticalPosition() == Qgs3DAxisRenderView::AxisViewportPosition::Middle )
+    vPosMiddleAct->setChecked( true );
 
   auto vPosBottomAct = new QAction( tr( "&Bottom" ), this );
   vPosBottomAct->setCheckable( true );
-  if ( mAxisViewportVertPos == AxisViewportPosition::End ) vPosBottomAct->setChecked( true );
+  if ( axisViewportVerticalPosition() == Qgs3DAxisRenderView::AxisViewportPosition::End )
+    vPosBottomAct->setChecked( true );
 
   auto vPosGroup = new QActionGroup( this );
   vPosGroup->addAction( vPosTopAct );
   vPosGroup->addAction( vPosMiddleAct );
   vPosGroup->addAction( vPosBottomAct );
 
-  connect( vPosTopAct, &QAction::triggered, this, [this]( bool ) {onAxisVertPositionChanged( AxisViewportPosition::Begin );} );
-  connect( vPosMiddleAct, &QAction::triggered, this, [this]( bool ) {onAxisVertPositionChanged( AxisViewportPosition::Middle );} );
-  connect( vPosBottomAct, &QAction::triggered, this, [this]( bool ) {onAxisVertPositionChanged( AxisViewportPosition::End );} );
+  connect( vPosTopAct, &QAction::triggered, this, [this]( bool )
+  {
+    mRenderView->onAxisVertPositionChanged( Qgs3DAxisRenderView::AxisViewportPosition::Begin );
+  } );
+  connect( vPosMiddleAct, &QAction::triggered, this, [this]( bool )
+  {
+    mRenderView->onAxisVertPositionChanged( Qgs3DAxisRenderView::AxisViewportPosition::Middle );
+  } );
+  connect( vPosBottomAct, &QAction::triggered, this, [this]( bool )
+  {
+    mRenderView->onAxisVertPositionChanged( Qgs3DAxisRenderView::AxisViewportPosition::End );
+  } );
 
   auto vertPosMenu = new QMenu( QStringLiteral( "Vertical position" ) );
   vertPosMenu->addAction( vPosTopAct );
@@ -590,22 +597,6 @@ void Qgs3DAxis::onAxisModeChanged( Qgs3DAxis::Mode mode )
   setMode( mode );
   Qgs3DAxisSettings s = mMapSettings.get3dAxisSettings();
   s.setMode( mode );
-  mMapSettings.set3dAxisSettings( s );
-}
-
-void Qgs3DAxis::onAxisHorizPositionChanged( AxisViewportPosition pos )
-{
-  setAxisViewportPosition( mAxisViewportSize, mAxisViewportVertPos, pos );
-  Qgs3DAxisSettings s = mMapSettings.get3dAxisSettings();
-  s.setHorizontalPosition( pos );
-  mMapSettings.set3dAxisSettings( s );
-}
-
-void Qgs3DAxis::onAxisVertPositionChanged( AxisViewportPosition pos )
-{
-  setAxisViewportPosition( mAxisViewportSize, pos, mAxisViewportHorizPos );
-  Qgs3DAxisSettings s = mMapSettings.get3dAxisSettings();
-  s.setVerticalPosition( pos );
   mMapSettings.set3dAxisSettings( s );
 }
 
@@ -892,42 +883,8 @@ void Qgs3DAxis::createAxis( const Qgs3DAxis::Axis &axisType )
   text->addComponent( textTransform );
 }
 
-
-void Qgs3DAxis::setAxisViewportPosition( int axisViewportSize, AxisViewportPosition axisViewportVertPos, AxisViewportPosition axisViewportHorizPos )
+void Qgs3DAxis::onViewportSizeUpdate( int )
 {
-  mAxisViewportSize = axisViewportSize;
-  mAxisViewportVertPos = axisViewportVertPos;
-  mAxisViewportHorizPos = axisViewportHorizPos;
-  onAxisViewportSizeUpdate();
-  mParentWindow->requestUpdate();
-}
-
-void Qgs3DAxis::onAxisViewportSizeUpdate( int )
-{
-  float widthRatio = ( float )mAxisViewportSize / mParentWindow->width();
-  float heightRatio = ( float )mAxisViewportSize / mParentWindow->height();
-
-  float xRatio;
-  float yRatio;
-  if ( mAxisViewportHorizPos == AxisViewportPosition::Begin )
-    xRatio = 0.0f;
-  else if ( mAxisViewportHorizPos == AxisViewportPosition::Middle )
-    xRatio = 0.5 - widthRatio / 2.0;
-  else
-    xRatio = 1.0 - widthRatio;
-
-  if ( mAxisViewportVertPos == AxisViewportPosition::Begin )
-    yRatio = 0.0f;
-  else if ( mAxisViewportVertPos == AxisViewportPosition::Middle )
-    yRatio = 0.5 - heightRatio / 2.0;
-  else
-    yRatio = 1.0 - heightRatio;
-
-#ifdef DEBUG
-  qDebug() << "Axis, update viewport" << xRatio << yRatio << widthRatio << heightRatio;
-#endif
-  mAxisViewport->setNormalizedRect( QRectF( xRatio, yRatio, widthRatio, heightRatio ) );
-
   mTwoDLabelCamera->lens()->setOrthographicProjection(
     -mParentWindow->width() / 2.0f, mParentWindow->width() / 2.0f,
     -mParentWindow->height() / 2.0f, mParentWindow->height() / 2.0f,
@@ -972,13 +929,16 @@ void Qgs3DAxis::updateAxisLabelPosition()
 {
   if ( mTextTransform_X && mTextTransform_Y && mTextTransform_Z )
   {
-    mTextTransform_X->setTranslation( from3dTo2dLabelPosition( mTextCoord_X, mAxisCamera, mAxisViewport,
+    mTextTransform_X->setTranslation( from3dTo2dLabelPosition( mTextCoord_X, mAxisCamera,
+                                      mRenderView->viewport(),
                                       mTwoDLabelCamera, mTwoDLabelViewport,
                                       mParentWindow->size() ) );
-    mTextTransform_Y->setTranslation( from3dTo2dLabelPosition( mTextCoord_Y, mAxisCamera, mAxisViewport,
+    mTextTransform_Y->setTranslation( from3dTo2dLabelPosition( mTextCoord_Y, mAxisCamera,
+                                      mRenderView->viewport(),
                                       mTwoDLabelCamera, mTwoDLabelViewport,
                                       mParentWindow->size() ) );
-    mTextTransform_Z->setTranslation( from3dTo2dLabelPosition( mTextCoord_Z, mAxisCamera, mAxisViewport,
+    mTextTransform_Z->setTranslation( from3dTo2dLabelPosition( mTextCoord_Z, mAxisCamera,
+                                      mRenderView->viewport(),
                                       mTwoDLabelCamera, mTwoDLabelViewport,
                                       mParentWindow->size() ) );
   }
@@ -989,9 +949,41 @@ void Qgs3DAxis::setMode( Mode axisMode )
   if ( mMode != axisMode )
   {
     mMode = axisMode;
-    createAxisScene();
+    createAxisEntities();
     mParentWindow->requestUpdate();
   }
+}
+
+void Qgs3DAxis::setAxisViewportPosition( int axisViewportSize,
+    Qgs3DAxisRenderView::AxisViewportPosition axisViewportVertPos,
+    Qgs3DAxisRenderView::AxisViewportPosition axisViewportHorizPos )
+{
+  if ( mRenderView )
+    mRenderView->setAxisViewportPosition( axisViewportSize, axisViewportVertPos, axisViewportHorizPos );
+}
+
+/**
+ * \brief Returns axis viewport size
+ */
+int Qgs3DAxis::axisViewportSize() const
+{
+  return mRenderView ? mRenderView->axisViewportSize() : -1;
+}
+
+/**
+ * \brief Returns axis viewport horizontal position
+ */
+Qgs3DAxisRenderView::AxisViewportPosition Qgs3DAxis::axisViewportHorizontalPosition() const
+{
+  return mRenderView ? mRenderView->axisViewportHorizontalPosition() : Qgs3DAxisRenderView::AxisViewportPosition::Begin;
+}
+
+/**
+ * \brief Returns axis viewport vertical position
+ */
+Qgs3DAxisRenderView::AxisViewportPosition Qgs3DAxis::axisViewportVerticalPosition() const
+{
+  return mRenderView ? mRenderView->axisViewportVerticalPosition() : Qgs3DAxisRenderView::AxisViewportPosition::Begin;
 }
 
 

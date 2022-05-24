@@ -19,6 +19,7 @@
 #include <QString>
 #include <QMap>
 
+#include "qgs3daxisrenderview.h"
 #include "qgs3daxis.h"
 
 class QgsReadWriteContext;
@@ -59,19 +60,19 @@ class _3D_EXPORT Qgs3DAxisSettings
     void setMode( Qgs3DAxis::Mode type ) { mMode = type; }
 
     //! Returns the horizontal position for the 3d axis
-    Qgs3DAxis::AxisViewportPosition horizontalPosition() const { return mHorizontalPosition; }
+    Qgs3DAxisRenderView::AxisViewportPosition horizontalPosition() const { return mHorizontalPosition; }
     //! Sets the horizontal position for the 3d axis
-    void setHorizontalPosition( const Qgs3DAxis::AxisViewportPosition &position ) { mHorizontalPosition = position; }
+    void setHorizontalPosition( const Qgs3DAxisRenderView::AxisViewportPosition &position ) { mHorizontalPosition = position; }
 
     //! Returns the vertical position for the 3d axis
-    Qgs3DAxis::AxisViewportPosition verticalPosition() const { return mVerticalPosition; }
+    Qgs3DAxisRenderView::AxisViewportPosition verticalPosition() const { return mVerticalPosition; }
     //! Sets the vertical position for the 3d axis
-    void setVerticalPosition( const Qgs3DAxis::AxisViewportPosition &position ) { mVerticalPosition = position; }
+    void setVerticalPosition( const Qgs3DAxisRenderView::AxisViewportPosition &position ) { mVerticalPosition = position; }
 
   private:
     Qgs3DAxis::Mode mMode = Qgs3DAxis::Mode::Crs;
-    Qgs3DAxis::AxisViewportPosition mHorizontalPosition = Qgs3DAxis::AxisViewportPosition::End;
-    Qgs3DAxis::AxisViewportPosition mVerticalPosition = Qgs3DAxis::AxisViewportPosition::Begin;
+    Qgs3DAxisRenderView::AxisViewportPosition mHorizontalPosition = Qgs3DAxisRenderView::AxisViewportPosition::End;
+    Qgs3DAxisRenderView::AxisViewportPosition mVerticalPosition = Qgs3DAxisRenderView::AxisViewportPosition::Begin;
     ;
 };
 

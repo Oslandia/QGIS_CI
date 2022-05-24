@@ -34,6 +34,7 @@
 #include <Qt3DRender/QGeometryRenderer>
 
 #include <QtWidgets/QMenu>
+#include "qgs3daxisrenderview.h"
 
 #define SIP_NO_FILE
 #define UNUSED __attribute__((__unused__))
@@ -82,19 +83,6 @@ class _3D_EXPORT Qgs3DAxis : public QObject
     Q_ENUM( Axis )
 
     /**
-     * \brief The AxisViewportPosition enum
-     */
-    enum class AxisViewportPosition
-    {
-      //! top or left
-      Begin = 1,
-      Middle = 2,
-      //! bottom or right
-      End = 3
-    };
-    Q_ENUM( AxisViewportPosition )
-
-    /**
      * \brief The Mode enum
      */
     enum class Mode
@@ -120,27 +108,29 @@ class _3D_EXPORT Qgs3DAxis : public QObject
     void setMode( Qgs3DAxis::Mode axisMode );
 
     /**
-     * \brief set axis viewport position parameters
+     * \brief set axis viewport position parameters. Wrapper to Qgs3DAxisRenderView::setAxisViewportPosition
      * \param axisViewportSize height/width size in pixel
      * @param axisViewportVertPos start vertical position
      * @param axisViewportHorizPos start horizontal position
      */
-    void setAxisViewportPosition( int axisViewportSize, AxisViewportPosition axisViewportVertPos, AxisViewportPosition axisViewportHorizPos );
+    void setAxisViewportPosition( int axisViewportSize,
+                                  Qgs3DAxisRenderView::AxisViewportPosition axisViewportVertPos,
+                                  Qgs3DAxisRenderView::AxisViewportPosition axisViewportHorizPos );
 
     /**
-     * \brief Returns axis viewport size
+     * \brief Returns axis viewport size. Wrapper to Qgs3DAxisRenderView::axisViewportSize
      */
-    int axisViewportSize() const { return mAxisViewportSize;}
+    int axisViewportSize() const;
 
     /**
-     * \brief Returns axis viewport horizontal position
+     * \brief Returns axis viewport horizontal position. Wrapper to Qgs3DAxisRenderView::axisViewportHorizontalPosition
      */
-    AxisViewportPosition axisViewportHorizontalPosition() const { return mAxisViewportHorizPos;}
+    Qgs3DAxisRenderView::AxisViewportPosition axisViewportHorizontalPosition() const;
 
     /**
-     * \brief Returns axis viewport vertical position
+     * \brief Returns axis viewport vertical position. Wrapper to Qgs3DAxisRenderView::axisViewportVerticalPosition
      */
-    AxisViewportPosition axisViewportVerticalPosition() const { return mAxisViewportVertPos;}
+    Qgs3DAxisRenderView::AxisViewportPosition axisViewportVerticalPosition() const;
 
     /**
      * \brief project a 3D position from sourceCamera (in sourceViewport) to a 2D position for destCamera (in destViewport). destCamera and the destViewport act as a billboarding layer. The labels displayed by this process will always face the camera.
@@ -161,13 +151,11 @@ class _3D_EXPORT Qgs3DAxis : public QObject
   private slots:
     // ========= private slots
     void onCameraUpdate( );
-    void onAxisViewportSizeUpdate( int val = 0 );
+    void onViewportSizeUpdate( int val = 0 );
 
     // axis picking and menu
     void onTouchedByRay( const Qt3DRender::QAbstractRayCaster::Hits &hits );
     void onAxisModeChanged( Qgs3DAxis::Mode mode );
-    void onAxisHorizPositionChanged( AxisViewportPosition pos );
-    void onAxisVertPositionChanged( AxisViewportPosition pos );
     void onCameraViewChange( float pitch, float yaw );
 
     void onCameraViewChangeHome( UNUSED bool fake = true ) { onCameraViewChange( 45.0, 45.0 ); }
@@ -180,14 +168,14 @@ class _3D_EXPORT Qgs3DAxis : public QObject
 
   private:
     // ========= private functions
-    void createAxisScene();
+    void createAxisEntities();
     void createAxis( const Axis &axis );
     void createCube( );
     void setEnableCube( bool show );
     void setEnableAxis( bool show );
     void updateAxisLabelPosition();
 
-    Qt3DRender::QViewport *constructAxisViewport( Qt3DCore::QEntity *parent3DScene );
+    void constructAxisScene( Qt3DCore::QEntity *parent3DScene );
     Qt3DRender::QViewport *constructLabelViewport( Qt3DCore::QEntity *parent3DScene, const QRectF &parentViewportSize );
 
     Qt3DExtras::QText2DEntity *addCubeText( const QString &text, float textHeight, float textWidth, const QFont &f, const QMatrix4x4 &rotation, const QVector3D &translation );
@@ -206,15 +194,11 @@ class _3D_EXPORT Qgs3DAxis : public QObject
     QgsCameraController *mCameraController;
 
     float mCylinderLength = 40.0f;
-    int mAxisViewportSize = 4.0 * mCylinderLength;
-    AxisViewportPosition mAxisViewportVertPos = AxisViewportPosition::Begin;
-    AxisViewportPosition mAxisViewportHorizPos = AxisViewportPosition::End;
     int mFontSize = 10;
 
+    Qgs3DAxisRenderView *mRenderView;
     Qt3DCore::QEntity *mAxisSceneEntity;
-    Qt3DRender::QLayer *mAxisSceneLayer;
     Qt3DRender::QCamera *mAxisCamera;
-    Qt3DRender::QViewport *mAxisViewport;
 
     Qgs3DAxis::Mode mMode = Mode::Crs;
     Qt3DCore::QEntity *mAxisRoot = nullptr;
