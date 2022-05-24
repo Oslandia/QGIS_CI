@@ -52,13 +52,12 @@ typedef Qt3DCore::QBuffer Qt3DQBuffer;
 #include "qgscoordinatereferencesystemutils.h"
 #include "qgscoordinatereferencesystem.h"
 #include "qgswindow3dengine.h"
-#include "qgsraycastingutils_p.h"
 
-Qgs3DAxis::Qgs3DAxis( Qt3DExtras::Qt3DWindow *parentWindow,
-                      Qt3DCore::QEntity *parent3DScene,
-                      Qgs3DMapScene *mapScene,
-                      QgsCameraController *cameraCtrl,
-                      Qgs3DMapSettings *map )
+Qgs3DAxis::Qgs3DAxis( Qt3DExtras::Qt3DWindow *parentWindow
+                      , Qt3DCore::QEntity *parent3DScene
+                      , Qgs3DMapScene *mapScene
+                      , QgsCameraController *cameraCtrl
+                      , Qgs3DMapSettings *map )
   : QObject( parentWindow )
   , mMapSettings( map )
   , mParentWindow( parentWindow )
@@ -66,8 +65,11 @@ Qgs3DAxis::Qgs3DAxis( Qt3DExtras::Qt3DWindow *parentWindow,
   , mCameraController( cameraCtrl )
   , mCrs( map->crs() )
 {
-  mAxisViewport = constructAxisViewport( parent3DScene );
-  mAxisViewport->setParent( mParentWindow->activeFrameGraph() );
+  constructAxisScene( parent3DScene );
+
+  mRenderView = new Qgs3DAxisRenderView( this, mParentWindow, mAxisCamera, mMapSettings );
+  mMapScene->engine()->frameGraph()->registerRenderView( mRenderView, "3daxis" );
+  mAxisSceneEntity->addComponent( mRenderView->layerToFilter() );
 
   mTwoDLabelViewport = constructLabelViewport( parent3DScene, QRectF( 0.0f, 0.0f, 1.0f, 1.0f ) );
   mTwoDLabelViewport->setParent( mParentWindow->activeFrameGraph() );
@@ -90,6 +92,14 @@ Qgs3DAxis::~Qgs3DAxis()
   mMenu = nullptr;
 }
 
+Qgs3DAxis::~Qgs3DAxis()
+{
+  if ( mRenderView && mMapScene )
+  {
+    mMapScene->engine()->frameGraph()->unregisterRenderView( "3daxis" );
+  }
+}
+
 void Qgs3DAxis::init3DObjectPicking( )
 {
   // Create screencaster to be used by EventFilter:
@@ -97,7 +107,7 @@ void Qgs3DAxis::init3DObjectPicking( )
   //   2- connect screencaster results to onTouchedByRay
   //   3- screencaster will be triggered by EventFilter
   mScreenRayCaster = new Qt3DRender::QScreenRayCaster( mAxisSceneEntity );
-  mScreenRayCaster->addLayer( mAxisSceneLayer ); // to only filter on axis objects
+  mScreenRayCaster->addLayer( mRenderView->layerToFilter() ); // to only filter on axis objects
   mScreenRayCaster->setFilterMode( Qt3DRender::QScreenRayCaster::AcceptAllMatchingLayers );
   mScreenRayCaster->setRunMode( Qt3DRender::QAbstractRayCaster::SingleShot );
 
@@ -155,7 +165,7 @@ bool Qgs3DAxis::eventFilter( QObject *watched, QEvent *event )
         QgsDebugMsgLevel( os.str().c_str(), 2 );
       }
 
-      if ( mAxisViewport->normalizedRect().contains( normalizedPos ) )
+      if ( mRenderView->viewport()->normalizedRect().contains( normalizedPos ) )
       {
         mLastClickedButton = mouseEvent->button();
         mLastClickedPos = mouseEvent->pos();
@@ -272,20 +282,11 @@ void Qgs3DAxis::onTouchedByRay( const Qt3DRender::QAbstractRayCaster::Hits &hits
   }
 }
 
-Qt3DRender::QViewport *Qgs3DAxis::constructAxisViewport( Qt3DCore::QEntity *parent3DScene )
+void Qgs3DAxis::constructAxisScene( Qt3DCore::QEntity *parent3DScene )
 {
-  Qt3DRender::QViewport *axisViewport = new Qt3DRender::QViewport;
-  // parent will be set later
-  // size will be set later
-
   mAxisSceneEntity = new Qt3DCore::QEntity;
   mAxisSceneEntity->setParent( parent3DScene );
   mAxisSceneEntity->setObjectName( "3DAxis_SceneEntity" );
-
-  mAxisSceneLayer = new Qt3DRender::QLayer;
-  mAxisSceneLayer->setObjectName( "3DAxis_SceneLayer" );
-  mAxisSceneLayer->setParent( mAxisSceneEntity );
-  mAxisSceneLayer->setRecursive( true );
 
   mAxisCamera = new Qt3DRender::QCamera;
   mAxisCamera->setParent( mAxisSceneEntity );
@@ -295,23 +296,6 @@ Qt3DRender::QViewport *Qgs3DAxis::constructAxisViewport( Qt3DCore::QEntity *pare
   mAxisCamera->setUpVector( QVector3D( 0.0f, 0.0f, 1.0f ) );
   mAxisCamera->setViewCenter( QVector3D( 0.0f, 0.0f, 0.0f ) );
   // position will be set later
-
-  Qt3DRender::QLayer *axisLayer = new Qt3DRender::QLayer;
-  axisLayer->setRecursive( true );
-  mAxisSceneEntity->addComponent( axisLayer );
-
-  Qt3DRender::QLayerFilter *axisLayerFilter = new Qt3DRender::QLayerFilter( axisViewport );
-  axisLayerFilter->addLayer( axisLayer );
-
-  Qt3DRender::QCameraSelector *axisCameraSelector = new Qt3DRender::QCameraSelector;
-  axisCameraSelector->setParent( axisLayerFilter );
-  axisCameraSelector->setCamera( mAxisCamera );
-
-  Qt3DRender::QClearBuffers *clearBuffers = new Qt3DRender::QClearBuffers( axisCameraSelector );
-  clearBuffers->setBuffers( Qt3DRender::QClearBuffers::DepthBuffer );
-
-  // cppcheck-suppress memleak
-  return axisViewport;
 }
 
 Qt3DRender::QViewport *Qgs3DAxis::constructLabelViewport( Qt3DCore::QEntity *parent3DScene, const QRectF &parentViewportSize )
@@ -418,14 +402,14 @@ void Qgs3DAxis::setEnableAxis( bool show )
   mTextZ->setEnabled( show );
 }
 
-void Qgs3DAxis::createAxisScene()
+void Qgs3DAxis::createAxisEntities()
 {
   if ( mAxisRoot == nullptr || mCubeRoot == nullptr )
   {
     mAxisRoot = new Qt3DCore::QEntity;
     mAxisRoot->setParent( mAxisSceneEntity );
     mAxisRoot->setObjectName( "3DAxis_AxisRoot" );
-    mAxisRoot->addComponent( mAxisSceneLayer ); // raycaster will filter object containing this layer
+    mAxisRoot->addComponent( mRenderView->layerToFilter() ); // raycaster will filter object containing this layer
 
     createAxis( Qt::Axis::XAxis );
     createAxis( Qt::Axis::YAxis );
@@ -434,7 +418,7 @@ void Qgs3DAxis::createAxisScene()
     mCubeRoot = new Qt3DCore::QEntity;
     mCubeRoot->setParent( mAxisSceneEntity );
     mCubeRoot->setObjectName( "3DAxis_CubeRoot" );
-    mCubeRoot->addComponent( mAxisSceneLayer ); // raycaster will filter object containing this layer
+    mCubeRoot->addComponent( mRenderView->layerToFilter() ); // raycaster will filter object containing this layer
 
     createCube( );
   }
@@ -446,9 +430,11 @@ void Qgs3DAxis::createAxisScene()
     mAxisSceneEntity->setEnabled( false );
     setEnableAxis( false );
     setEnableCube( false );
+    mRenderView->enableSubTree( false );
   }
   else
   {
+    mRenderView->enableSubTree( true );
     mAxisSceneEntity->setEnabled( true );
     if ( mode == Qgs3DAxisSettings::Mode::Crs )
     {
@@ -579,6 +565,8 @@ void Qgs3DAxis::createMenu()
     if ( mMapSettings->get3DAxisSettings().horizontalPosition() == Qt::AnchorPoint::AnchorLeft )
       hPosLeftAct->setChecked( true );
   } );
+  // TODO   if ( axisViewportHorizontalPosition() == Qgs3DAxisRenderView::AxisViewportPosition::Begin )
+  //  hPosLeftAct->setChecked( true );
 
   QAction *hPosMiddleAct = new QAction( tr( "&Center" ), mMenu );
   hPosMiddleAct->setCheckable( true );
@@ -604,6 +592,19 @@ void Qgs3DAxis::createMenu()
   connect( hPosLeftAct, &QAction::triggered, this, [this]( bool ) {onAxisHorizPositionChanged( Qt::AnchorPoint::AnchorLeft );} );
   connect( hPosMiddleAct, &QAction::triggered, this, [this]( bool ) {onAxisHorizPositionChanged( Qt::AnchorPoint::AnchorHorizontalCenter );} );
   connect( hPosRightAct, &QAction::triggered, this, [this]( bool ) {onAxisHorizPositionChanged( Qt::AnchorPoint::AnchorRight );} );
+  /* TODO
+    {
+      mRenderView->onAxisHorizPositionChanged( Qgs3DAxisRenderView::AxisViewportPosition::Begin );
+    } );
+    connect( hPosMiddleAct, &QAction::triggered, this, [this]( bool )
+    {
+      mRenderView->onAxisHorizPositionChanged( Qgs3DAxisRenderView::AxisViewportPosition::Middle );
+    } );
+    connect( hPosRightAct, &QAction::triggered, this, [this]( bool )
+    {
+      mRenderView->onAxisHorizPositionChanged( Qgs3DAxisRenderView::AxisViewportPosition::End );
+    } );
+    */
 
   QMenu *horizPosMenu = new QMenu( QStringLiteral( "Horizontal Position" ), mMenu );
   horizPosMenu->addAction( hPosLeftAct );
@@ -896,7 +897,7 @@ Qt3DExtras::QText2DEntity *Qgs3DAxis::addCubeText( const QString &text, float te
   return textEntity;
 }
 
-void Qgs3DAxis::createAxis( Qt::Axis axisType )
+void Qgs3DAxis::createAxis( const Qt::Axis axisType )
 {
   float cylinderRadius = 0.05f * mCylinderLength;
   float coneLength = 0.3f * mCylinderLength;
@@ -1157,25 +1158,62 @@ void Qgs3DAxis::updateAxisLabelPosition()
   if ( mTextTransformX && mTextTransformY && mTextTransformZ )
   {
     mTextTransformX->setTranslation( from3DTo2DLabelPosition( mTextCoordX * mAxisScaleFactor, mAxisCamera,
-                                     mAxisViewport, mTwoDLabelCamera, mTwoDLabelViewport,
+                                     mRenderView->viewport(),
+                                     mTwoDLabelCamera, mTwoDLabelViewport,
                                      mParentWindow->size() ) );
     onTextXChanged( mTextX->text() );
 
     mTextTransformY->setTranslation( from3DTo2DLabelPosition( mTextCoordY * mAxisScaleFactor, mAxisCamera,
-                                     mAxisViewport, mTwoDLabelCamera, mTwoDLabelViewport,
+                                     mRenderView->viewport(),
+                                     mTwoDLabelCamera, mTwoDLabelViewport,
                                      mParentWindow->size() ) );
     onTextYChanged( mTextY->text() );
 
     mTextTransformZ->setTranslation( from3DTo2DLabelPosition( mTextCoordZ * mAxisScaleFactor, mAxisCamera,
-                                     mAxisViewport, mTwoDLabelCamera, mTwoDLabelViewport,
+                                     mRenderView->viewport(),
+                                     mTwoDLabelCamera, mTwoDLabelViewport,
                                      mParentWindow->size() ) );
     onTextZChanged( mTextZ->text() );
   }
 }
 
+void Qgs3DAxis::setAxisViewportPosition( int axisViewportSize,
+    Qgs3DAxisRenderView::AxisViewportPosition axisViewportVertPos,
+    Qgs3DAxisRenderView::AxisViewportPosition axisViewportHorizPos )
+{
+  if ( mRenderView )
+    mRenderView->setAxisViewportPosition( axisViewportSize, axisViewportVertPos, axisViewportHorizPos );
+}
+
+/**
+ * \brief Returns axis viewport size
+ */
+int Qgs3DAxis::axisViewportSize() const
+{
+  return mRenderView ? mRenderView->axisViewportSize() : -1;
+}
+
+/**
+ * \brief Returns axis viewport horizontal position
+ */
+Qgs3DAxisRenderView::AxisViewportPosition Qgs3DAxis::axisViewportHorizontalPosition() const
+{
+  return mRenderView ? mRenderView->axisViewportHorizontalPosition() : Qgs3DAxisRenderView::AxisViewportPosition::Begin;
+}
+
+/**
+ * \brief Returns axis viewport vertical position
+ */
+Qgs3DAxisRenderView::AxisViewportPosition Qgs3DAxis::axisViewportVerticalPosition() const
+{
+  return mRenderView ? mRenderView->axisViewportVerticalPosition() : Qgs3DAxisRenderView::AxisViewportPosition::Begin;
+}
+
+
+
 void Qgs3DAxis::onTextXChanged( const QString &text )
 {
-  QFont f = QFont( "monospace", mAxisScaleFactor *  mFontSize ); // TODO: should use outlined font
+  QFont f = QFontDatabase::systemFont( QFontDatabase::FixedFont ); // TODO: should use outlined font
   f.setWeight( QFont::Weight::Black );
   f.setStyleStrategy( QFont::StyleStrategy::ForceOutline );
   mTextX->setFont( f );
@@ -1185,7 +1223,7 @@ void Qgs3DAxis::onTextXChanged( const QString &text )
 
 void Qgs3DAxis::onTextYChanged( const QString &text )
 {
-  QFont f = QFont( "monospace", mAxisScaleFactor *  mFontSize ); // TODO: should use outlined font
+  QFont f = QFontDatabase::systemFont( QFontDatabase::FixedFont ); // TODO: should use outlined font
   f.setWeight( QFont::Weight::Black );
   f.setStyleStrategy( QFont::StyleStrategy::ForceOutline );
   mTextY->setFont( f );
@@ -1195,7 +1233,7 @@ void Qgs3DAxis::onTextYChanged( const QString &text )
 
 void Qgs3DAxis::onTextZChanged( const QString &text )
 {
-  QFont f = QFont( "monospace", mAxisScaleFactor *  mFontSize ); // TODO: should use outlined font
+  QFont f = QFontDatabase::systemFont( QFontDatabase::FixedFont ); // TODO: should use outlined font
   f.setWeight( QFont::Weight::Black );
   f.setStyleStrategy( QFont::StyleStrategy::ForceOutline );
   mTextZ->setFont( f );
@@ -1203,9 +1241,9 @@ void Qgs3DAxis::onTextZChanged( const QString &text )
   mTextZ->setHeight( mAxisScaleFactor * mFontSize * 1.5f );
 }
 
-//
+// ----------------
 // Qgs3DWiredMesh
-//
+// ----------------
 
 Qgs3DWiredMesh::Qgs3DWiredMesh( Qt3DCore::QNode *parent )
   : Qt3DRender::QGeometryRenderer( parent )
@@ -1246,3 +1284,5 @@ void Qgs3DWiredMesh::setVertices( const QList<QVector3D> &vertices )
   mVertexBuffer->setData( vertexBufferData );
   setVertexCount( vertices.count() );
 }
+
+// ----------------

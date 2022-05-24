@@ -220,8 +220,8 @@ class QgsShadowRenderingFrameGraph : public Qt3DCore::QEntity
      */
     void setDebugOverlayEnabled( bool enabled );
 
+    bool registerRenderView( QgsAbstractRenderView *renderView, const QString &name );
     void unregisterRenderView( const QString &name );
-    void registerRenderView( QgsAbstractRenderView *renderView, const QString &name );
     void setEnableRenderView( const QString &name, bool enable );
     QgsAbstractRenderView *renderView( const QString &name );
     Qt3DRender::QLayer *filterLayer( const QString &name );

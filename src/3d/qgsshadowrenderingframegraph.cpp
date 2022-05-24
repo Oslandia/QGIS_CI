@@ -594,16 +594,19 @@ void QgsShadowRenderingFrameGraph::unregisterRenderView( const QString &name )
   }
 }
 
-void QgsShadowRenderingFrameGraph::registerRenderView( QgsAbstractRenderView *renderView, const QString &name )
+bool QgsShadowRenderingFrameGraph::registerRenderView( QgsAbstractRenderView *renderView, const QString &name )
 {
+  bool out;
   if ( mRenderViewMap [name] == nullptr )
   {
     mRenderViewMap [name] = renderView;
-//    mShadowRendererEnabler = new Qt3DRender::QSubtreeEnabler;
-//    out = mShadowRendererEnabler;
     renderView->topGraphNode()->setParent( mMainViewPort );
+    out = true;
   }
+  else
+    out = false;
 
+  return out;
 }
 
 void QgsShadowRenderingFrameGraph::setEnableRenderView( const QString &name, bool enable )
