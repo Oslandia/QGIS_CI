@@ -13,15 +13,18 @@ mirror_from_github:
     - git config --global user.email "${GITLAB_USER_EMAIL}"
   script:
 # MASTER
-    - rm -fr ".git/rebase-merge"
-    - git remote | grep -q upstream || git remote add upstream "https://github.com/qgis/QGIS.git"
-    - git fetch upstream
-    - git branch | grep -q github_master && git checkout github_master || git checkout -b github_master upstream/master
+#    - rm -fr ".git/rebase-merge"
+    - git branch
+    - git remote -v
+    - git remote add upstream "https://github.com/qgis/QGIS.git"
+    - git fetch upstream master
+    - git checkout -b github_master upstream/master
     - git push -f "https://gitlab-ci-token:${GIT_TOKEN}@git.oslandia.net/Oslandia/Oslandia-3d/qgis.git" HEAD:master
-    - git checkout master
-    - git reset --hard origin/master
+#    - git checkout -b master origin/master
+#    - git reset --hard origin/master
 # DEVELOP
-    - git checkout develop
-    - git reset --hard origin/develop
+    - git fetch origin
+    - git checkout -b develop origin/develop
+#    - git reset --hard origin/develop
     - git rebase origin/master
     - git push -f "https://gitlab-ci-token:${GIT_TOKEN}@git.oslandia.net/Oslandia/Oslandia-3d/qgis.git" develop
