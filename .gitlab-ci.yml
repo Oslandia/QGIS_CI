@@ -7,12 +7,16 @@ mirror_from_github:
     - docker
   only:
     - schedules
-# disable cache:
-  cache: []
   before_script:
     - apt update -qq && apt install -y -qq git
     - git config --global user.name "${GITLAB_USER_NAME}"
     - git config --global user.email "${GITLAB_USER_EMAIL}"
+# create dedicated directory to clone as we may have gitlab cache (via docker volumes)
+    - rm -rf /tmp/qgis
+    - mkdir -p /tmp/
+    - cd /tmp/
+    - git clone "https://gitlab-ci-token:${GIT_TOKEN}@git.oslandia.net/Oslandia/Oslandia-3d/qgis.git"
+    - cd qgis
   script:
 # MASTER
     - git branch
@@ -26,3 +30,6 @@ mirror_from_github:
     - git checkout -b develop origin/develop
     - git rebase origin/master
     - git push -f "https://gitlab-ci-token:${GIT_TOKEN}@git.oslandia.net/Oslandia/Oslandia-3d/qgis.git" develop
+# remove dedicated directory
+after_script:
+    - rm -rf /tmp/qgis
