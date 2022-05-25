@@ -25,7 +25,13 @@ jobs:
       LANG: "en_US.UTF-8"
 
     steps:
-    
+
+      - name: Trust My Directory
+        run: |
+          echo "only work before git v2.35.2:"
+          export GIT_CEILING_DIRECTORIES=/__w
+          git config --global --add safe.directory /__w/QGIS_CI/QGIS_CI
+
       - uses: actions/checkout@v2
         with:
           fetch-depth: 0
@@ -47,7 +53,7 @@ jobs:
           mkdir -p $HOME/.sonar
           curl -sSLo $HOME/.sonar/sonar-scanner.zip ${{ env.SONAR_SCANNER_DOWNLOAD_URL }}
           unzip -o $HOME/.sonar/sonar-scanner.zip -d $HOME/.sonar/
-          
+
       - name: Download and setup build-wrapper
         shell: bash
         env:
@@ -56,7 +62,7 @@ jobs:
         run: |
           curl -sSLo $HOME/.sonar/build-wrapper-linux-x86.zip ${{ env.BUILD_WRAPPER_DOWNLOAD_URL }}
           unzip -o $HOME/.sonar/build-wrapper-linux-x86.zip -d $HOME/.sonar/
-          
+
       - name: Set build-wrapper and sonar-scanner paths
         run: |
           echo "$HOME/.sonar/build-wrapper-linux-x86" >> $GITHUB_PATH
@@ -79,4 +85,3 @@ jobs:
           update-locale LC_ALL="${{env.LANG}}"
           export LANG="${{env.LANG}}"
           sonar-scanner --define sonar.host.url="${{ env.SONAR_SERVER_URL }}" --define sonar.cfamily.cache.path=$HOME/.sonar/cache
-
