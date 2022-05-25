@@ -7,24 +7,22 @@ mirror_from_github:
     - docker
   only:
     - schedules
+# disable cache:
+  cache: []
   before_script:
     - apt update -qq && apt install -y -qq git
     - git config --global user.name "${GITLAB_USER_NAME}"
     - git config --global user.email "${GITLAB_USER_EMAIL}"
   script:
 # MASTER
-#    - rm -fr ".git/rebase-merge"
     - git branch
     - git remote -v
     - git remote add upstream "https://github.com/qgis/QGIS.git"
     - git fetch upstream master
     - git checkout -b github_master upstream/master
     - git push -f "https://gitlab-ci-token:${GIT_TOKEN}@git.oslandia.net/Oslandia/Oslandia-3d/qgis.git" HEAD:master
-#    - git checkout -b master origin/master
-#    - git reset --hard origin/master
 # DEVELOP
     - git fetch origin
     - git checkout -b develop origin/develop
-#    - git reset --hard origin/develop
     - git rebase origin/master
     - git push -f "https://gitlab-ci-token:${GIT_TOKEN}@git.oslandia.net/Oslandia/Oslandia-3d/qgis.git" develop
