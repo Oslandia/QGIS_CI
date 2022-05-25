@@ -23,6 +23,7 @@ add_subdirectory(sandbox)
 set(TESTS
   testqgs3dutils.cpp
   testqgs3drendering.cpp
+  testqgs4978rendering.cpp
   testqgslayout3dmap.cpp
   testqgsmaterialregistry.cpp
   testqgs3dmaterial.cpp
@@ -35,4 +36,3 @@ set(TESTS
 foreach(TESTSRC ${TESTS})
   add_qgis_test(${TESTSRC} MODULE 3d LINKEDLIBRARIES qgis_3d)
 endforeach(TESTSRC)
-
