@@ -84,6 +84,7 @@
 #include "qgspointcloudlayerelevationproperties.h"
 #include "qgspointcloudlayer.h"
 #include "qgspointcloudlayerchunkloader_p.h"
+#include "qgsshadowrenderview.h"
 
 Qgs3DMapScene::Qgs3DMapScene( Qgs3DMapSettings &map, QgsAbstract3DEngine *engine )
   : mMap( map )
@@ -1066,16 +1067,26 @@ void Qgs3DMapScene::onShadowSettingsChanged()
 
   QgsShadowSettings shadowSettings = mMap.shadowSettings();
   int selectedLight = shadowSettings.selectedDirectionalLight();
-  if ( shadowSettings.renderShadows() && selectedLight >= 0 && selectedLight < directionalLightSources.count() )
+  if ( shadowSettings.renderShadows() && selectedLight >= 0 && selectedLight < directionalLightSources.count()
+       && shadowRenderingFrameGraph->renderView( "shadow" ) )
   {
-    shadowRenderingFrameGraph->setShadowRenderingEnabled( true );
-    shadowRenderingFrameGraph->setShadowBias( shadowSettings.shadowBias() );
+    QgsShadowRenderView *srv;
+    if ( shadowRenderingFrameGraph->renderView( "shadow" ) == nullptr )
+    {
+      srv = new QgsShadowRenderView( this, shadowRenderingFrameGraph->shadowRenderTargetOutput() );
+      shadowRenderingFrameGraph->registerRenderView( srv, "shadow" );
+    }
+    else
+      srv = dynamic_cast<QgsShadowRenderView *>( shadowRenderingFrameGraph->renderView( "shadow" ) ) ;
+
+    srv->enableSubTree( true );
+    srv->setShadowBias( shadowSettings.shadowBias() );
     shadowRenderingFrameGraph->setShadowMapResolution( shadowSettings.shadowMapResolution() );
     QgsDirectionalLightSettings light = *directionalLightSources.at( selectedLight );
-    shadowRenderingFrameGraph->setupDirectionalLight( light, shadowSettings.maximumShadowRenderingDistance() );
+    srv->setupDirectionalLight( light, shadowSettings.maximumShadowRenderingDistance(), shadowRenderingFrameGraph->mainCamera() );
   }
   else
-    shadowRenderingFrameGraph->setShadowRenderingEnabled( false );
+    shadowRenderingFrameGraph->setEnableRenderView( "shadow", false );
 }
 
 void Qgs3DMapScene::onDebugShadowMapSettingsChanged()

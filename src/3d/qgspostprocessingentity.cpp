@@ -65,7 +65,7 @@ QgsPostprocessingEntity::QgsPostprocessingEntity( QgsShadowRenderingFrameGraph *
   mMaterial->addParameter( mShadowMapParameter );
 
   mMainCamera = frameGraph->mainCamera();
-  mLightCamera = frameGraph->lightCamera();
+  //mLightCamera = frameGraph->lightCamera();
 
   mFarPlaneParameter = new Qt3DRender::QParameter( QStringLiteral( "farPlane" ), mMainCamera->farPlane() );
   mMaterial->addParameter( mFarPlaneParameter );
