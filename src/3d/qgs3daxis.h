@@ -71,6 +71,8 @@ class _3D_EXPORT Qgs3DAxis : public QObject
     Qgs3DAxis( Qt3DExtras::Qt3DWindow *parentWindow,  Qt3DCore::QEntity *parent3DScene,
                Qgs3DMapScene *mapScene, QgsCameraController *camera, Qgs3DMapSettings &map );
 
+    virtual ~Qgs3DAxis();
+
     /**
      * \brief The Axis enum
      */
