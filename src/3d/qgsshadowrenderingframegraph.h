@@ -148,7 +148,8 @@ class QgsShadowRenderingFrameGraph : public Qt3DCore::QEntity
      */
     bool renderCaptureEnabled() const { return mRenderCaptureEnabled; }
 
-    void registerRenderView( QgsAbstractRenderView *renderView, const QString &name );
+    bool registerRenderView( QgsAbstractRenderView *renderView, const QString &name );
+    void unregisterRenderView( const QString &name );
     void setEnableRenderView( const QString &name, bool enable );
     QgsAbstractRenderView *renderView( const QString &name );
     Qt3DRender::QLayer *filterLayer( const QString &name );
