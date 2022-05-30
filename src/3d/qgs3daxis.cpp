@@ -75,6 +75,14 @@ Qgs3DAxis::Qgs3DAxis( Qt3DExtras::Qt3DWindow *parentWindow
   init3DObjectPicking();
 }
 
+Qgs3DAxis::~Qgs3DAxis()
+{
+  if ( mRenderView && mMapScene )
+  {
+    mMapScene->engine()->frameGraph()->unregisterRenderView( "3daxis" );
+  }
+}
+
 void Qgs3DAxis::init3DObjectPicking( )
 {
   // Create screencaster to be used by EventFilter:
