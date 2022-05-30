@@ -51,7 +51,7 @@ class Qgs3DMapSettings;
 
 /**
  * \ingroup 3d
- * \brief Base class for 3D render view
+ * \brief 3d axis render view class
  *
  * \note Not available in Python bindings
  * \since QGIS 3.26
