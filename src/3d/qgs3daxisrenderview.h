@@ -51,7 +51,7 @@ class Qgs3DMapSettings;
 
 /**
  * \ingroup 3d
- * \brief Base class for 3D render view
+ * \brief 3d axis render view class
  *
  * \note Not available in Python bindings
  * \since QGIS 3.26
@@ -94,6 +94,9 @@ class _3D_EXPORT Qgs3DAxisRenderView : public QgsAbstractRenderView
 
     //! Enable or disable via \a enable the renderview sub tree
     virtual void enableSubTree( bool enable );
+
+    //! Returns true if renderview is enabled
+    virtual bool isSubTreeEnabled();
 
     //! Return viewport side length (as it is a square)
     int axisViewportSize() const { return mAxisViewportSize; }

@@ -26,6 +26,7 @@
 #include <QUrl>
 
 #include "qgsshadowrenderingframegraph.h"
+#include "qgsshadowrenderview.h"
 
 QgsPostprocessingEntity::QgsPostprocessingEntity( QgsShadowRenderingFrameGraph *frameGraph, QNode *parent )
   : Qt3DCore::QEntity( parent )
@@ -65,7 +66,7 @@ QgsPostprocessingEntity::QgsPostprocessingEntity( QgsShadowRenderingFrameGraph *
   mMaterial->addParameter( mShadowMapParameter );
 
   mMainCamera = frameGraph->mainCamera();
-  mLightCamera = frameGraph->lightCamera();
+  mLightCamera = dynamic_cast<QgsShadowRenderView *>( frameGraph->renderView( "shadow" ) )->lightCamera();
 
   mFarPlaneParameter = new Qt3DRender::QParameter( QStringLiteral( "farPlane" ), mMainCamera->farPlane() );
   mMaterial->addParameter( mFarPlaneParameter );

@@ -80,6 +80,12 @@ void Qgs3DAxisRenderView::enableSubTree( bool enable )
   }
 }
 
+bool Qgs3DAxisRenderView::isSubTreeEnabled()
+{
+  return mShadowRendererEnabler != nullptr && mShadowRendererEnabler->isEnabled();
+}
+
+
 Qt3DRender::QFrameGraphNode *Qgs3DAxisRenderView::topGraphNode()
 {
   return mShadowRendererEnabler;

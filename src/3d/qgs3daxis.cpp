@@ -79,7 +79,7 @@ Qgs3DAxis::~Qgs3DAxis()
 {
   if ( mRenderView && mMapScene )
   {
-    mMapScene->engine()->frameGraph()->unregisterRenderView( "3daxis" );
+    // seg fault mMapScene->engine()->frameGraph()->unregisterRenderView( "3daxis" );
   }
 }
 
