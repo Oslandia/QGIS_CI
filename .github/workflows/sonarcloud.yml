@@ -16,11 +16,11 @@ jobs:
 
     runs-on: ubuntu-latest
     if: "!contains(github.event.head_commit.message, '[skip ci]')"
-    container : 'qgis/qgis3-build-deps:latest'
+    container : 'qgis/qgis3-build-deps:latest_21.10'
 
     env:
-      SONAR_SCANNER_VERSION: 4.6.1.2450 # Find the latest version in the "Linux" link on this page:
-      # https://sonarcloud.io/documentation/analysis/scan/sonarscanner/
+      SONAR_SCANNER_VERSION: 4.7.0.2747 # Find the latest version in the "Linux" link on this page:
+      # https://docs.sonarcloud.io/advanced-setup/ci-based-analysis/sonarscanner-cli/
       SONAR_SERVER_URL: "https://sonarcloud.io"
       LANG: "en_US.UTF-8"
 
