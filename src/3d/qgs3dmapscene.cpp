@@ -85,6 +85,7 @@
 #include "qgspointcloudlayer.h"
 #include "qgspointcloudlayerchunkloader_p.h"
 #include "qgsshadowrenderview.h"
+#include "qgsframegraphdebug.h"
 
 Qgs3DMapScene::Qgs3DMapScene( Qgs3DMapSettings &map, QgsAbstract3DEngine *engine )
   : mMap( map )
@@ -1073,9 +1074,11 @@ void Qgs3DMapScene::onShadowSettingsChanged()
     QgsShadowRenderView *srv = dynamic_cast<QgsShadowRenderView *>( shadowRenderingFrameGraph->renderView( "shadow" ) ) ;
     srv->enableSubTree( true );
     srv->setShadowBias( shadowSettings.shadowBias() );
+    shadowRenderingFrameGraph->postprocessingEntity()->setShadowBias( shadowSettings.shadowBias() );
+
     shadowRenderingFrameGraph->setShadowMapResolution( shadowSettings.shadowMapResolution() );
     QgsDirectionalLightSettings light = *directionalLightSources.at( selectedLight );
-    srv->setupDirectionalLight( light, shadowSettings.maximumShadowRenderingDistance(), shadowRenderingFrameGraph->mainCamera() );
+    srv->setupDirectionalLight( light, shadowSettings.maximumShadowRenderingDistance(), shadowRenderingFrameGraph->mainCamera(), shadowRenderingFrameGraph->postprocessingEntity() );
   }
   else
     shadowRenderingFrameGraph->setEnableRenderView( "shadow", false );
@@ -1083,14 +1086,14 @@ void Qgs3DMapScene::onShadowSettingsChanged()
 
 void Qgs3DMapScene::onDebugShadowMapSettingsChanged()
 {
-  QgsShadowRenderingFrameGraph *shadowRenderingFrameGraph = mEngine->frameGraph();
-  shadowRenderingFrameGraph->setupShadowMapDebugging( mMap.debugShadowMapEnabled(), mMap.debugShadowMapCorner(), mMap.debugShadowMapSize() );
+  QgsFrameGraphDebug *debug = mEngine->frameGraph()->frameGraphDebug();
+  debug->setupShadowMapDebugging( mMap.debugShadowMapEnabled(), mMap.debugShadowMapCorner(), mMap.debugShadowMapSize() );
 }
 
 void Qgs3DMapScene::onDebugDepthMapSettingsChanged()
 {
-  QgsShadowRenderingFrameGraph *shadowRenderingFrameGraph = mEngine->frameGraph();
-  shadowRenderingFrameGraph->setupDepthMapDebugging( mMap.debugDepthMapEnabled(), mMap.debugDepthMapCorner(), mMap.debugDepthMapSize() );
+  QgsFrameGraphDebug *debug = mEngine->frameGraph()->frameGraphDebug();
+  debug->setupDepthMapDebugging( mMap.debugDepthMapEnabled(), mMap.debugDepthMapCorner(), mMap.debugDepthMapSize() );
 }
 
 void Qgs3DMapScene::onEyeDomeShadingSettingsChanged()

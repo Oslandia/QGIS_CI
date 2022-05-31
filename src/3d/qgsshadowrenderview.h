@@ -52,6 +52,7 @@ namespace Qt3DExtras
 class QgsShadowRenderingFrameGraph;
 class Qgs3DMapSettings;
 class QgsDirectionalLightSettings;
+class QgsPostprocessingEntity;
 
 /**
  * \ingroup 3d
@@ -98,7 +99,7 @@ class QgsShadowRenderView : public QgsAbstractRenderView
 
     //! Sets shadow rendering to use a directional light
     void setupDirectionalLight( const QgsDirectionalLightSettings &light, float maximumShadowRenderingDistance,
-                                const Qt3DRender::QCamera *mainCamera );
+                                const Qt3DRender::QCamera *mainCamera, QgsPostprocessingEntity *postprocessingEntity );
 
   private:
     float mShadowBias = 0.00001f;

@@ -34,11 +34,12 @@
 #include <Qt3DRender/QRenderCapture>
 #include <Qt3DRender/QSubtreeEnabler>
 
+#include "qgspostprocessingentity.h"
+
 QgsShadowRenderView::QgsShadowRenderView( QObject *parent, Qt3DRender::QRenderTargetOutput *targetOutput )
   : QgsAbstractRenderView( parent )
   , mTargetOutput( targetOutput )
 {
-
   mLightCamera = new Qt3DRender::QCamera;
   mCastShadowsLayer = new Qt3DRender::QLayer;
   mCastShadowsLayer->setRecursive( true );
@@ -87,7 +88,7 @@ bool QgsShadowRenderView::isSubTreeEnabled()
 
 
 void QgsShadowRenderView::setupDirectionalLight( const QgsDirectionalLightSettings &light, float maximumShadowRenderingDistance,
-    const Qt3DRender::QCamera *mainCamera )
+    const Qt3DRender::QCamera *mainCamera, QgsPostprocessingEntity *postprocessingEntity )
 {
   float minX, maxX, minY, maxY, minZ, maxZ;
   QVector3D lookingAt = mainCamera->viewCenter();
@@ -110,8 +111,9 @@ void QgsShadowRenderView::setupDirectionalLight( const QgsDirectionalLightSettin
     - 0.7 * ( maxZ - minZ ), 0.7 * ( maxZ - minZ ),
     1.0f, 2 * ( lookingAt - lightPosition ).length() );
 
-  //mPostprocessingEntity->setupShadowRenderingExtent( minX, maxX, minZ, maxZ );
-  //mPostprocessingEntity->setupDirectionalLight( lightPosition, lightDirection );
+  // TODO not really nice
+  postprocessingEntity->setupShadowRenderingExtent( minX, maxX, minZ, maxZ );
+  postprocessingEntity->setupDirectionalLight( lightPosition, lightDirection );
 }
 
 Qt3DRender::QFrameGraphNode *QgsShadowRenderView::constructShadowRenderPass()
@@ -153,7 +155,6 @@ Qt3DRender::QFrameGraphNode *QgsShadowRenderView::constructShadowRenderPass()
 void QgsShadowRenderView::setShadowBias( float shadowBias )
 {
   mShadowBias = shadowBias;
-  //mPostprocessingEntity->setShadowBias( mShadowBias );
 }
 
 // computes the portion of the Y=y plane the camera is looking at

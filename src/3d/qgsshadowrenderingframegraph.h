@@ -36,13 +36,14 @@
 #include <Qt3DRender/QRenderCapture>
 
 #include "qgspointlightsettings.h"
+#include "qgsframegraphdebug.h"
 
 class QgsDirectionalLightSettings;
 class QgsCameraController;
 class QgsRectangle;
 class QgsPostprocessingEntity;
-class QgsPreviewQuad;
 class QgsAbstractRenderView;
+class QgsShadowRenderView;
 
 #define SIP_NO_FILE
 
@@ -96,6 +97,8 @@ class QgsShadowRenderingFrameGraph : public Qt3DCore::QEntity
     //! Returns the render capture object used to take an image of the depth buffer of the scene
     Qt3DRender::QRenderCapture *depthRenderCapture() { return mDepthRenderCapture; }
 
+    //! Return object holding the frame graph debugging
+    QgsFrameGraphDebug *frameGraphDebug() const {return mFrameGraphDebug;}
 
     //! Returns whether frustum culling is enabled
     bool frustumCullingEnabled() const { return mFrustumCullingEnabled; }
@@ -108,19 +111,14 @@ class QgsShadowRenderingFrameGraph : public Qt3DCore::QEntity
     //! Sets the resolution of the shadow map
     void setShadowMapResolution( int resolution );
 
+    //! Returns target output for shadow render view
     Qt3DRender::QRenderTargetOutput *shadowRenderTargetOutput() const { return mShadowRenderTargetOutput;}
 
     //! Sets the clear color of the scene (background color)
     void setClearColor( const QColor &clearColor );
-    //! Adds an preview entity that shows a texture in real time for debugging purposes
-    QgsPreviewQuad *addTexturePreviewOverlay( Qt3DRender::QTexture2D *texture, const QPointF &centerNDC, const QSizeF &size, QVector<Qt3DRender::QParameter *> additionalShaderParameters = QVector<Qt3DRender::QParameter *>() );
 
     //! Sets eye dome lighting shading related settings
     void setupEyeDomeLighting( bool enabled, double strength, int distance );
-    //! Sets the shadow map debugging view port
-    void setupShadowMapDebugging( bool enabled, Qt::Corner corner, double size );
-    //! Sets the depth map debugging view port
-    void setupDepthMapDebugging( bool enabled, Qt::Corner corner, double size );
     //! Sets the size of the buffers used for rendering
     void setSize( QSize s );
 
@@ -203,8 +201,7 @@ class QgsShadowRenderingFrameGraph : public Qt3DCore::QEntity
     double mEyeDomeLightingStrength = 1000.0;
     int mEyeDomeLightingDistance = 1;
 
-    QgsPreviewQuad *mDebugShadowMapPreviewQuad = nullptr;
-    QgsPreviewQuad *mDebugDepthMapPreviewQuad = nullptr;
+    QgsFrameGraphDebug *mFrameGraphDebug = nullptr;
 
     QEntity *mDepthRenderQuad = nullptr;
 
@@ -220,11 +217,9 @@ class QgsShadowRenderingFrameGraph : public Qt3DCore::QEntity
 
     QgsPostprocessingEntity *mPostprocessingEntity = nullptr;
 
-    QVector<QgsPreviewQuad *> mPreviewQuads;
-
     Qt3DRender::QFrameGraphNode *constructForwardRenderPass();
     Qt3DRender::QFrameGraphNode *constructTexturesPreviewPass();
-    Qt3DRender::QFrameGraphNode *constructPostprocessingPass();
+    Qt3DRender::QFrameGraphNode *constructPostprocessingPass( QgsShadowRenderView *srv );
     Qt3DRender::QFrameGraphNode *constructDepthRenderPass();
 
     Qt3DCore::QEntity *constructDepthRenderQuad();
