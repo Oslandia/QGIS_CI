@@ -33,6 +33,7 @@ namespace Qt3DRender
   class QCamera;
 }
 
+class Qgs3DBoundingBoxSettings;
 class Qgs3DMapSettings;
 class Qgs3DWiredMesh;
 class QgsAABB;
@@ -52,16 +53,18 @@ class _3D_EXPORT Qgs3DBoundingBoxEntity: public Qt3DCore::QEntity
 
   public:
     Qgs3DBoundingBoxEntity( Qt3DCore::QEntity *parent, Qgs3DMapSettings *mapSettings, QgsCameraController *cameraCtrl );
-    void setBox( const QgsAABB &box );
+    virtual ~Qgs3DBoundingBoxEntity();
+    void setParameters( Qgs3DBoundingBoxSettings const &settings );
 
   private slots:
     void onCameraChanged();
 
   private:
-    void createLabels( Qt::Axis const axis, const QgsAABB &bbox, const QgsVector3D &bboxMin, const QgsVector3D &bboxMax, float maxExtent, QList<QVector3D> &vertices );
+    void createLabels( Qt::Axis const axis, const QgsVector3D &bboxMin, const QgsVector3D &bboxMax, float maxExtent, QList<QVector3D> &vertices );
 
     Qgs3DMapSettings *mMapSettings = nullptr;
 
+    Qgs3DBoundingBoxSettings *mSettings = nullptr;
     Qgs3DWiredMesh *mBBMesh = nullptr;
     QList<Qt3DExtras::QText2DEntity *> mLabels;
     QColor mColor = Qt::black;

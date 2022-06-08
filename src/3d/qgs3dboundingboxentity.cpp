@@ -21,6 +21,7 @@
 
 #include "qgs3dboundingboxentity.h"
 #include "qgs3dboundingboxlabels.h"
+#include "qgs3dboundingboxsettings.h"
 #include "qgs3dmapscene.h"
 #include "qgs3dmapsettings.h"
 #include "qgs3dwiredmesh.h"
@@ -30,6 +31,7 @@
 Qgs3DBoundingBoxEntity::Qgs3DBoundingBoxEntity( Qt3DCore::QEntity *parent, Qgs3DMapSettings *mapSettings, QgsCameraController *cameraCtrl )
   : Qt3DCore::QEntity( parent )
   , mMapSettings( mapSettings )
+  , mSettings( new Qgs3DBoundingBoxSettings() )
   , mCameraCtrl( cameraCtrl )
 {
   mBBMesh = new Qgs3DWiredMesh( this );
@@ -50,9 +52,13 @@ Qgs3DBoundingBoxEntity::Qgs3DBoundingBoxEntity( Qt3DCore::QEntity *parent, Qgs3D
   connect( mCameraCtrl, &QgsCameraController::cameraChanged, this, &Qgs3DBoundingBoxEntity::onCameraChanged );
 }
 
-void Qgs3DBoundingBoxEntity::createLabels( Qt::Axis axis, const QgsAABB &bbox, const QgsVector3D &bboxMin, const QgsVector3D &bboxMax, float maxExtent, QList<QVector3D> &vertices )
+Qgs3DBoundingBoxEntity::~Qgs3DBoundingBoxEntity()
 {
-  int nrTicks = 7;
+  delete mSettings;
+}
+
+void Qgs3DBoundingBoxEntity::createLabels( Qt::Axis axis, const QgsVector3D &bboxMin, const QgsVector3D &bboxMax, float maxExtent, QList<QVector3D> &vertices )
+{
   int nrIncrD;
   float rangeIncr;
   float labelValue;
@@ -68,6 +74,8 @@ void Qgs3DBoundingBoxEntity::createLabels( Qt::Axis axis, const QgsAABB &bbox, c
   QVector3D pt4;
 
   float fontSize = mLabelsFont.pointSizeF();
+  QgsAABB bbox = mSettings->coords();
+  int nrTicks = mSettings->nrTicks();
 
   switch ( axis )
   {
@@ -208,38 +216,37 @@ void Qgs3DBoundingBoxEntity::createLabels( Qt::Axis axis, const QgsAABB &bbox, c
   }
 }
 
-void Qgs3DBoundingBoxEntity::setBox( const QgsAABB &bbox )
+void Qgs3DBoundingBoxEntity::setParameters( Qgs3DBoundingBoxSettings const &settings )
 {
-  qDebug() << "setbox";
-  qDebug() << "bounding box" << bbox.xExtent()  << "x" << bbox.yExtent()  << "x" << bbox.zExtent();
-  QList<QVector3D> ticksVertices;
+  if ( settings != *mSettings )
+  {
+    delete mSettings;
+    mSettings = new Qgs3DBoundingBoxSettings( settings );
 
-  for ( auto *label : mLabels )
-    label->setParent( ( QEntity * ) nullptr );
+    QgsAABB bbox = settings.coords();
+    qDebug() << "set bounding box parameters";
+    QList<QVector3D> ticksVertices;
 
-  mLabels.clear();
+    for ( auto *label : mLabels )
+      label->setParent( ( QEntity * ) nullptr );
 
-  QgsVector3D bboxWorldMin( bbox.xMin, bbox.yMin, bbox.zMin );
-  QgsVector3D bboxMapMin = mMapSettings->worldToMapCoordinates( bboxWorldMin );
-  QgsVector3D bboxWorldMax( bbox.xMax, bbox.yMax, bbox.zMax );
-  QgsVector3D bboxMapMax = mMapSettings->worldToMapCoordinates( bboxWorldMax );
-  float swapY = bboxMapMin.y();
-  bboxMapMin.set( bboxMapMin.x(), bboxMapMax.y(), bboxMapMin.z() );
-  bboxMapMax.set( bboxMapMax.x(), swapY, bboxMapMax.z() );
+    mLabels.clear();
 
+    QgsVector3D bboxWorldMin( bbox.xMin, bbox.yMin, bbox.zMin );
+    QgsVector3D bboxMapMin = mMapSettings->worldToMapCoordinates( bboxWorldMin );
+    QgsVector3D bboxWorldMax( bbox.xMax, bbox.yMax, bbox.zMax );
+    QgsVector3D bboxMapMax = mMapSettings->worldToMapCoordinates( bboxWorldMax );
+    float swapY = bboxMapMin.y();
+    bboxMapMin.set( bboxMapMin.x(), bboxMapMax.y(), bboxMapMin.z() );
+    bboxMapMax.set( bboxMapMax.x(), swapY, bboxMapMax.z() );
+    float maxExtent = std::max( std::max( bboxMapMax.x() - bboxMapMin.x(), bboxMapMax.y() - bboxMapMin.y() ), bboxMapMax.z() - bboxMapMin.z() );
 
-  float maxExtent = std::max( std::max( bboxMapMax.x() - bboxMapMin.x(), bboxMapMax.y() - bboxMapMin.y() ), bboxMapMax.z() - bboxMapMin.z() );
-  /// float minExtent = std::min( bboxMapMax.x() - bboxMapMin.x(), bboxMapMax.y() - bboxMapMin.y() );
-  // qDebug() << "le min" << minExtent << "car" << bboxMapMax.x() << "x" << bboxMapMax.y();
+    createLabels( Qt::Axis::XAxis, bboxMapMin, bboxMapMax, maxExtent, ticksVertices );
+    createLabels( Qt::Axis::YAxis, bboxMapMin, bboxMapMax, maxExtent, ticksVertices );
+    createLabels( Qt::Axis::ZAxis, bboxMapMin, bboxMapMax, maxExtent, ticksVertices );
 
-  // int fontSize = static_cast< int >( std::ceil( 0.015 * minExtent ) );
-  // mLabelsFont.setPointSize( fontSize );
-  // qDebug() << "fontSize" << fontSize;
-
-  createLabels( Qt::Axis::XAxis, bbox, bboxMapMin, bboxMapMax, maxExtent, ticksVertices );
-  createLabels( Qt::Axis::YAxis, bbox, bboxMapMin, bboxMapMax, maxExtent, ticksVertices );
-  createLabels( Qt::Axis::ZAxis, bbox, bboxMapMin, bboxMapMax, maxExtent, ticksVertices );
-  mBBMesh->setVertices( bbox.verticesForLines() + ticksVertices );
+    mBBMesh->setVertices( bbox.verticesForLines() + ticksVertices );
+  }
 }
 
 void Qgs3DBoundingBoxEntity::onCameraChanged()

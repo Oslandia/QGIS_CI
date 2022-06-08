@@ -1168,7 +1168,7 @@ void Qgs3DMapScene::onBoundingBoxSettingsChanged()
   mBoundingBox->setEnabled( boundingBoxSettings.isEnabled() );
 
   if ( boundingBoxSettings.isEnabled() )
-    mBoundingBox->setBox( boundingBoxSettings.coords() );
+    mBoundingBox->setParameters( boundingBoxSettings );
 }
 
 void Qgs3DMapScene::exportScene( const Qgs3DMapExportSettings &exportSettings )
