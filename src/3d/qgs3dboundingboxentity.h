@@ -57,6 +57,22 @@ class _3D_EXPORT Qgs3DBoundingBoxEntity: public Qt3DCore::QEntity
     virtual ~Qgs3DBoundingBoxEntity();
     void setParameters( Qgs3DBoundingBoxSettings const &settings );
 
+#if QT_VERSION < QT_VERSION_CHECK(5, 14, 0)
+    template<class T>
+    QVector<T *> componentsOfType() const
+    {
+      QVector<T *> matchComponents;
+      const QComponentVector comps = this->components();
+      for ( QComponent *component : comps )
+      {
+        T *typedComponent = qobject_cast<T *>( component );
+        if ( typedComponent != nullptr )
+          matchComponents.append( typedComponent );
+      }
+      return matchComponents;
+    }
+#endif
+
   private slots:
     void onCameraChanged();
 
