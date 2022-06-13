@@ -16,6 +16,10 @@
 #ifndef QGS3DBOUNDINGBOXENTITY_H
 #define QGS3DBOUNDINGBOXENTITY_H
 
+#if QT_VERSION < QT_VERSION_CHECK(5, 14, 0)
+#include <Qt3DCore/QComponent>
+#endif
+
 #include "qgis_3d.h"
 
 namespace Qt3DCore
@@ -62,8 +66,8 @@ class _3D_EXPORT Qgs3DBoundingBoxEntity: public Qt3DCore::QEntity
     QVector<T *> componentsOfType() const
     {
       QVector<T *> matchComponents;
-      const QComponentVector comps = this->components();
-      for ( QComponent *component : comps )
+      const QVector<Qt3DCore::QComponent *> comps = this->components();
+      for ( Qt3DCore::QComponent *component : comps )
       {
         T *typedComponent = qobject_cast<T *>( component );
         if ( typedComponent != nullptr )
