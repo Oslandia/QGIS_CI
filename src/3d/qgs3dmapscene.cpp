@@ -630,7 +630,15 @@ void Qgs3DMapScene::createTerrainDeferred()
     float rootError = mMap.terrainGenerator()->rootChunkError( mMap );
     mMap.terrainGenerator()->setupQuadtree( rootBbox, rootError, maxZoomLevel );
 
-    qDebug() << "root bbox x :" << rootBbox.xMin << "x" << rootBbox.xMax << "y:" << rootBbox.yMin << "x" << rootBbox.yMax << "z :" << rootBbox.zMin << "x" << rootBbox.zMax;
+    QgsVector3D bboxWorldMin( rootBbox.xMin, rootBbox.yMin, rootBbox.zMin );
+    QgsVector3D bboxMapMin = mMap.worldToMapCoordinates( bboxWorldMin );
+    QgsVector3D bboxWorldMax( rootBbox.xMax, rootBbox.yMax, rootBbox.zMax );
+    QgsVector3D bboxMapMax = mMap.worldToMapCoordinates( bboxWorldMax );
+    float swapY = bboxMapMin.y();
+    bboxMapMin.set( bboxMapMin.x(), bboxMapMax.y(), bboxMapMin.z() );
+    bboxMapMax.set( bboxMapMax.x(), swapY, bboxMapMax.z() );
+
+    qDebug() << "Project bounding box coordinates :" << bboxMapMin.x() << "x" << bboxMapMax.x() << "y:" << bboxMapMin.y() << "x" << bboxMapMax.y() << "z :" << bboxMapMin.z() << "x" << bboxMapMax.z();
 
     mTerrain = new QgsTerrainEntity( mMap );
     mTerrain->setParent( this );
