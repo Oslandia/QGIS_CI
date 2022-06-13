@@ -604,21 +604,36 @@ void Qgs3DMapConfigWidget::initBoundingBoxPage()
   Qgs3DBoundingBoxSettings boundingBoxSettings = mMap->getBoundingBoxSettings();
   QgsAABB boundingBoxCoords = boundingBoxSettings.coords();
 
-  // bounding box coordinates are stored in the world coordinate System
-  // They neds to be displayed in the map coordinate system
-  QgsVector3D boundingBoxCoordsWorldMin( boundingBoxCoords.xMin, boundingBoxCoords.yMin, boundingBoxCoords.zMin );
-  QgsVector3D boundingBoxCoordsMapMin = mMap->worldToMapCoordinates( boundingBoxCoordsWorldMin );
-  QgsVector3D boundingBoxCoordsWorldMax( boundingBoxCoords.xMax, boundingBoxCoords.yMax, boundingBoxCoords.zMax );
-  QgsVector3D boundingBoxCoordsMapMax = mMap->worldToMapCoordinates( boundingBoxCoordsWorldMax );
+  // if there are no stored coordinates, use the scene extent
+  if ( boundingBoxCoords.xMin == 0.0f && boundingBoxCoords.yMin == 0.0f
+       && boundingBoxCoords.xMax == 0.0f && boundingBoxCoords.yMax == 0.0f )
+  {
+    const QgsRectangle sceneExtent = m3DMapCanvas->scene()->sceneExtent();
+    mBoundingBoxXMin->setValue( sceneExtent.xMinimum() );
+    mBoundingBoxYMin->setValue( sceneExtent.yMinimum() );
+    mBoundingBoxZMin->setValue( 0.0f );
+    mBoundingBoxXMax->setValue( sceneExtent.xMaximum() );
+    mBoundingBoxYMax->setValue( sceneExtent.yMaximum() );
+    mBoundingBoxZMax->setValue( 0.0f );
+  }
+  else
+  {
+    // bounding box coordinates are stored in the world coordinate System
+    // They need to be displayed in the map coordinate system
+    QgsVector3D boundingBoxCoordsWorldMin( boundingBoxCoords.xMin, boundingBoxCoords.yMin, boundingBoxCoords.zMin );
+    QgsVector3D boundingBoxCoordsMapMin = mMap->worldToMapCoordinates( boundingBoxCoordsWorldMin );
+    QgsVector3D boundingBoxCoordsWorldMax( boundingBoxCoords.xMax, boundingBoxCoords.yMax, boundingBoxCoords.zMax );
+    QgsVector3D boundingBoxCoordsMapMax = mMap->worldToMapCoordinates( boundingBoxCoordsWorldMax );
+
+    mBoundingBoxXMin->setValue( boundingBoxCoordsMapMin.x() );
+    mBoundingBoxYMin->setValue( boundingBoxCoordsMapMax.y() );
+    mBoundingBoxZMin->setValue( boundingBoxCoordsMapMin.z() );
+    mBoundingBoxXMax->setValue( boundingBoxCoordsMapMax.x() );
+    mBoundingBoxYMax->setValue( boundingBoxCoordsMapMin.y() );
+    mBoundingBoxZMax->setValue( boundingBoxCoordsMapMax.z() );
+  }
 
   mGroupBoundingBox->setChecked( boundingBoxSettings.isEnabled() );
-  mBoundingBoxXMin->setValue( boundingBoxCoordsMapMin.x() );
-  mBoundingBoxYMin->setValue( boundingBoxCoordsMapMax.y() );
-  mBoundingBoxZMin->setValue( boundingBoxCoordsMapMin.z() );
-  mBoundingBoxXMax->setValue( boundingBoxCoordsMapMax.x() );
-  mBoundingBoxYMax->setValue( boundingBoxCoordsMapMin.y() );
-  mBoundingBoxZMax->setValue( boundingBoxCoordsMapMax.z() );
-
   mBoundingBoxNrTicks->setValue( boundingBoxSettings.nrTicks() );
   mBoundingBoxColor->setColor( boundingBoxSettings.color() );
 }
