@@ -15,6 +15,7 @@
 
 #include <QRegularExpression>
 #include <QVector>
+#include <qnamespace.h>
 
 #include "qgsaabb.h"
 #include "qgslogger.h"
@@ -123,6 +124,78 @@ QList<QVector3D> QgsAABB::verticesForLines() const
     }
   }
   return vertices;
+}
+
+QList<QgsAABB::Line> QgsAABB::lines() const
+{
+  QList<Line> lines;
+  for ( int i = 0; i < 2; ++i )
+  {
+    const float x = i ? xMax : xMin;
+    for ( int j = 0; j < 2; ++j )
+    {
+      const float y = j ? yMax : yMin;
+      for ( int k = 0; k < 2; ++k )
+      {
+        const float z = k ? zMax : zMin;
+        if ( i == 0 )
+        {
+          Line line;
+          line.points[0] = QVector3D( xMin, y, z );
+          line.points[1] = QVector3D( xMax, y, z );
+          line.axis = Qt::Axis::XAxis;
+          if ( z == zMin )
+            line.faces[0] = Face::Zmin;
+          else
+            line.faces[0] = Face::Zmax;
+
+          if ( y == yMin )
+            line.faces[1] = Face::Ymin;
+          else
+            line.faces[1] = Face::Ymax;
+
+          lines.append( line );
+        }
+        if ( j == 0 )
+        {
+          Line line;
+          line.points[0] = QVector3D( x, yMin, z );
+          line.points[1] = QVector3D( x, yMax, z );
+          line.axis = Qt::Axis::YAxis;
+          if ( x == xMin )
+            line.faces[0] = QgsAABB::Face::Xmin;
+          else
+            line.faces[0] = QgsAABB::Face::Xmax;
+
+          if ( z == zMin )
+            line.faces[1] = QgsAABB::Face::Zmin;
+          else
+            line.faces[1] = QgsAABB::Face::Zmax;
+
+          lines.append( line );
+        }
+        if ( k == 0 )
+        {
+          Line line;
+          line.points[0] = QVector3D( x, y, zMin );
+          line.points[1] = QVector3D( x, y, zMax );
+          line.axis = Qt::Axis::ZAxis;
+          if ( x == xMin )
+            line.faces[0] = QgsAABB::Face::Xmin;
+          else
+            line.faces[0] = QgsAABB::Face::Xmax;
+
+          if ( y == yMin )
+            line.faces[1] = QgsAABB::Face::Ymin;
+          else
+            line.faces[1] = QgsAABB::Face::Ymax;
+
+          lines.append( line );
+        }
+      }
+    }
+  }
+  return lines;
 }
 
 QString QgsAABB::toString() const

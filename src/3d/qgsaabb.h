@@ -48,6 +48,33 @@ class _3D_EXPORT QgsAABB
     //! Returns true if objects are not equal
     bool operator!=( QgsAABB const &other ) const;
 
+    enum class Face
+    {
+      Xmin = 0,
+      Xmax = 1,
+      Ymin = 2,
+      Ymax = 3,
+      Zmin = 4,
+      Zmax = 5
+    };
+
+    static inline const std::map<QgsAABB::Face, QVector3D > normals =
+    {
+      { QgsAABB::Face::Xmin, QVector3D( -1.0f, 0.0f, 0.0f ) },
+      { QgsAABB::Face::Xmax, QVector3D( 1.0f, 0.0f, 0.0f ) },
+      { QgsAABB::Face::Ymin, QVector3D( 0.0f, -1.0f, 0.0f ) },
+      { QgsAABB::Face::Ymax, QVector3D( 0.0f, 1.0f, 0.0f ) },
+      { QgsAABB::Face::Zmin, QVector3D( 0.0f, 0.0f, -1.0f ) },
+      { QgsAABB::Face::Zmax, QVector3D( 0.0f, 0.0f, 1.0f ) }
+    };
+
+    struct Line
+    {
+      QVector3D points[2];
+      Qt::Axis axis;
+      Face faces[2];
+    };
+
     //! Returns box width in X axis
     float xExtent() const { return xMax - xMin; }
     //! Returns box width in Y axis
@@ -83,6 +110,7 @@ class _3D_EXPORT QgsAABB
 
     //! Returns a list of pairs of vertices (useful for display of bounding boxes)
     QList<QVector3D> verticesForLines() const;
+    QList<Line> lines() const;
 
     //! Returns text representation of the bounding box
     QString toString() const;
