@@ -62,6 +62,7 @@ class _3D_EXPORT Qgs3DBoundingBoxEntity: public Qt3DCore::QEntity
 
   private:
     void createLabels( Qt::Axis const axis, const QgsVector3D &bboxMin, const QgsVector3D &bboxMax, float maxExtent, QList<QVector3D> &vertices );
+    void createLabels( QList<QVector3D> &vertices );
 
     Qgs3DMapSettings *mMapSettings = nullptr;
 

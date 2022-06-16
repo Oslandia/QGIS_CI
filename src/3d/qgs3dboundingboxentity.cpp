@@ -18,6 +18,7 @@
 #include <Qt3DExtras/QPhongMaterial>
 #include <Qt3DExtras/QText2DEntity>
 #include <Qt3DRender/QCamera>
+#include <qvector3d.h>
 
 #include "qgs3dboundingboxentity.h"
 #include "qgs3dboundingboxlabels.h"
@@ -50,12 +51,45 @@ Qgs3DBoundingBoxEntity::Qgs3DBoundingBoxEntity( Qt3DCore::QEntity *parent, Qgs3D
   mLabelsFont.setWeight( QFont::Weight::Black );
   mLabelsFont.setStyleStrategy( QFont::StyleStrategy::ForceOutline );
 
-  // connect( mCameraCtrl, &QgsCameraController::cameraChanged, this, &Qgs3DBoundingBoxEntity::onCameraChanged );
+  connect( mCameraCtrl, &QgsCameraController::cameraChanged, this, &Qgs3DBoundingBoxEntity::onCameraChanged );
 }
 
 Qgs3DBoundingBoxEntity::~Qgs3DBoundingBoxEntity()
 {
   delete mSettings;
+}
+
+void Qgs3DBoundingBoxEntity::createLabels( QList<QVector3D> &vertices )
+{
+  QgsAABB bbox = mSettings->coords();
+
+  QVector3D cameraPosition = mCameraCtrl->camera()->position();
+  QVector3D bbCenter = QVector3D( ( bbox.xMin + bbox.xMax ) / 2.0f, ( bbox.yMin + bbox.yMax ) / 2.0f, ( bbox.zMin + bbox.zMax ) / 2.0f );
+  QVector3D direction = ( bbCenter - cameraPosition ).normalized();
+  QList<QgsAABB::Face> keptFaces;
+  qDebug() << "keptFaces";
+  for ( const auto face : QgsAABB::normals )
+  {
+    if ( QgsVector3D::dotProduct( direction, face.second ) > 0 )
+    {
+      keptFaces.append( face.first );
+      qDebug() << QgsVector3D::dotProduct( direction, face.second ) << " : " << ( int ) face.first;
+    }
+  }
+
+  for ( const auto line : bbox.lines() )
+  {
+    for ( const auto face : keptFaces )
+    {
+      if ( ( line.faces & face ) != QgsAABB::Face::None )
+      {
+        vertices.append( line.points[0] );
+        vertices.append( line.points[1] );
+        qDebug() << "on ajoute" << line.points[0] << "x" << line.points[1] << "car " << line.axis;
+        break;
+      }
+    }
+  }
 }
 
 void Qgs3DBoundingBoxEntity::createLabels( Qt::Axis axis, const QgsVector3D &bboxMin, const QgsVector3D &bboxMax, float maxExtent, QList<QVector3D> &vertices )
@@ -255,11 +289,13 @@ void Qgs3DBoundingBoxEntity::setParameters( Qgs3DBoundingBoxSettings const &sett
       bboxMapMax.set( bboxMapMax.x(), swapY, bboxMapMax.z() );
       float maxExtent = std::max( std::max( bboxMapMax.x() - bboxMapMin.x(), bboxMapMax.y() - bboxMapMin.y() ), bboxMapMax.z() - bboxMapMin.z() );
 
-      createLabels( Qt::Axis::XAxis, bboxMapMin, bboxMapMax, maxExtent, ticksVertices );
-      createLabels( Qt::Axis::YAxis, bboxMapMin, bboxMapMax, maxExtent, ticksVertices );
-      createLabels( Qt::Axis::ZAxis, bboxMapMin, bboxMapMax, maxExtent, ticksVertices );
+      // createLabels( Qt::Axis::XAxis, bboxMapMin, bboxMapMax, maxExtent, ticksVertices );
+      // createLabels( Qt::Axis::YAxis, bboxMapMin, bboxMapMax, maxExtent, ticksVertices );
+      // createLabels( Qt::Axis::ZAxis, bboxMapMin, bboxMapMax, maxExtent, ticksVertices );
 
-      mBBMesh->setVertices( bbox.verticesForLines() + ticksVertices );
+      // mBBMesh->setVertices( bbox.verticesForLines() + ticksVertices );
+      createLabels( ticksVertices );
+      mBBMesh->setVertices( ticksVertices );
     }
 
     if ( changedColor )
@@ -280,31 +316,35 @@ void Qgs3DBoundingBoxEntity::setParameters( Qgs3DBoundingBoxSettings const &sett
 
 void Qgs3DBoundingBoxEntity::onCameraChanged()
 {
-  QVector3D cameraPosition = mCameraCtrl->camera()->position();
+  QList<QVector3D> ticksVertices;
 
-  // camera position has not been set yet
-  if ( cameraPosition.x() == 0.0f && cameraPosition.z() == 0.0f )
-  {
-    qDebug() << "not set";
-    return;
-  }
+  createLabels( ticksVertices );
+  mBBMesh->setVertices( ticksVertices );
+  // QVector3D cameraPosition = mCameraCtrl->camera()->position();
 
-  if ( mInitialCameraPosition ==  QVector3D( 0, 0, 0 ) )
-    mInitialCameraPosition = mCameraCtrl->camera()->position();
+  // // camera position has not been set yet
+  // if ( cameraPosition.x() == 0.0f && cameraPosition.z() == 0.0f )
+  // {
+  //   qDebug() << "not set";
+  //   return;
+  // }
 
-  qDebug() << "on camera changed";
-  qDebug() << "camera position" << cameraPosition;
+  // if ( mInitialCameraPosition ==  QVector3D( 0, 0, 0 ) )
+  //   mInitialCameraPosition = mCameraCtrl->camera()->position();
 
-  float fov_tan = 2.0f * std::tan( mCameraCtrl->camera()->fieldOfView() * M_PI / ( 180.0f * 2.0f ) );
+  // qDebug() << "on camera changed";
+  // qDebug() << "camera position" << cameraPosition;
 
-  for ( auto *label : mLabels )
-  {
-    Qt3DCore::QTransform *transform = label->componentsOfType<Qt3DCore::QTransform>()[0];
-    float distance = cameraPosition.distanceToPoint( transform->translation() );
-    float size = fov_tan * distance;
+  // float fov_tan = 2.0f * std::tan( mCameraCtrl->camera()->fieldOfView() * M_PI / ( 180.0f * 2.0f ) );
 
-    float distanceInit = mInitialCameraPosition.distanceToPoint( transform->translation() );
-    float sizeInit = fov_tan * distanceInit;
-    transform->setScale( size / sizeInit );
-  }
+  // for ( auto *label : mLabels )
+  // {
+  //   Qt3DCore::QTransform *transform = label->componentsOfType<Qt3DCore::QTransform>()[0];
+  //   float distance = cameraPosition.distanceToPoint( transform->translation() );
+  //   float size = fov_tan * distance;
+
+  //   float distanceInit = mInitialCameraPosition.distanceToPoint( transform->translation() );
+  //   float sizeInit = fov_tan * distanceInit;
+  //   transform->setScale( size / sizeInit );
+  // }
 }
