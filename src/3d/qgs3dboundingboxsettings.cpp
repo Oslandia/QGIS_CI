@@ -26,15 +26,17 @@ Qgs3DBoundingBoxSettings::Qgs3DBoundingBoxSettings( const Qgs3DBoundingBoxSettin
   , mBoundingBox( other.mBoundingBox )
   , mNrTicks( other.mNrTicks )
   , mColor( other.mColor )
+  , mFull( other.mFull )
 {
 
 }
 
-Qgs3DBoundingBoxSettings::Qgs3DBoundingBoxSettings( bool enabled, const QgsAABB &boundingBox, int nrTicks, QColor color )
+Qgs3DBoundingBoxSettings::Qgs3DBoundingBoxSettings( bool enabled, const QgsAABB &boundingBox, int nrTicks, QColor color, bool full )
   : mEnabled( enabled )
   , mBoundingBox( boundingBox )
   , mNrTicks( nrTicks )
   , mColor( color )
+  , mFull( full )
 {
 
 }
@@ -45,6 +47,7 @@ Qgs3DBoundingBoxSettings &Qgs3DBoundingBoxSettings::operator=( Qgs3DBoundingBoxS
   this->mBoundingBox = rhs.mBoundingBox;
   this->mNrTicks = rhs.mNrTicks;
   this->mColor = rhs.mColor;
+  this->mFull = rhs.mFull;
   return *this;
 }
 
@@ -55,6 +58,7 @@ bool Qgs3DBoundingBoxSettings::operator==( Qgs3DBoundingBoxSettings const &rhs )
   out &= this->mBoundingBox == rhs.mBoundingBox;
   out &= this->mNrTicks == rhs.mNrTicks;
   out &= this->mColor == rhs.mColor;
+  out &= this->mFull == rhs.mFull;
   return out;
 }
 
@@ -75,6 +79,9 @@ void Qgs3DBoundingBoxSettings::readXml( const QDomElement &element, const QgsRea
   mNrTicks = nrTicks.toInt();
 
   mColor = QgsSymbolLayerUtils::decodeColor( element.attribute( QStringLiteral( "color" ), QStringLiteral( "0,0,0,255" ) ) );
+
+  const QString full = element.attribute( QStringLiteral( "full" ), QStringLiteral( "1" ) );
+  mFull = full.toInt() ? true : false;
 }
 
 QDomElement Qgs3DBoundingBoxSettings::writeXml( QDomElement &element, const QgsReadWriteContext &context ) const
@@ -88,5 +95,7 @@ QDomElement Qgs3DBoundingBoxSettings::writeXml( QDomElement &element, const QgsR
   element.setAttribute( QStringLiteral( "extent" ), mBoundingBox.toString() );
   element.setAttribute( QStringLiteral( "nr-ticks" ),  QString::number( mNrTicks ) );
   element.setAttribute( QStringLiteral( "color" ), QgsSymbolLayerUtils::encodeColor( mColor ) );
+  QString full = mFull ? QStringLiteral( "1" ) : QStringLiteral( "0" );
+  element.setAttribute( QStringLiteral( "full" ), full );
   return element;
 }

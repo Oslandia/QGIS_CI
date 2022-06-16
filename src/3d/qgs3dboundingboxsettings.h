@@ -39,7 +39,7 @@ class _3D_EXPORT Qgs3DBoundingBoxSettings
     //! default constructor
     Qgs3DBoundingBoxSettings() = default;
     // constructor
-    Qgs3DBoundingBoxSettings( bool enabled, const QgsAABB &boundingBox, int nrTicks = 7, QColor color = Qt::black );
+    Qgs3DBoundingBoxSettings( bool enabled, const QgsAABB &boundingBox, int nrTicks = 7, QColor color = Qt::black, bool full = true );
     //! copy constructor
     Qgs3DBoundingBoxSettings( const Qgs3DBoundingBoxSettings &other );
     //! delete assignment operator
@@ -70,11 +70,20 @@ class _3D_EXPORT Qgs3DBoundingBoxSettings
     //! Returns bounding box color
     QColor color() const { return mColor; }
 
+    /**
+     * Returns bounding full state
+     *
+     * When a bounding is in full state, the whole cuboid is visible.
+     * Otherwise, only the background faces are visible.
+     */
+    bool isFull() const { return mFull; }
+
   private:
     bool mEnabled = false;
     QgsAABB mBoundingBox;
     int mNrTicks = 7;
     QColor mColor = Qt::black;
+    bool mFull = true;
 };
 
 #endif // QGS3DBOUNDINGBOXSETTINGS_H
