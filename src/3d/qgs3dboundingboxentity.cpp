@@ -26,7 +26,6 @@
 #include "qgs3dmapscene.h"
 #include "qgs3dmapsettings.h"
 #include "qgs3dwiredmesh.h"
-#include "qgsaabb.h"
 #include "qgscameracontroller.h"
 #include "qgs3dbillboardlabel.h"
 
@@ -51,7 +50,7 @@ Qgs3DBoundingBoxEntity::Qgs3DBoundingBoxEntity( Qt3DCore::QEntity *parent, Qgs3D
   mLabelsFont.setWeight( QFont::Weight::Black );
   mLabelsFont.setStyleStrategy( QFont::StyleStrategy::ForceOutline );
 
-  connect( mCameraCtrl, &QgsCameraController::cameraChanged, this, &Qgs3DBoundingBoxEntity::onCameraChanged );
+  // connect( mCameraCtrl, &QgsCameraController::cameraChanged, this, &Qgs3DBoundingBoxEntity::onCameraChanged );
 }
 
 Qgs3DBoundingBoxEntity::~Qgs3DBoundingBoxEntity()
@@ -59,46 +58,106 @@ Qgs3DBoundingBoxEntity::~Qgs3DBoundingBoxEntity()
   delete mSettings;
 }
 
-void Qgs3DBoundingBoxEntity::createLabels( QList<QVector3D> &vertices )
+QList<QVector3D> Qgs3DBoundingBoxEntity::computeBoundingBoxVertices()
 {
+  QList<QVector3D> vertices;
+
   QgsAABB bbox = mSettings->coords();
 
-  QVector3D cameraPosition = mCameraCtrl->camera()->position();
-  QVector3D bbCenter = QVector3D( ( bbox.xMin + bbox.xMax ) / 2.0f, ( bbox.yMin + bbox.yMax ) / 2.0f, ( bbox.zMin + bbox.zMax ) / 2.0f );
-  QVector3D direction = ( bbCenter - cameraPosition ).normalized();
-  QList<QgsAABB::Face> keptFaces;
-  qDebug() << "keptFaces";
-  for ( const auto face : QgsAABB::normals )
+  if ( mSettings->isFull() )
   {
-    if ( QgsVector3D::dotProduct( direction, face.second ) > 0 )
-    {
-      keptFaces.append( face.first );
-      qDebug() << QgsVector3D::dotProduct( direction, face.second ) << " : " << ( int ) face.first;
-    }
+    vertices = bbox.verticesForLines();
   }
-
-  for ( const auto line : bbox.lines() )
+  else
   {
-    for ( const auto face : keptFaces )
+    for ( const auto line : bbox.lines() )
     {
-      if ( ( line.faces & face ) != QgsAABB::Face::None )
+      for ( const auto face : mVisibleFaces )
       {
-        vertices.append( line.points[0] );
-        vertices.append( line.points[1] );
-        qDebug() << "on ajoute" << line.points[0] << "x" << line.points[1] << "car " << line.axis;
-        break;
+        if ( std::find( std::begin( line.faces ), std::end( line.faces ), face ) != std::end( line.faces ) )
+        {
+          vertices.append( line.points[0] );
+          vertices.append( line.points[1] );
+          break;
+        }
       }
     }
   }
+
+  return vertices;
 }
 
-void Qgs3DBoundingBoxEntity::createLabels( Qt::Axis axis, const QgsVector3D &bboxMin, const QgsVector3D &bboxMax, float maxExtent, QList<QVector3D> &vertices )
+void Qgs3DBoundingBoxEntity::updateVisibleFaces()
 {
-  int nrIncrD;
-  float rangeIncr;
-  float labelValue;
-  float rangeMin;
-  float rangeMax;
+  mVisibleFaces.clear();
+
+  if ( mSettings->isFull() )
+  {
+    mVisibleFaces =
+    {
+      QgsAABB::Face::Xmin, QgsAABB::Face::Xmax,
+      QgsAABB::Face::Ymin, QgsAABB::Face::Ymax,
+      QgsAABB::Face::Zmin, QgsAABB::Face::Zmax,
+    };
+  }
+  else
+  {
+    // ajouter un commentaire pour expliquer
+    QgsAABB bbox = mSettings->coords();
+    QVector3D cameraPosition = mCameraCtrl->camera()->position();
+    QVector3D bbCenter = QVector3D( ( bbox.xMin + bbox.xMax ) / 2.0f, ( bbox.yMin + bbox.yMax ) / 2.0f, ( bbox.zMin + bbox.zMax ) / 2.0f );
+    QVector3D direction = ( bbCenter - cameraPosition ).normalized();
+
+    for ( const auto face : QgsAABB::normals )
+    {
+      if ( QgsVector3D::dotProduct( direction, face.second ) > 0 )
+      {
+        mVisibleFaces.append( face.first );
+      }
+    }
+
+  }
+}
+
+void Qgs3DBoundingBoxEntity::computeLabelsRanges( QVector3D &rangeMin, QVector3D &rangeMax, QVector3D &rangeIncr )
+{
+  QgsAABB bbox = mSettings->coords();
+
+  QgsVector3D bboxWorldMin( bbox.xMin, bbox.yMin, bbox.zMin );
+  QgsVector3D bboxWorldMax( bbox.xMax, bbox.yMax, bbox.zMax );
+
+  QgsVector3D bboxMapMin = mMapSettings->worldToMapCoordinates( bboxWorldMin );
+  QgsVector3D bboxMapMax = mMapSettings->worldToMapCoordinates( bboxWorldMax );
+
+  // the conversion invert the Y coords sign.
+  // Min and Max y coords need to be swapped.
+  float swapMinY = bboxMapMin.y();
+  bboxMapMin.set( bboxMapMin.x(), bboxMapMax.y(), bboxMapMin.z() );
+  bboxMapMax.set( bboxMapMax.x(), swapMinY, bboxMapMax.z() );
+
+  float maxExtent = std::max( std::max( bboxMapMax.x() - bboxMapMin.x(), bboxMapMax.y() - bboxMapMin.y() ), bboxMapMax.z() - bboxMapMin.z() );
+  int nrTicks = mSettings->nrTicks();
+
+  int nrIncr = std::max( ( int ) std::lround( nrTicks * ( bboxMapMax.x() - bboxMapMin.x() ) / maxExtent ), 3 );
+  QgsBoundingBoxLabels::extendedWilkinsonAlgorithm( bboxMapMin.x(), bboxMapMax.x(), nrIncr, false, rangeMin[0], rangeMax[0], rangeIncr[0] );
+
+  nrIncr = std::max( ( int ) std::lround( nrTicks * bbox.yExtent() / maxExtent ), 3 );
+  QgsBoundingBoxLabels::extendedWilkinsonAlgorithm( bboxMapMin.z(), bboxMapMax.z(), nrIncr, false, rangeMin[1], rangeMax[1], rangeIncr[1] );
+
+  nrIncr = std::max( ( int ) std::lround( nrTicks * bbox.zExtent() / maxExtent ), 3 );
+  QgsBoundingBoxLabels::extendedWilkinsonAlgorithm( bboxMapMin.y(), bboxMapMax.y(), nrIncr, false, rangeMin[2], rangeMax[2], rangeIncr[2] );
+}
+
+void Qgs3DBoundingBoxEntity::clearLabels()
+{
+  for ( auto *label : mLabels )
+    label->setParent( ( QEntity * ) nullptr );
+
+  mLabels.clear();
+}
+
+void Qgs3DBoundingBoxEntity::createLabelsForFullBoundingBox( Qt::Axis axis, const QVector3D &rangeMin, const QVector3D &rangeMax, const QVector3D &rangeIncr, QList<QVector3D> &vertices )
+{
   float coordTmp;
   QVector3D delta1;
   QVector3D delta2;
@@ -110,16 +169,12 @@ void Qgs3DBoundingBoxEntity::createLabels( Qt::Axis axis, const QgsVector3D &bbo
 
   float fontSize = mLabelsFont.pointSizeF();
   QgsAABB bbox = mSettings->coords();
-  int nrTicks = mSettings->nrTicks();
 
   switch ( axis )
   {
     case Qt::Axis::XAxis:
-      nrIncrD = std::max( ( int ) std::lround( nrTicks * bbox.xExtent() / maxExtent ), 3 );
-      QgsBoundingBoxLabels::extendedWilkinsonAlgorithm( bboxMin.x(), bboxMax.x(), nrIncrD, false, rangeMin, rangeMax, rangeIncr );
-
-      coordTmp = rangeMin - mMapSettings->origin().x();
-      incr = QVector3D( rangeIncr, 0.0f, 0.0f );
+      coordTmp = rangeMin[0] - mMapSettings->origin().x();
+      incr = QVector3D( rangeIncr[0], 0.0f, 0.0f );
       pt1 = QVector3D( coordTmp, bbox.yMin, bbox.zMin );
       pt2 = QVector3D( coordTmp, bbox.yMax, bbox.zMin );
       pt3 = QVector3D( coordTmp, bbox.yMin, bbox.zMax );
@@ -130,12 +185,8 @@ void Qgs3DBoundingBoxEntity::createLabels( Qt::Axis axis, const QgsVector3D &bbo
       break;
 
     case Qt::Axis::YAxis:
-      nrIncrD = std::max( ( int ) std::lround( nrTicks * bbox.yExtent() / maxExtent ), 3 );
-      // QgsBoundingBoxLabels::extendedWilkinsonAlgorithm( bboxMin.y(), bboxMax.y(), nrIncrD, false, rangeMin, rangeMax, rangeIncr );
-      QgsBoundingBoxLabels::extendedWilkinsonAlgorithm( bboxMin.z(), bboxMax.z(), nrIncrD, false, rangeMin, rangeMax, rangeIncr );
-
-      coordTmp = rangeMin - mMapSettings->origin().z();
-      incr = QVector3D( 0.0f, rangeIncr, 0.0f );
+      coordTmp = rangeMin[1] - mMapSettings->origin().z();
+      incr = QVector3D( 0.0f, rangeIncr[1], 0.0f );
       pt1 = QVector3D( bbox.xMin, coordTmp, bbox.zMin );
       pt2 = QVector3D( bbox.xMin, coordTmp, bbox.zMax );
       pt3 = QVector3D( bbox.xMax, coordTmp, bbox.zMin );
@@ -146,12 +197,8 @@ void Qgs3DBoundingBoxEntity::createLabels( Qt::Axis axis, const QgsVector3D &bbo
       break;
 
     case Qt::Axis::ZAxis:
-      nrIncrD = std::max( ( int ) std::lround( nrTicks * bbox.zExtent() / maxExtent ), 3 );
-      // QgsBoundingBoxLabels::extendedWilkinsonAlgorithm( bboxMin.z(), bboxMax.z(), nrIncrD, false, rangeMin, rangeMax, rangeIncr );
-      QgsBoundingBoxLabels::extendedWilkinsonAlgorithm( bboxMin.y(), bboxMax.y(), nrIncrD, false, rangeMin, rangeMax, rangeIncr );
-
-      coordTmp = - ( rangeMin - mMapSettings->origin().y() );
-      incr = QVector3D( 0.0f, 0.0f, -rangeIncr );
+      coordTmp = - ( rangeMin[2] - mMapSettings->origin().y() );
+      incr = QVector3D( 0.0f, 0.0f, -rangeIncr[2] );
       pt1 = QVector3D( bbox.xMin, bbox.yMin, coordTmp );
       pt2 = QVector3D( bbox.xMin, bbox.yMax, coordTmp );
       pt3 = QVector3D( bbox.xMax, bbox.yMin, coordTmp );
@@ -165,8 +212,8 @@ void Qgs3DBoundingBoxEntity::createLabels( Qt::Axis axis, const QgsVector3D &bbo
       return;
   }
 
-  labelValue = rangeMin;
-  nrIncrD = ( rangeMax - rangeMin ) / rangeIncr + 1;
+  float labelValue = rangeMin[axis];
+  int nrIncrD = ( rangeMax[axis] - rangeMin[axis] ) / rangeIncr[axis] + 1;
   for ( int i = 0; i < nrIncrD; ++i )
   {
     vertices.append( pt1 );
@@ -255,7 +302,80 @@ void Qgs3DBoundingBoxEntity::createLabels( Qt::Axis axis, const QgsVector3D &bbo
     pt2 += incr;
     pt3 += incr;
     pt4 += incr;
-    labelValue += rangeIncr;
+    labelValue += rangeIncr[axis];
+  }
+}
+
+void Qgs3DBoundingBoxEntity::createLabelsForPartialBoundingBox( const QVector3D &rangeMin, const QVector3D &rangeMax, const QVector3D &rangeIncr, QList<QVector3D> &vertices )
+{
+  QgsAABB bbox = mSettings->coords();
+  int fontSize = mLabelsFont.pointSize();
+
+  for ( const auto line : bbox.lines() )
+  {
+    for ( const auto face : mVisibleFaces )
+    {
+      if ( std::find( std::begin( line.faces ), std::end( line.faces ), face ) != std::end( line.faces ) )
+      {
+        QVector3D pt;
+        QVector3D incr;
+
+        switch ( line.axis )
+        {
+          case Qt::Axis::XAxis:
+            incr = QVector3D( rangeIncr[0], 0.0f, 0.0f );
+            pt = line.points[0];
+            pt.setX( rangeMin[0] - mMapSettings->origin().x() );
+            break;
+
+          case Qt::Axis::YAxis:
+            incr = QVector3D( 0.0f, rangeIncr[1], 0.0f );
+            pt = line.points[0];
+            pt.setY( rangeMin[1] - mMapSettings->origin().z() );
+            break;
+
+          case Qt::Axis::ZAxis:
+            incr = QVector3D( 0.0f, 0.0f, -rangeIncr[2] );
+            pt = line.points[0];
+            pt.setZ( - ( rangeMin[2] - mMapSettings->origin().y() ) );
+            break;
+
+          default:
+            break;
+        }
+
+        qDebug() << line.axis << " : " << ( int )line.faces[0] << "x" << ( int )line.faces[1];
+        const QVector3D delta1 = fontSize * QgsAABB::normals.at( line.faces[0] );
+        const QVector3D delta2 = fontSize * QgsAABB::normals.at( line.faces[1] );
+        qDebug() << delta1 << "x" << delta2;
+
+        float labelValue = rangeMin[line.axis];
+        int nrIncrD = ( rangeMax[line.axis] - rangeMin[line.axis] ) / rangeIncr[line.axis] + 1;
+        for ( int i = 0; i < nrIncrD; ++i )
+        {
+          vertices.append( pt );
+          vertices.append( pt + delta1 );
+          vertices.append( pt );
+          vertices.append( pt + delta2 );
+
+          QString text = QString::number( int( labelValue ) );
+          Qgs3DBillboardLabel *textLabel = new Qgs3DBillboardLabel( mCameraCtrl, this );
+          textLabel->setFont( mLabelsFont );
+          textLabel->setHeight( 1.5 * mLabelsFont.pointSize() );
+          textLabel->setWidth( text.length() * mLabelsFont.pointSize() );
+          textLabel->setText( text );
+          textLabel->setColor( mSettings->color() );
+          textLabel->setTranslation( pt + delta1 );
+          mLabels.append( textLabel );
+
+          // qDebug() << "on ajoute le texte" << text << "en " << pt.x() << "x" << pt.y() << "x" << pt.z();
+
+          pt += incr;
+          labelValue += rangeIncr[line.axis];
+        }
+        break;
+      }
+    }
   }
 }
 
@@ -264,38 +384,49 @@ void Qgs3DBoundingBoxEntity::setParameters( Qgs3DBoundingBoxSettings const &sett
   if ( settings != *mSettings )
   {
     bool changedColor = mSettings->color() != settings.color();
-    bool changedLabels = ( mSettings->coords() != settings.coords() ) || ( mSettings->nrTicks() != settings.nrTicks() );
+    bool changedCoords = ( mSettings->coords() != settings.coords() ) || ( mBBMesh->vertexCount() == 0 ) || ( mSettings->isFull() != settings.isFull() );
+    bool changedTicks =  mSettings->nrTicks() != settings.nrTicks();
 
     delete mSettings;
     mSettings = new Qgs3DBoundingBoxSettings( settings );
 
-    if ( changedLabels )
+    QList<QVector3D> vertices;
+
+    if ( changedCoords )
     {
-      QgsAABB bbox = settings.coords();
-      qDebug() << "set bounding box parameters";
-      QList<QVector3D> ticksVertices;
+      updateVisibleFaces();
+      vertices = computeBoundingBoxVertices();
 
-      for ( auto *label : mLabels )
-        label->setParent( ( QEntity * ) nullptr );
+      if ( !mSettings->isFull() and !mCameraConnection )
+      {
+        mCameraConnection = connect( mCameraCtrl, &QgsCameraController::cameraChanged, this, &Qgs3DBoundingBoxEntity::onCameraChanged );
+      }
+      else if ( mSettings->isFull() and mCameraConnection )
+      {
+        disconnect( mCameraConnection );
+      }
+    }
 
-      mLabels.clear();
+    if ( changedCoords || changedTicks )
+    {
+      clearLabels();
+      QVector3D rangeMin;
+      QVector3D rangeMax;
+      QVector3D rangeIncr;
+      computeLabelsRanges( rangeMin, rangeMax, rangeIncr );
 
-      QgsVector3D bboxWorldMin( bbox.xMin, bbox.yMin, bbox.zMin );
-      QgsVector3D bboxMapMin = mMapSettings->worldToMapCoordinates( bboxWorldMin );
-      QgsVector3D bboxWorldMax( bbox.xMax, bbox.yMax, bbox.zMax );
-      QgsVector3D bboxMapMax = mMapSettings->worldToMapCoordinates( bboxWorldMax );
-      float swapY = bboxMapMin.y();
-      bboxMapMin.set( bboxMapMin.x(), bboxMapMax.y(), bboxMapMin.z() );
-      bboxMapMax.set( bboxMapMax.x(), swapY, bboxMapMax.z() );
-      float maxExtent = std::max( std::max( bboxMapMax.x() - bboxMapMin.x(), bboxMapMax.y() - bboxMapMin.y() ), bboxMapMax.z() - bboxMapMin.z() );
+      if ( mSettings->isFull() )
+      {
+        createLabelsForFullBoundingBox( Qt::Axis::XAxis, rangeMin, rangeMax, rangeIncr, vertices );
+        createLabelsForFullBoundingBox( Qt::Axis::YAxis, rangeMin, rangeMax, rangeIncr, vertices );
+        createLabelsForFullBoundingBox( Qt::Axis::ZAxis, rangeMin, rangeMax, rangeIncr, vertices );
+      }
+      else
+      {
+        createLabelsForPartialBoundingBox( rangeMin, rangeMax, rangeIncr, vertices );
+      }
 
-      // createLabels( Qt::Axis::XAxis, bboxMapMin, bboxMapMax, maxExtent, ticksVertices );
-      // createLabels( Qt::Axis::YAxis, bboxMapMin, bboxMapMax, maxExtent, ticksVertices );
-      // createLabels( Qt::Axis::ZAxis, bboxMapMin, bboxMapMax, maxExtent, ticksVertices );
-
-      // mBBMesh->setVertices( bbox.verticesForLines() + ticksVertices );
-      createLabels( ticksVertices );
-      mBBMesh->setVertices( ticksVertices );
+      mBBMesh->setVertices( vertices );
     }
 
     if ( changedColor )
@@ -303,7 +434,9 @@ void Qgs3DBoundingBoxEntity::setParameters( Qgs3DBoundingBoxSettings const &sett
       Qt3DExtras::QPhongMaterial *material = this->componentsOfType<Qt3DExtras::QPhongMaterial>()[0];
       material->setAmbient( mSettings->color() );
 
-      if ( !changedLabels )
+      // If the ticks number has also changed, the labels have already been redrawn
+      // with the correct color.
+      if ( !changedTicks )
       {
         for ( auto *label : mLabels )
         {
@@ -316,10 +449,22 @@ void Qgs3DBoundingBoxEntity::setParameters( Qgs3DBoundingBoxSettings const &sett
 
 void Qgs3DBoundingBoxEntity::onCameraChanged()
 {
-  QList<QVector3D> ticksVertices;
+  QList<QgsAABB::Face> previousVisibleFaces = mVisibleFaces;
+  updateVisibleFaces();
 
-  createLabels( ticksVertices );
-  mBBMesh->setVertices( ticksVertices );
+  if ( mVisibleFaces != previousVisibleFaces )
+  {
+    clearLabels();
+    QList<QVector3D> vertices = computeBoundingBoxVertices();
+    QVector3D rangeMin;
+    QVector3D rangeMax;
+    QVector3D rangeIncr;
+    computeLabelsRanges( rangeMin, rangeMax, rangeIncr );
+
+    createLabelsForPartialBoundingBox( rangeMin, rangeMax, rangeIncr, vertices );
+    mBBMesh->setVertices( vertices );
+  }
+
   // QVector3D cameraPosition = mCameraCtrl->camera()->position();
 
   // // camera position has not been set yet
