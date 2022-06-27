@@ -279,7 +279,7 @@ void QgsChunkedEntity::pruneLoaderQueue( const SceneState &state )
   while ( e )
   {
     Q_ASSERT( e->chunk->state() == QgsChunkNode::QueuedForLoad || e->chunk->state() == QgsChunkNode::QueuedForUpdate );
-    if ( Qgs3DUtils::isCullable( e->chunk->bbox(), state.viewProjectionMatrix ) )
+    if ( Qgs3DUtils::isCullable( e->chunk->bbox(), state.viewProjectionMatrix ) || !state.boundingBox.intersects( e->chunk->bbox() ) )
     {
       toRemoveFromLoaderQueue.append( e->chunk );
     }
@@ -359,7 +359,7 @@ void QgsChunkedEntity::update( QgsChunkNode *root, const SceneState &state )
     pq.pop();
     QgsChunkNode *node = s.first;
 
-    if ( Qgs3DUtils::isCullable( node->bbox(), state.viewProjectionMatrix ) )
+    if ( Qgs3DUtils::isCullable( node->bbox(), state.viewProjectionMatrix ) || !state.boundingBox.intersects( node->bbox() ) )
     {
       ++mFrustumCulled;
       continue;
@@ -418,7 +418,7 @@ void QgsChunkedEntity::update( QgsChunkNode *root, const SceneState &state )
           else
           {
             // chunk is not yet resident - let's try to load it
-            if ( Qgs3DUtils::isCullable( children[i]->bbox(), state.viewProjectionMatrix ) )
+            if ( Qgs3DUtils::isCullable( node->bbox(), state.viewProjectionMatrix ) || !state.boundingBox.intersects( node->bbox() ) )
               continue;
 
             double dist = children[i]->bbox().center().distanceToPoint( state.cameraPos );
