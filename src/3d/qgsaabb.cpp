@@ -67,9 +67,9 @@ bool QgsAABB::operator!=( QgsAABB const &rhs ) const
 
 bool QgsAABB::intersects( const QgsAABB &other ) const
 {
-  return xMin < other.xMax && other.xMin < xMax &&
-         yMin < other.yMax && other.yMin < yMax &&
-         zMin < other.zMax && other.zMin < zMax;
+  return xMin <= other.xMax && other.xMin <= xMax &&
+         yMin <= other.yMax && other.yMin <= yMax &&
+         zMin <= other.zMax && other.zMin <= zMax;
 }
 
 bool QgsAABB::intersects( float x, float y, float z ) const
