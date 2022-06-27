@@ -76,6 +76,7 @@ class QgsChunkedEntity : public Qt3DCore::QEntity
       float cameraFov;       //!< Field of view (in degrees)
       int screenSizePx;      //!< Size of the viewport in pixels
       QMatrix4x4 viewProjectionMatrix; //!< For frustum culling
+      QgsAABB boundingBox;   //!< For bounding box culling
     };
 
     //! Called when e.g. camera changes and entity may need updated

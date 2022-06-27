@@ -389,7 +389,7 @@ float Qgs3DMapScene::worldSpaceError( float epsilon, float distance )
   return err;
 }
 
-QgsChunkedEntity::SceneState _sceneState( QgsCameraController *cameraController )
+QgsChunkedEntity::SceneState _sceneState( QgsCameraController *cameraController, Qgs3DMapSettings &mapSettings )
 {
   Qt3DRender::QCamera *camera = cameraController->camera();
   QgsChunkedEntity::SceneState state;
@@ -398,6 +398,13 @@ QgsChunkedEntity::SceneState _sceneState( QgsCameraController *cameraController 
   QRect rect = cameraController->viewport();
   state.screenSizePx = std::max( rect.width(), rect.height() ); // TODO: is this correct?
   state.viewProjectionMatrix = camera->projectionMatrix() * camera->viewMatrix();
+  Qgs3DBoundingBoxSettings bbSettings = mapSettings.getBoundingBoxSettings();
+  if ( bbSettings.isEnabled() )
+    state.boundingBox = bbSettings.coords();
+  else
+    state.boundingBox = QgsAABB( std::numeric_limits<float>::lowest(), std::numeric_limits<float>::lowest(), std::numeric_limits<float>::lowest(),
+                                 std::numeric_limits<float>::max(), std::numeric_limits<float>::max(), std::numeric_limits<float>::max() );
+
   return state;
 }
 
@@ -463,7 +470,7 @@ void Qgs3DMapScene::updateScene()
   for ( QgsChunkedEntity *entity : std::as_const( mChunkEntities ) )
   {
     if ( entity->isEnabled() )
-      entity->update( _sceneState( mCameraController ) );
+      entity->update( _sceneState( mCameraController, mMap ) );
   }
   updateSceneState();
 }
@@ -572,7 +579,7 @@ void Qgs3DMapScene::onFrameTriggered( float dt )
     if ( entity->isEnabled() && entity->needsUpdate() )
     {
       QgsDebugMsgLevel( QStringLiteral( "need for update" ), 2 );
-      entity->update( _sceneState( mCameraController ) );
+      entity->update( _sceneState( mCameraController, mMap ) );
     }
   }
 
