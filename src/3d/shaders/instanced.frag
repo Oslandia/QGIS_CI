@@ -8,6 +8,8 @@ uniform vec3 ks;                            // Specular reflectivity
 uniform float shininess;                    // Specular shininess factor
 uniform float opacity;                      // Opacity
 
+uniform bool boundingBoxEnabled;
+
 uniform vec3 eyePosition;
 
 in vec3 worldPosition;
@@ -19,6 +21,12 @@ out vec4 fragColor;
 
 void main()
 {
+    // if (boundingBoxEnabled && worldPosition.x < 0.0) {
+    if (boundingBoxEnabled) {
+        discard;
+        return;
+    }
+
     vec3 diffuseColor, specularColor;
     vec3 worldView = normalize(eyePosition - worldPosition);
     adsModel(worldPosition, worldNormal, worldView, shininess, diffuseColor, specularColor);

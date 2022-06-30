@@ -37,7 +37,7 @@ class QgsPoint3DBillboardMaterial : public Qt3DRender::QMaterial
     Q_OBJECT
 
   public:
-    QgsPoint3DBillboardMaterial();
+    QgsPoint3DBillboardMaterial( const Qgs3DMapSettings *mapSettings );
 
     //! Set the billboard size.
     void setSize( const QSizeF size );

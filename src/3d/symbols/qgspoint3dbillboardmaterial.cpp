@@ -32,7 +32,7 @@
 #include "qgs3dmapsettings.h"
 #include "qgsmarkersymbol.h"
 
-QgsPoint3DBillboardMaterial::QgsPoint3DBillboardMaterial()
+QgsPoint3DBillboardMaterial::QgsPoint3DBillboardMaterial( const Qgs3DMapSettings *mapSettings )
   : mSize( new Qt3DRender::QParameter( "BB_SIZE", QSizeF( 100, 100 ), this ) )
   , mViewportSize( new Qt3DRender::QParameter( "WIN_SCALE", QSizeF( 800, 600 ), this ) )
 {
@@ -76,6 +76,9 @@ QgsPoint3DBillboardMaterial::QgsPoint3DBillboardMaterial()
   technique->graphicsApiFilter()->setProfile( Qt3DRender::QGraphicsApiFilter::CoreProfile );
   technique->graphicsApiFilter()->setMajorVersion( 3 );
   technique->graphicsApiFilter()->setMinorVersion( 1 );
+
+  Qgs3DBoundingBoxSettings bbSettings = mapSettings->getBoundingBoxSettings();
+  technique->addParameter( new Qt3DRender::QParameter( QStringLiteral( "boundingBoxEnabled" ),  bbSettings.isEnabled() ) );
 
   // Effect
   Qt3DRender::QEffect *effect = new Qt3DRender::QEffect( this );

@@ -56,6 +56,7 @@ typedef Qt3DCore::QGeometry Qt3DQGeometry;
 #include <QUrl>
 #include <QVector3D>
 
+#include "qgs3dboundingboxsettings.h"
 #include "qgspoint3dsymbol.h"
 #include "qgs3dmapsettings.h"
 
@@ -85,7 +86,7 @@ class QgsInstancedPoint3DSymbolHandler : public QgsFeature3DHandler
 
   private:
 
-    static Qt3DRender::QMaterial *material( const QgsPoint3DSymbol *symbol );
+    static Qt3DRender::QMaterial *material( const QgsPoint3DSymbol *symbol, const Qgs3DMapSettings *mapSettings );
     static Qt3DRender::QGeometryRenderer *renderer( const QgsPoint3DSymbol *symbol, const QVector<QVector3D> &positions );
     static Qt3DQGeometry *symbolGeometry( QgsPoint3DSymbol::Shape shape, const QVariantMap &shapeProperties );
 
@@ -143,7 +144,7 @@ void QgsInstancedPoint3DSymbolHandler::finalize( Qt3DCore::QEntity *parent, cons
 void QgsInstancedPoint3DSymbolHandler::makeEntity( Qt3DCore::QEntity *parent, const Qgs3DRenderContext &context, PointData &out, bool selected )
 {
   // build the default material
-  Qt3DRender::QMaterial *mat = material( mSymbol.get() );
+  Qt3DRender::QMaterial *mat = material( mSymbol.get(), &( context.map() ) );
 
   if ( selected )
   {
@@ -169,7 +170,7 @@ void QgsInstancedPoint3DSymbolHandler::makeEntity( Qt3DCore::QEntity *parent, co
 
 
 
-Qt3DRender::QMaterial *QgsInstancedPoint3DSymbolHandler::material( const QgsPoint3DSymbol *symbol )
+Qt3DRender::QMaterial *QgsInstancedPoint3DSymbolHandler::material( const QgsPoint3DSymbol *symbol, const Qgs3DMapSettings *mapSettings )
 {
   Qt3DRender::QFilterKey *filterKey = new Qt3DRender::QFilterKey;
   filterKey->setName( QStringLiteral( "renderingStyle" ) );
@@ -192,6 +193,9 @@ Qt3DRender::QMaterial *QgsInstancedPoint3DSymbolHandler::material( const QgsPoin
   technique->graphicsApiFilter()->setProfile( Qt3DRender::QGraphicsApiFilter::CoreProfile );
   technique->graphicsApiFilter()->setMajorVersion( 3 );
   technique->graphicsApiFilter()->setMinorVersion( 2 );
+
+  Qgs3DBoundingBoxSettings bbSettings = mapSettings->getBoundingBoxSettings();
+  technique->addParameter( new Qt3DRender::QParameter( QStringLiteral( "boundingBoxEnabled" ),  bbSettings.isEnabled() ) );
 
   const QMatrix4x4 transformMatrix = symbol->transform();
   QMatrix3x3 normalMatrix = transformMatrix.normalMatrix();  // transponed inverse of 3x3 sub-matrix
@@ -558,6 +562,7 @@ void QgsPoint3DBillboardSymbolHandler::processFeature( const QgsFeature &feature
 
 void QgsPoint3DBillboardSymbolHandler::finalize( Qt3DCore::QEntity *parent, const Qgs3DRenderContext &context )
 {
+  qDebug() << "billboard finalize moi ca";
   makeEntity( parent, context, outNormal, false );
   makeEntity( parent, context, outSelected, true );
 
@@ -572,6 +577,7 @@ void QgsPoint3DBillboardSymbolHandler::finalize( Qt3DCore::QEntity *parent, cons
 
 void QgsPoint3DBillboardSymbolHandler::makeEntity( Qt3DCore::QEntity *parent, const Qgs3DRenderContext &context, PointData &out, bool selected )
 {
+  qDebug() << "create billboard entity";
   // Billboard Geometry
   QgsBillboardGeometry *billboardGeometry = new QgsBillboardGeometry();
   billboardGeometry->setPoints( out.positions );
@@ -583,7 +589,7 @@ void QgsPoint3DBillboardSymbolHandler::makeEntity( Qt3DCore::QEntity *parent, co
   billboardGeometryRenderer->setVertexCount( billboardGeometry->count() );
 
   // Billboard Material
-  QgsPoint3DBillboardMaterial *billboardMaterial = new QgsPoint3DBillboardMaterial();
+  QgsPoint3DBillboardMaterial *billboardMaterial = new QgsPoint3DBillboardMaterial( &( context.map() ) );
   QgsMarkerSymbol *symbol = mSymbol->billboardSymbol();
 
   if ( symbol )
