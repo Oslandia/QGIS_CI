@@ -415,6 +415,11 @@ void Qgs3DBoundingBoxEntity::setParameters( Qgs3DBoundingBoxSettings const &sett
       QVector3D rangeIncr;
       computeLabelsRanges( rangeMin, rangeMax, rangeIncr );
 
+      QgsAABB bbox = mSettings->coords();
+      int fontSize = static_cast< int >( std::ceil( 0.03 * std::min( bbox.xExtent(), bbox.zExtent() ) ) );
+      mLabelsFont.setPointSize( fontSize );
+      // qDebug() << "la extent" << extent.width() << "x" << extent.height() << ", donne font size" << fontSize;
+
       if ( mSettings->isFull() )
       {
         createLabelsForFullBoundingBox( Qt::Axis::XAxis, rangeMin, rangeMax, rangeIncr, vertices );
