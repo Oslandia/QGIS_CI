@@ -1,5 +1,6 @@
 <RCC>
     <qresource prefix="/">
+        <file>shaders/boundingboxcut.inc.frag</file>
         <file>shaders/diffuseSpecular.frag</file>
         <file>shaders/diffuseSpecular.vert</file>
         <file>shaders/instanced.frag</file>

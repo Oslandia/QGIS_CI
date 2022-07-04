@@ -55,6 +55,7 @@ typedef Qt3DCore::QGeometry Qt3DQGeometry;
 
 #include <QUrl>
 #include <QVector3D>
+#include <qvector3d.h>
 
 #include "qgs3dboundingboxsettings.h"
 #include "qgspoint3dsymbol.h"
@@ -195,7 +196,10 @@ Qt3DRender::QMaterial *QgsInstancedPoint3DSymbolHandler::material( const QgsPoin
   technique->graphicsApiFilter()->setMinorVersion( 2 );
 
   Qgs3DBoundingBoxSettings bbSettings = mapSettings->getBoundingBoxSettings();
+  QgsAABB bbCoords = bbSettings.coords();
   technique->addParameter( new Qt3DRender::QParameter( QStringLiteral( "boundingBoxEnabled" ),  bbSettings.isEnabled() ) );
+  technique->addParameter( new Qt3DRender::QParameter( QStringLiteral( "boundingBoxMin" ),  QVector3D( bbCoords.xMin, bbCoords.yMin, bbCoords.zMin ) ) );
+  technique->addParameter( new Qt3DRender::QParameter( QStringLiteral( "boundingBoxMax" ),  QVector3D( bbCoords.xMax, bbCoords.yMax, bbCoords.zMax ) ) );
 
   const QMatrix4x4 transformMatrix = symbol->transform();
   QMatrix3x3 normalMatrix = transformMatrix.normalMatrix();  // transponed inverse of 3x3 sub-matrix
@@ -473,7 +477,7 @@ void QgsModelPoint3DSymbolHandler::addMeshEntities( const Qgs3DMapSettings &map,
   QgsMaterialContext materialContext;
   materialContext.setIsSelected( are_selected );
   materialContext.setSelectionColor( map.selectionColor() );
-  Qt3DRender::QMaterial *mat = symbol->material()->toMaterial( QgsMaterialSettingsRenderingTechnique::Triangles, materialContext );
+  Qt3DRender::QMaterial *mat = symbol->material()->toMaterial( &map, QgsMaterialSettingsRenderingTechnique::Triangles, materialContext );
 
   // get nodes
   for ( const QVector3D &position : positions )
