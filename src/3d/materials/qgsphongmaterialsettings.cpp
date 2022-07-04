@@ -97,7 +97,7 @@ void QgsPhongMaterialSettings::writeXml( QDomElement &elem, const QgsReadWriteCo
 }
 
 
-Qt3DRender::QMaterial *QgsPhongMaterialSettings::toMaterial( QgsMaterialSettingsRenderingTechnique technique, const QgsMaterialContext &context ) const
+Qt3DRender::QMaterial *QgsPhongMaterialSettings::toMaterial( const Qgs3DMapSettings *mapSettings, QgsMaterialSettingsRenderingTechnique technique, const QgsMaterialContext &context ) const
 {
   switch ( technique )
   {
@@ -231,6 +231,7 @@ void QgsPhongMaterialSettings::applyDataDefinedToGeometry( Qt3DQGeometry *geomet
 
 Qt3DRender::QMaterial *QgsPhongMaterialSettings::dataDefinedMaterial() const
 {
+  qDebug() << "PHONG MATGRIAL";
   Qt3DRender::QMaterial *material = new Qt3DRender::QMaterial;
 
   Qt3DRender::QEffect *eff = new Qt3DRender::QEffect( material );

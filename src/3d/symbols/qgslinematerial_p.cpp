@@ -14,6 +14,7 @@
  ***************************************************************************/
 
 #include "qgslinematerial_p.h"
+#include "qgs3dmapsettings.h"
 
 #include <QColor>
 #include <QSizeF>
@@ -32,12 +33,13 @@
 /// @cond PRIVATE
 
 
-QgsLineMaterial::QgsLineMaterial()
+QgsLineMaterial::QgsLineMaterial( const Qgs3DMapSettings *mapSettings )
   : mParameterThickness( new Qt3DRender::QParameter( "THICKNESS", 10, this ) )
   , mParameterMiterLimit( new Qt3DRender::QParameter( "MITER_LIMIT", -1, this ) )  // 0.75
   , mParameterLineColor( new Qt3DRender::QParameter( "lineColor", QColor( 0, 255, 0 ), this ) )
   , mParameterWindowScale( new Qt3DRender::QParameter( "WIN_SCALE", QSizeF(), this ) )
 {
+  qDebug() << "on line";
   addParameter( mParameterThickness );
   addParameter( mParameterMiterLimit );
   addParameter( mParameterLineColor );
@@ -75,6 +77,14 @@ QgsLineMaterial::QgsLineMaterial()
   technique->graphicsApiFilter()->setProfile( Qt3DRender::QGraphicsApiFilter::CoreProfile );
   technique->graphicsApiFilter()->setMajorVersion( 3 );
   technique->graphicsApiFilter()->setMinorVersion( 1 );
+
+  Qgs3DBoundingBoxSettings bbSettings = mapSettings->getBoundingBoxSettings();
+  QgsAABB bbCoords = bbSettings.coords();
+  qDebug() << bbCoords.xMin << "x" << bbCoords.yMin << "x" << bbCoords.zMin;
+  qDebug() << bbCoords.xMax << "x" << bbCoords.yMax << "x" << bbCoords.zMax;
+  technique->addParameter( new Qt3DRender::QParameter( QStringLiteral( "boundingBoxEnabled" ),  bbSettings.isEnabled() ) );
+  technique->addParameter( new Qt3DRender::QParameter( QStringLiteral( "boundingBoxMin" ),  QVector3D( bbCoords.xMin, bbCoords.yMin, bbCoords.zMin ) ) );
+  technique->addParameter( new Qt3DRender::QParameter( QStringLiteral( "boundingBoxMax" ),  QVector3D( bbCoords.xMax, bbCoords.yMax, bbCoords.zMax ) ) );
 
   Qt3DRender::QEffect *effect = new Qt3DRender::QEffect( this );
   effect->addTechnique( technique );

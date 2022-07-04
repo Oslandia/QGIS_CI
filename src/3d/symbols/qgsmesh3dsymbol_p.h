@@ -49,7 +49,7 @@ class QgsMesh3DSymbolEntity : public Qt3DCore::QEntity
     QgsMesh3DSymbolEntity( const Qgs3DMapSettings &map, QgsMeshLayer *layer, const QgsMesh3DSymbol &symbol, Qt3DCore::QNode *parent = nullptr );
 
   private:
-    Qt3DRender::QMaterial *material( const QgsMesh3DSymbol &symbol ) const;
+    Qt3DRender::QMaterial *material( const QgsMesh3DSymbol &symbol, const  Qgs3DMapSettings *mapSettings ) const;
 };
 
 class QgsMesh3DSymbolEntityNode : public Qt3DCore::QEntity

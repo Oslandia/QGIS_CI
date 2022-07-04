@@ -117,6 +117,7 @@ Qt3DQGeometry *QgsLineVertexData::createGeometry( Qt3DCore::QNode *parent )
 
 void QgsLineVertexData::addLineString( const QgsLineString &lineString, float extraHeightOffset )
 {
+  qDebug() << "ADD LINE STRING";
   if ( withAdjacency )
     indexes << vertices.count();  // add the following vertex (for adjacency)
 

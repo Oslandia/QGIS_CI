@@ -49,7 +49,7 @@ QgsMesh3DSymbolEntity::QgsMesh3DSymbolEntity( const Qgs3DMapSettings &map,
   : Qt3DCore::QEntity( parent )
 {
   // build the default material
-  Qt3DRender::QMaterial *mat = material( symbol );
+  Qt3DRender::QMaterial *mat = material( symbol, &map );
 
   // build a transform function
   Qt3DCore::QTransform *tform = new Qt3DCore::QTransform;
@@ -63,10 +63,10 @@ QgsMesh3DSymbolEntity::QgsMesh3DSymbolEntity( const Qgs3DMapSettings &map,
   entity->setParent( this );
 }
 
-Qt3DRender::QMaterial *QgsMesh3DSymbolEntity::material( const QgsMesh3DSymbol &symbol ) const
+Qt3DRender::QMaterial *QgsMesh3DSymbolEntity::material( const QgsMesh3DSymbol &symbol, const Qgs3DMapSettings *mapSettings ) const
 {
   const QgsMaterialContext context;
-  Qt3DRender::QMaterial *material = symbol.material()->toMaterial( QgsMaterialSettingsRenderingTechnique::Triangles, context );
+  Qt3DRender::QMaterial *material = symbol.material()->toMaterial( mapSettings, QgsMaterialSettingsRenderingTechnique::Triangles, context );
 
   // front/back side culling
   const auto techniques = material->effect()->techniques();

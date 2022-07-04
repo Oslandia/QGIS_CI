@@ -15,6 +15,7 @@
 
 #include "qgsgoochmaterialsettings.h"
 
+#include "qgs3dmapsettings.h"
 #include "qgssymbollayerutils.h"
 #include <Qt3DExtras/QGoochMaterial>
 #if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
@@ -104,8 +105,9 @@ QMap<QString, QString> QgsGoochMaterialSettings::toExportParameters() const
   return QMap<QString, QString>();
 }
 
-Qt3DRender::QMaterial *QgsGoochMaterialSettings::toMaterial( QgsMaterialSettingsRenderingTechnique technique, const QgsMaterialContext &context ) const
+Qt3DRender::QMaterial *QgsGoochMaterialSettings::toMaterial( const Qgs3DMapSettings *mapSettings, QgsMaterialSettingsRenderingTechnique technique, const QgsMaterialContext &context ) const
 {
+  qDebug() << "TO MATERIAL";
   switch ( technique )
   {
     case QgsMaterialSettingsRenderingTechnique::Triangles:
@@ -114,7 +116,7 @@ Qt3DRender::QMaterial *QgsGoochMaterialSettings::toMaterial( QgsMaterialSettings
     case QgsMaterialSettingsRenderingTechnique::TrianglesFromModel:
     {
       if ( dataDefinedProperties().hasActiveProperties() )
-        return dataDefinedMaterial();
+        return dataDefinedMaterial( mapSettings );
       Qt3DExtras::QGoochMaterial *material  = new Qt3DExtras::QGoochMaterial;
       material->setDiffuse( mDiffuse );
       material->setWarm( mWarm );
@@ -235,7 +237,7 @@ void QgsGoochMaterialSettings::applyDataDefinedToGeometry( Qt3DQGeometry *geomet
   dataBuffer->setData( data );
 }
 
-Qt3DRender::QMaterial *QgsGoochMaterialSettings::dataDefinedMaterial() const
+Qt3DRender::QMaterial *QgsGoochMaterialSettings::dataDefinedMaterial( const Qgs3DMapSettings *mapSettings ) const
 {
   Qt3DRender::QMaterial *material = new Qt3DRender::QMaterial;
 
@@ -266,6 +268,12 @@ Qt3DRender::QMaterial *QgsGoochMaterialSettings::dataDefinedMaterial() const
   technique->addParameter( new Qt3DRender::QParameter( QStringLiteral( "shininess" ), mShininess ) );
   technique->addParameter( new Qt3DRender::QParameter( QStringLiteral( "alpha" ), mAlpha ) );
   technique->addParameter( new Qt3DRender::QParameter( QStringLiteral( "beta" ), mBeta ) );
+
+  Qgs3DBoundingBoxSettings bbSettings = mapSettings->getBoundingBoxSettings();
+  QgsAABB bbCoords = bbSettings.coords();
+  technique->addParameter( new Qt3DRender::QParameter( QStringLiteral( "boundingBoxEnabled" ),  bbSettings.isEnabled() ) );
+  technique->addParameter( new Qt3DRender::QParameter( QStringLiteral( "boundingBoxMin" ),  QVector3D( bbCoords.xMin, bbCoords.yMin, bbCoords.zMin ) ) );
+  technique->addParameter( new Qt3DRender::QParameter( QStringLiteral( "boundingBoxMax" ),  QVector3D( bbCoords.xMax, bbCoords.yMax, bbCoords.zMax ) ) );
 
   eff->addTechnique( technique );
   material->setEffect( eff );

@@ -13,6 +13,8 @@ uniform vec2 WIN_SCALE;	 // the size of the viewport in pixels
 out vec2 UV;
 // glsl
 
+out vec3 worldPosition;
+
 void main (void)
 {
 
@@ -23,21 +25,25 @@ void main (void)
 
   gl_Position = P;
   gl_Position.xy += vec2(-0.5,-0.5) * size;
+  worldPosition = gl_Position.xyz;
   UV = vec2(0,0);
   EmitVertex();
 
   gl_Position = P;
   gl_Position.xy += vec2(0.5,-0.5) * size;
+  worldPosition = gl_Position.xyz;
   UV = vec2(1,0);
   EmitVertex();
 
   gl_Position = P;
   gl_Position.xy += vec2(-0.5,+0.5) * size;
+  worldPosition = gl_Position.xyz;
   UV = vec2(0,1);
   EmitVertex();
 
   gl_Position = P;
   gl_Position.xy += vec2(+0.5,+0.5) * size;
+  worldPosition = gl_Position.xyz;
   UV = vec2(1,1);
   EmitVertex();
 

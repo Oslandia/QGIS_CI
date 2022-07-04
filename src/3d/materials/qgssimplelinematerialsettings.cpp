@@ -65,7 +65,7 @@ void QgsSimpleLineMaterialSettings::writeXml( QDomElement &elem, const QgsReadWr
   elem.setAttribute( QStringLiteral( "ambient" ), QgsSymbolLayerUtils::encodeColor( mAmbient ) );
 }
 
-Qt3DRender::QMaterial *QgsSimpleLineMaterialSettings::toMaterial( QgsMaterialSettingsRenderingTechnique technique, const QgsMaterialContext &context ) const
+Qt3DRender::QMaterial *QgsSimpleLineMaterialSettings::toMaterial( const Qgs3DMapSettings *mapSettings, QgsMaterialSettingsRenderingTechnique technique, const QgsMaterialContext &context ) const
 {
   switch ( technique )
   {
@@ -79,7 +79,8 @@ Qt3DRender::QMaterial *QgsSimpleLineMaterialSettings::toMaterial( QgsMaterialSet
 
     case QgsMaterialSettingsRenderingTechnique::Lines:
     {
-      QgsLineMaterial *mat = new QgsLineMaterial;
+      qDebug() << "on simple line";
+      QgsLineMaterial *mat = new QgsLineMaterial( mapSettings );
       mat->setLineColor( mAmbient );
       if ( context.isSelected() )
       {
