@@ -193,8 +193,7 @@ void QgsGoochMaterialSettings::applyDataDefinedToGeometry( Qt3DRender::QGeometry
   warmAttribute->setByteStride( 12 * sizeof( unsigned char ) );
   warmAttribute->setByteOffset( 3 * sizeof( unsigned char ) );
   warmAttribute->setCount( vertexCount );
-  geometry->addAttribute( warmAttribute
-                        );
+  geometry->addAttribute( warmAttribute );
 
   Qt3DRender::QAttribute *coolAttribute = new Qt3DRender::QAttribute( geometry );
   coolAttribute->setName( QStringLiteral( "dataDefinedCoolColor" ) );
