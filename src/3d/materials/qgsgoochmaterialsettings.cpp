@@ -113,23 +113,19 @@ Qt3DRender::QMaterial *QgsGoochMaterialSettings::toMaterial( QgsMaterialSettings
     case QgsMaterialSettingsRenderingTechnique::TrianglesWithFixedTexture:
     case QgsMaterialSettingsRenderingTechnique::TrianglesFromModel:
     {
+      Qt3DRender::QMaterial *material = createMaterial( dataDefinedProperties().hasActiveProperties() );
       if ( dataDefinedProperties().hasActiveProperties() )
-        return dataDefinedMaterial();
-      Qt3DExtras::QGoochMaterial *material  = new Qt3DExtras::QGoochMaterial;
-      material->setDiffuse( mDiffuse );
-      material->setWarm( mWarm );
-      material->setCool( mCool );
+        return material;
 
-      material->setSpecular( mSpecular );
-      material->setShininess( mShininess );
-      material->setAlpha( mAlpha );
-      material->setBeta( mBeta );
+      Qt3DRender::QEffect *effect = material->effect();
+      Qt3DRender::QTechnique *technique = effect->techniques()[0];
 
-      if ( context.isSelected() )
-      {
-        // update the material with selection colors
-        material->setDiffuse( context.selectionColor() );
-      }
+      QColor diffuse = context.isSelected() ? context.selectionColor() : mDiffuse;
+      technique->addParameter( new Qt3DRender::QParameter( QStringLiteral( "kd" ), diffuse ) );
+      technique->addParameter( new Qt3DRender::QParameter( QStringLiteral( "ks" ), mWarm ) );
+      technique->addParameter( new Qt3DRender::QParameter( QStringLiteral( "kblue" ), mCool ) );
+      technique->addParameter( new Qt3DRender::QParameter( QStringLiteral( "kyellow" ), mSpecular ) );
+
       return material;
     }
 
@@ -234,7 +230,7 @@ void QgsGoochMaterialSettings::applyDataDefinedToGeometry( Qt3DQGeometry *geomet
   dataBuffer->setData( data );
 }
 
-Qt3DRender::QMaterial *QgsGoochMaterialSettings::dataDefinedMaterial() const
+Qt3DRender::QMaterial *QgsGoochMaterialSettings::createMaterial( bool hasActiveProperties ) const
 {
   Qt3DRender::QMaterial *material = new Qt3DRender::QMaterial;
 
@@ -254,9 +250,11 @@ Qt3DRender::QMaterial *QgsGoochMaterialSettings::dataDefinedMaterial() const
   Qt3DRender::QShaderProgram *shaderProgram = new Qt3DRender::QShaderProgram();
 
   //Load shader programs
-  const QUrl urlVert( QStringLiteral( "qrc:/shaders/goochDataDefined.vert" ) );
+  QString vertShaderPath = hasActiveProperties ? QStringLiteral( "qrc:/shaders/goochDataDefined.vert" ) : QStringLiteral( "qrc:/shaders/gooch.vert" );
+  QString fragShaderPath = hasActiveProperties ? QStringLiteral( "qrc:/shaders/goochDataDefined.frag" ) : QStringLiteral( "qrc:/shaders/gooch.frag" );
+  const QUrl urlVert( vertShaderPath );
   shaderProgram->setShaderCode( Qt3DRender::QShaderProgram::Vertex, Qt3DRender::QShaderProgram::loadSource( urlVert ) );
-  const QUrl urlFrag( QStringLiteral( "qrc:/shaders/goochDataDefined.frag" ) );
+  const QUrl urlFrag( fragShaderPath );
   shaderProgram->setShaderCode( Qt3DRender::QShaderProgram::Fragment, Qt3DRender::QShaderProgram::loadSource( urlFrag ) );
 
   renderPass->setShaderProgram( shaderProgram );

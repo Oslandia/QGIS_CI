@@ -26,6 +26,8 @@
         <file>shaders/preview.frag</file>
         <file>shaders/phongDataDefined.vert</file>
         <file>shaders/phongDataDefined.frag</file>
+	<file>shaders/gooch.frag</file>
+        <file>shaders/gooch.vert</file>
         <file>shaders/goochDataDefined.frag</file>
         <file>shaders/goochDataDefined.vert</file>
         <file>shaders/depth_render.frag</file>
