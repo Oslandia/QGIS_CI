@@ -24,6 +24,7 @@
 #include <QAction>
 
 #include "qgisapp.h"
+#include "qgs3dboundingboxsettings.h"
 #include "qgs3dmapcanvas.h"
 #include "qgs3dmapconfigwidget.h"
 #include "qgs3dmapscene.h"
@@ -274,6 +275,9 @@ Qgs3DMapCanvasWidget::~Qgs3DMapCanvasWidget()
   delete mDockableWidgetHelper;
   if ( mViewFrustumHighlight )
     delete mViewFrustumHighlight;
+
+  if ( mViewBoundingBoxHighlight )
+    delete mViewBoundingBoxHighlight;
 }
 
 void Qgs3DMapCanvasWidget::resizeEvent( QResizeEvent *event )
@@ -374,6 +378,8 @@ void Qgs3DMapCanvasWidget::setMapSettings( Qgs3DMapSettings *map )
   mLabelFpsCounter->setVisible( map->isFpsCounterEnabled() );
 
   connect( map, &Qgs3DMapSettings::viewFrustumVisualizationEnabledChanged, this, &Qgs3DMapCanvasWidget::onViewFrustumVisualizationEnabledChanged );
+  connect( map, &Qgs3DMapSettings::boundingBoxSettingsChanged, this, &Qgs3DMapCanvasWidget::onViewBoundingBoxChanged );
+  onViewBoundingBoxChanged();
 }
 
 void Qgs3DMapCanvasWidget::setMainCanvas( QgsMapCanvas *canvas )
@@ -388,6 +394,11 @@ void Qgs3DMapCanvasWidget::setMainCanvas( QgsMapCanvas *canvas )
     delete mViewFrustumHighlight;
   mViewFrustumHighlight = new QgsRubberBand( canvas, QgsWkbTypes::PolygonGeometry );
   mViewFrustumHighlight->setColor( QColor::fromRgba( qRgba( 0, 0, 255, 50 ) ) );
+
+  if ( mViewBoundingBoxHighlight )
+    delete mViewBoundingBoxHighlight;
+
+  mViewBoundingBoxHighlight = new QgsRubberBand( canvas, QgsWkbTypes::PolygonGeometry );
 }
 
 void Qgs3DMapCanvasWidget::resetView()
@@ -617,6 +628,31 @@ void Qgs3DMapCanvasWidget::onViewFrustumVisualizationEnabledChanged()
     {
       mViewFrustumHighlight->addPoint( pt, false );
     }
+    mViewFrustumHighlight->closePoints();
+  }
+}
+
+void Qgs3DMapCanvasWidget::onViewBoundingBoxChanged()
+{
+  Qgs3DMapSettings *mapSettings = mCanvas->map();
+  mViewBoundingBoxHighlight->reset( QgsWkbTypes::PolygonGeometry );
+  Qgs3DBoundingBoxSettings bbSettings = mapSettings->getBoundingBoxSettings();
+  if ( bbSettings.isEnabled() && bbSettings.showIn2DView() )
+  {
+    QColor bbColor = bbSettings.color();
+    mViewBoundingBoxHighlight->setColor( QColor( bbColor.red(), bbColor.green(), bbColor.blue(), 127 ) );
+    QgsAABB bbox = bbSettings.coords();
+    QgsVector3D bboxWorldMin( bbox.xMin, bbox.yMin, bbox.zMin );
+    QgsVector3D bboxWorldMax( bbox.xMax, bbox.yMax, bbox.zMax );
+    QgsVector3D bboxMapMin = mapSettings->worldToMapCoordinates( bboxWorldMin );
+    QgsVector3D bboxMapMax = mapSettings->worldToMapCoordinates( bboxWorldMax );
+
+    mViewBoundingBoxHighlight->addPoint( QgsPointXY( bboxMapMin.x(), bboxMapMin.y() ), false );
+    mViewBoundingBoxHighlight->addPoint( QgsPointXY( bboxMapMin.x(), bboxMapMax.y() ), false );
+    mViewBoundingBoxHighlight->addPoint( QgsPointXY( bboxMapMax.x(), bboxMapMax.y() ), false );
+    mViewBoundingBoxHighlight->addPoint( QgsPointXY( bboxMapMax.x(), bboxMapMin.y() ), false );
+    mViewBoundingBoxHighlight->closePoints();
+
     mViewFrustumHighlight->closePoints();
   }
 }

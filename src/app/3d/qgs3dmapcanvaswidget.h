@@ -91,6 +91,7 @@ class APP_EXPORT Qgs3DMapCanvasWidget : public QWidget
     void onMainMapCanvasExtentChanged();
     void onViewed2DExtentFrom3DChanged( QVector<QgsPointXY> extent );
     void onViewFrustumVisualizationEnabledChanged();
+    void onViewBoundingBoxChanged();
 
   private:
     QString mCanvasName;
@@ -118,6 +119,7 @@ class APP_EXPORT Qgs3DMapCanvasWidget : public QWidget
     QgsDockableWidgetHelper *mDockableWidgetHelper = nullptr;
     QgsRubberBand *mViewFrustumHighlight = nullptr;
     QPointer<QDialog> mConfigureDialog;
+    QgsRubberBand *mViewBoundingBoxHighlight = nullptr;
 };
 
 #endif // QGS3DMAPCANVASWIDGET_H
