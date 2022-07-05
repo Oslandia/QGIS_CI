@@ -39,7 +39,7 @@ class _3D_EXPORT Qgs3DBoundingBoxSettings
     //! default constructor
     Qgs3DBoundingBoxSettings() = default;
     // constructor
-    Qgs3DBoundingBoxSettings( bool enabled, const QgsAABB &boundingBox, int nrTicks = 7, QColor color = Qt::black, bool full = true );
+    Qgs3DBoundingBoxSettings( bool enabled, const QgsAABB &boundingBox, int nrTicks = 7, QColor color = Qt::black, bool full = true, bool showIn2DView = false );
     //! copy constructor
     Qgs3DBoundingBoxSettings( const Qgs3DBoundingBoxSettings &other );
     //! delete assignment operator
@@ -78,12 +78,16 @@ class _3D_EXPORT Qgs3DBoundingBoxSettings
      */
     bool isFull() const { return mFull; }
 
+    //! Returns whether the bounding box is displayed in the 2D View
+    bool showIn2DView() const { return mShowIn2DView; }
+
   private:
     bool mEnabled = false;
     QgsAABB mBoundingBox;
     int mNrTicks = 7;
     QColor mColor = Qt::black;
     bool mFull = true;
+    bool mShowIn2DView = false;
 };
 
 #endif // QGS3DBOUNDINGBOXSETTINGS_H

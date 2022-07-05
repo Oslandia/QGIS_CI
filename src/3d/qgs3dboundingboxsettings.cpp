@@ -27,16 +27,18 @@ Qgs3DBoundingBoxSettings::Qgs3DBoundingBoxSettings( const Qgs3DBoundingBoxSettin
   , mNrTicks( other.mNrTicks )
   , mColor( other.mColor )
   , mFull( other.mFull )
+  , mShowIn2DView( other.mShowIn2DView )
 {
 
 }
 
-Qgs3DBoundingBoxSettings::Qgs3DBoundingBoxSettings( bool enabled, const QgsAABB &boundingBox, int nrTicks, QColor color, bool full )
+Qgs3DBoundingBoxSettings::Qgs3DBoundingBoxSettings( bool enabled, const QgsAABB &boundingBox, int nrTicks, QColor color, bool full, bool showIn2DView )
   : mEnabled( enabled )
   , mBoundingBox( boundingBox )
   , mNrTicks( nrTicks )
   , mColor( color )
   , mFull( full )
+  , mShowIn2DView( showIn2DView )
 {
 
 }
@@ -48,6 +50,7 @@ Qgs3DBoundingBoxSettings &Qgs3DBoundingBoxSettings::operator=( Qgs3DBoundingBoxS
   this->mNrTicks = rhs.mNrTicks;
   this->mColor = rhs.mColor;
   this->mFull = rhs.mFull;
+  this->mShowIn2DView = rhs.mShowIn2DView;
   return *this;
 }
 
@@ -59,6 +62,7 @@ bool Qgs3DBoundingBoxSettings::operator==( Qgs3DBoundingBoxSettings const &rhs )
   out &= this->mNrTicks == rhs.mNrTicks;
   out &= this->mColor == rhs.mColor;
   out &= this->mFull == rhs.mFull;
+  out &= this->mShowIn2DView == rhs.mShowIn2DView;
   return out;
 }
 
@@ -82,6 +86,9 @@ void Qgs3DBoundingBoxSettings::readXml( const QDomElement &element, const QgsRea
 
   const QString full = element.attribute( QStringLiteral( "full" ), QStringLiteral( "1" ) );
   mFull = full.toInt() ? true : false;
+
+  const QString showIn2DView = element.attribute( QStringLiteral( "show-in-2d-view" ), QStringLiteral( "0" ) );
+  mShowIn2DView = showIn2DView.toInt() ? true : false;
 }
 
 QDomElement Qgs3DBoundingBoxSettings::writeXml( QDomElement &element, const QgsReadWriteContext &context ) const
@@ -97,5 +104,7 @@ QDomElement Qgs3DBoundingBoxSettings::writeXml( QDomElement &element, const QgsR
   element.setAttribute( QStringLiteral( "color" ), QgsSymbolLayerUtils::encodeColor( mColor ) );
   QString full = mFull ? QStringLiteral( "1" ) : QStringLiteral( "0" );
   element.setAttribute( QStringLiteral( "full" ), full );
+  QString showIn2DView = mShowIn2DView ? QStringLiteral( "1" ) : QStringLiteral( "0" );
+  element.setAttribute( QStringLiteral( "show-in-2d-view" ),  showIn2DView );
   return element;
 }
