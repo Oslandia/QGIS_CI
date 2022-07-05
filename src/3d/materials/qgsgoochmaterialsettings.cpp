@@ -250,11 +250,9 @@ Qt3DRender::QMaterial *QgsGoochMaterialSettings::createMaterial( bool hasActiveP
   Qt3DRender::QShaderProgram *shaderProgram = new Qt3DRender::QShaderProgram();
 
   //Load shader programs
-  QString vertShaderPath = hasActiveProperties ? QStringLiteral( "qrc:/shaders/goochDataDefined.vert" ) : QStringLiteral( "qrc:/shaders/gooch.vert" );
-  QString fragShaderPath = hasActiveProperties ? QStringLiteral( "qrc:/shaders/goochDataDefined.frag" ) : QStringLiteral( "qrc:/shaders/gooch.frag" );
-  const QUrl urlVert( vertShaderPath );
+  const QUrl urlVert( QStringLiteral( "qrc:/shaders/goochDataDefined.vert" ) );
   shaderProgram->setShaderCode( Qt3DRender::QShaderProgram::Vertex, Qt3DRender::QShaderProgram::loadSource( urlVert ) );
-  const QUrl urlFrag( fragShaderPath );
+  const QUrl urlFrag( QStringLiteral( "qrc:/shaders/goochDataDefined.frag" ) );
   shaderProgram->setShaderCode( Qt3DRender::QShaderProgram::Fragment, Qt3DRender::QShaderProgram::loadSource( urlFrag ) );
 
   renderPass->setShaderProgram( shaderProgram );
