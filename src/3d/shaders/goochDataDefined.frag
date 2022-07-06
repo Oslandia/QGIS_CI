@@ -14,12 +14,19 @@ uniform float shininess;    // Specular shininess factor
 
 uniform vec3 eyePosition;
 
+// bounding box parameters
+uniform bool boundingBoxEnabled;
+uniform vec3 boundingBoxMin;
+uniform vec3 boundingBoxMax;
+
 in vec3 worldPosition;
 in vec3 worldNormal;
 
 out vec4 fragColor;
 
 #pragma include light.inc.frag
+
+#pragma include boundingboxcut.inc.frag
 
 vec3 goochModel( const in vec3 pos, const in vec3 n )
 {
@@ -62,5 +69,10 @@ vec3 goochModel( const in vec3 pos, const in vec3 n )
 
 void main()
 {
+  if (!isInsideBoundingBox(worldPosition, boundingBoxEnabled, boundingBoxMin, boundingBoxMax))
+    {
+        discard;
+        return;
+    }
     fragColor = vec4( goochModel( worldPosition, normalize( worldNormal ) ), 1.0 );
 }

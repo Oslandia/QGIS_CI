@@ -115,24 +115,24 @@ Qt3DRender::QMaterial *QgsGoochMaterialSettings::toMaterial( const Qgs3DMapSetti
     case QgsMaterialSettingsRenderingTechnique::TrianglesWithFixedTexture:
     case QgsMaterialSettingsRenderingTechnique::TrianglesFromModel:
     {
-      if ( dataDefinedProperties().hasActiveProperties() )
-        return dataDefinedMaterial( mapSettings );
-      Qt3DExtras::QGoochMaterial *material  = new Qt3DExtras::QGoochMaterial;
-      material->setDiffuse( mDiffuse );
-      material->setWarm( mWarm );
-      material->setCool( mCool );
+      // if ( dataDefinedProperties().hasActiveProperties() )
+      return dataDefinedMaterial( mapSettings );
+      // Qt3DExtras::QGoochMaterial *material  = new Qt3DExtras::QGoochMaterial;
+      // material->setDiffuse( mDiffuse );
+      // material->setWarm( mWarm );
+      // material->setCool( mCool );
 
-      material->setSpecular( mSpecular );
-      material->setShininess( mShininess );
-      material->setAlpha( mAlpha );
-      material->setBeta( mBeta );
+      // material->setSpecular( mSpecular );
+      // material->setShininess( mShininess );
+      // material->setAlpha( mAlpha );
+      // material->setBeta( mBeta );
 
-      if ( context.isSelected() )
-      {
-        // update the material with selection colors
-        material->setDiffuse( context.selectionColor() );
-      }
-      return material;
+      // if ( context.isSelected() )
+      // {
+      //   // update the material with selection colors
+      //   material->setDiffuse( context.selectionColor() );
+      // }
+      // return material;
     }
 
     case QgsMaterialSettingsRenderingTechnique::Lines:
@@ -150,10 +150,24 @@ void QgsGoochMaterialSettings::addParametersToEffect( Qt3DRender::QEffect * ) co
 QByteArray QgsGoochMaterialSettings::dataDefinedVertexColorsAsByte( const QgsExpressionContext &expressionContext ) const
 {
 
-  const QColor diffuse = dataDefinedProperties().valueAsColor( Diffuse, expressionContext, mDiffuse );
-  const QColor warm = dataDefinedProperties().valueAsColor( Warm, expressionContext, mWarm );
-  const QColor cool = dataDefinedProperties().valueAsColor( Cool, expressionContext, mCool );
-  const QColor specular = dataDefinedProperties().valueAsColor( Specular, expressionContext, mSpecular );
+  QColor diffuse;
+  QColor warm;
+  QColor cool;
+  QColor specular;
+  if ( dataDefinedProperties().hasActiveProperties() )
+  {
+    diffuse = dataDefinedProperties().valueAsColor( Diffuse, expressionContext, mDiffuse );
+    warm = dataDefinedProperties().valueAsColor( Warm, expressionContext, mWarm );
+    cool = dataDefinedProperties().valueAsColor( Cool, expressionContext, mCool );
+    specular = dataDefinedProperties().valueAsColor( Specular, expressionContext, mSpecular );
+  }
+  else
+  {
+    diffuse = mDiffuse;
+    warm = mWarm;
+    cool = mCool;
+    specular = mSpecular;
+  }
 
 
   QByteArray array;
