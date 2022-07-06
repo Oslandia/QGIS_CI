@@ -418,7 +418,7 @@ void Qgs3DMapConfigWidget::apply()
   bool boundingBoxEnabled = mGroupBoundingBox->isChecked();
   Qgs3DBoundingBoxSettings boundingBoxSettings = Qgs3DBoundingBoxSettings(
         boundingBoxEnabled, boundingBox, mBoundingBoxNrTicks->value(),
-        mBoundingBoxColor->color(), mBoundingBoxFull->isChecked() );
+	mBoundingBoxColor->color(), mBoundingBoxFull->isChecked(), mBoundingBoxShowIn2DView->isChecked() );
   if ( boundingBoxSettings != mMap->getBoundingBoxSettings() )
     mMap->setBoundingBoxSettings( boundingBoxSettings );
 
@@ -661,6 +661,7 @@ void Qgs3DMapConfigWidget::initBoundingBoxPage()
   mBoundingBoxNrTicks->setValue( boundingBoxSettings.nrTicks() );
   mBoundingBoxColor->setColor( boundingBoxSettings.color() );
   mBoundingBoxFull->setChecked( boundingBoxSettings.isFull() );
+  mBoundingBoxShowIn2DView->setChecked( boundingBoxSettings.showIn2DView() );
 
   connect( mBoundingBoxXMin, static_cast<void ( QDoubleSpinBox::* )( double )>( &QDoubleSpinBox::valueChanged ), this, &Qgs3DMapConfigWidget::validate );
   connect( mBoundingBoxXMax, static_cast<void ( QDoubleSpinBox::* )( double )>( &QDoubleSpinBox::valueChanged ), this, &Qgs3DMapConfigWidget::validate );
