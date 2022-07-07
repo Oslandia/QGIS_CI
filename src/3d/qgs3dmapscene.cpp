@@ -25,9 +25,9 @@
 #include <Qt3DRender/QSceneLoader>
 #include <Qt3DExtras/QForwardRenderer>
 #include <Qt3DExtras/QPhongMaterial>
-#include <Qt3DExtras/QPhongAlphaMaterial>
 #include <Qt3DExtras/QDiffuseSpecularMaterial>
 #include <Qt3DExtras/QSphereMesh>
+#include <Qt3DExtras/QTextureMaterial>
 #include <Qt3DLogic/QFrameAction>
 #include <Qt3DRender/QEffect>
 #include <Qt3DRender/QTechnique>
@@ -928,16 +928,44 @@ void Qgs3DMapScene::finalizeNewEntity( Qt3DCore::QEntity *newEntity )
   // Finalize adding the 3D transparent objects by adding the layer components to the entities
   QgsShadowRenderingFrameGraph *frameGraph = mEngine->frameGraph();
   Qt3DRender::QLayer *layer = frameGraph->transparentObjectLayer();
-  for ( Qt3DExtras::QDiffuseSpecularMaterial *ph : newEntity->findChildren<Qt3DExtras::QDiffuseSpecularMaterial *>() )
+  for ( Qt3DRender::QMaterial *material : newEntity->findChildren<Qt3DRender::QMaterial *>() )
   {
-    if ( ph->diffuse().value<QColor>().alphaF() == 1.0f )
-      continue;
-    Qt3DCore::QEntity *entity = qobject_cast<Qt3DCore::QEntity *>( ph->parent() );
-    if ( !entity )
-      continue;
-    if ( entity->components().contains( layer ) )
-      continue;
-    entity->addComponent( layer );
+    // this handles the untextured case
+    if ( Qt3DExtras::QDiffuseSpecularMaterial *specularMaterial = dynamic_cast<Qt3DExtras::QDiffuseSpecularMaterial *>( material ) )
+    {
+      if ( specularMaterial->diffuse().value<QColor>().alphaF() != 1.0f )
+      {
+        if ( !newEntity->components().contains( layer ) )
+          newEntity->addComponent( layer );
+      }
+    }
+    // this handles the textured case
+    else if ( Qt3DExtras::QTextureMaterial *textureMaterial = dynamic_cast<Qt3DExtras::QTextureMaterial *>( material ) )
+    {
+      Qt3DRender::QEffect *effect = textureMaterial->effect();
+      if ( effect )
+      {
+        QVector<Qt3DRender::QTechnique *> techniques = effect->techniques();
+        bool opacityFound = false;
+        for ( const auto *technique : techniques )
+        {
+          for ( const auto *parameter : technique->parameters() )
+          {
+            if ( parameter->name() == "opacity" && parameter->value() != 1.0 )
+            {
+              opacityFound = true;
+              if ( !newEntity->components().contains( layer ) )
+              {
+                newEntity->addComponent( layer );
+              }
+              break;
+            }
+          }
+          if ( opacityFound )
+            break;
+        }
+      }
+    }
   }
 }
 
