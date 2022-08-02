@@ -19,6 +19,7 @@
 #include "qgsrenderpassquad.h"
 
 class QgsShadowRenderingFrameGraph;
+class QgsShadowRenderView;
 
 #define SIP_NO_FILE
 
@@ -82,6 +83,7 @@ class QgsPostprocessingEntity : public QgsRenderPassQuad
     Qt3DRender::QParameter *mShadowMaxX = nullptr;
     Qt3DRender::QParameter *mShadowMinZ = nullptr;
     Qt3DRender::QParameter *mShadowMaxZ = nullptr;
+    QgsShadowRenderView *mShadowRenderView = nullptr;
 
     Qt3DRender::QParameter *mRenderShadowsParameter = nullptr;
     Qt3DRender::QParameter *mShadowBiasParameter = nullptr;

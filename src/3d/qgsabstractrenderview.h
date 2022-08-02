@@ -75,6 +75,9 @@ class _3D_EXPORT QgsAbstractRenderView : public QObject
 
     //! Enable or disable via \a enable the renderview sub tree
     virtual void enableSubTree( bool enable ) = 0;
+
+    //! Returns true if renderview is enabled
+    virtual bool isSubTreeEnabled() = 0;
 };
 
 

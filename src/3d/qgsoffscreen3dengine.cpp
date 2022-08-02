@@ -34,6 +34,7 @@
 #include <Qt3DRender/QTexture>
 #include <Qt3DRender/QViewport>
 #include <QtGui/QOpenGLContext>
+#include "qgsabstractrenderview.h"
 
 QgsOffscreen3DEngine::QgsOffscreen3DEngine()
 {
@@ -98,7 +99,7 @@ QgsOffscreen3DEngine::QgsOffscreen3DEngine()
 
   mFrameGraph = new QgsShadowRenderingFrameGraph( mOffscreenSurface, mSize, mCamera, mRoot );
   mFrameGraph->setRenderCaptureEnabled( true );
-  mFrameGraph->setShadowRenderingEnabled( false );
+  mFrameGraph->setEnableRenderView( "shadow", false );
   // Set this frame graph to be in use.
   // the render settings also sets itself as the parent of mSurfaceSelector
   mRenderSettings->setActiveFrameGraph( mFrameGraph->frameGraphRoot() );
@@ -144,7 +145,8 @@ void QgsOffscreen3DEngine::setRootEntity( Qt3DCore::QEntity *root )
   mSceneRoot = root;
   mSceneRoot->setParent( mRoot );
   root->addComponent( mFrameGraph->forwardRenderLayer() );
-  root->addComponent( mFrameGraph->castShadowsLayer() );
+  if ( mFrameGraph->renderView( "shadow" ) )
+    root->addComponent( mFrameGraph->renderView( "shadow" )->layerToFilter() );
 }
 
 Qt3DRender::QRenderSettings *QgsOffscreen3DEngine::renderSettings()

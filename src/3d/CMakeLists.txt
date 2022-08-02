@@ -35,6 +35,7 @@ set(QGIS_3D_SRCS
   qgsskyboxentity.cpp
   qgsskyboxsettings.cpp
   qgsshadowrenderingframegraph.cpp
+  qgsshadowrenderview.cpp
   qgspostprocessingentity.cpp
   qgsrenderpassquad.cpp
   qgsambientocclusionrenderentity.cpp
@@ -134,6 +135,7 @@ set(QGIS_3D_HDRS
   qgsskyboxentity.h
   qgsskyboxsettings.h
   qgsshadowrenderingframegraph.h
+  qgsshadowrenderview.h
   qgspostprocessingentity.h
   qgspreviewquad.h
   qgsshadowsettings.h

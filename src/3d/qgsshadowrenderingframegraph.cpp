@@ -50,6 +50,7 @@ typedef Qt3DCore::QGeometry Qt3DQGeometry;
 #include <Qt3DRender/QSortPolicy>
 #include <Qt3DRender/QNoDepthMask>
 #include <Qt3DRender/QBlendEquationArguments>
+#include "qgsshadowrenderview.h"
 
 Qt3DRender::QFrameGraphNode *QgsShadowRenderingFrameGraph::constructTexturesPreviewPass()
 {
@@ -182,59 +183,12 @@ Qt3DRender::QFrameGraphNode *QgsShadowRenderingFrameGraph::constructForwardRende
   return mMainCameraSelector;
 }
 
-Qt3DRender::QFrameGraphNode *QgsShadowRenderingFrameGraph::constructShadowRenderPass()
-{
-  mLightCameraSelectorShadowPass = new Qt3DRender::QCameraSelector;
-  mLightCameraSelectorShadowPass->setCamera( mLightCamera );
-
-  mShadowSceneEntitiesFilter = new Qt3DRender::QLayerFilter( mLightCameraSelectorShadowPass );
-  mShadowSceneEntitiesFilter->addLayer( mCastShadowsLayer );
-
-  mShadowMapTexture = new Qt3DRender::QTexture2D;
-  mShadowMapTexture->setWidth( mShadowMapResolution );
-  mShadowMapTexture->setHeight( mShadowMapResolution );
-  mShadowMapTexture->setFormat( Qt3DRender::QTexture2D::TextureFormat::DepthFormat );
-  mShadowMapTexture->setGenerateMipMaps( false );
-  mShadowMapTexture->setMagnificationFilter( Qt3DRender::QTexture2D::Linear );
-  mShadowMapTexture->setMinificationFilter( Qt3DRender::QTexture2D::Linear );
-  mShadowMapTexture->wrapMode()->setX( Qt3DRender::QTextureWrapMode::ClampToEdge );
-  mShadowMapTexture->wrapMode()->setY( Qt3DRender::QTextureWrapMode::ClampToEdge );
-
-  Qt3DRender::QRenderTarget *shadowRenderTarget = new Qt3DRender::QRenderTarget;
-  Qt3DRender::QRenderTargetOutput *shadowRenderTargetOutput = new Qt3DRender::QRenderTargetOutput;
-  shadowRenderTargetOutput->setAttachmentPoint( Qt3DRender::QRenderTargetOutput::Depth );
-  shadowRenderTargetOutput->setTexture( mShadowMapTexture );
-  shadowRenderTarget->addOutput( shadowRenderTargetOutput );
-
-  mShadowRenderTargetSelector = new Qt3DRender::QRenderTargetSelector( mShadowSceneEntitiesFilter );
-  mShadowRenderTargetSelector->setTarget( shadowRenderTarget );
-
-  mShadowClearBuffers = new Qt3DRender::QClearBuffers( mShadowRenderTargetSelector );
-  mShadowClearBuffers->setBuffers( Qt3DRender::QClearBuffers::BufferType::ColorDepthBuffer );
-  mShadowClearBuffers->setClearColor( QColor::fromRgbF( 0.0f, 1.0f, 0.0f ) );
-
-  mShadowRenderStateSet = new Qt3DRender::QRenderStateSet( mShadowClearBuffers );
-
-  Qt3DRender::QDepthTest *shadowDepthTest = new Qt3DRender::QDepthTest;
-  shadowDepthTest->setDepthFunction( Qt3DRender::QDepthTest::Less );
-  mShadowRenderStateSet->addRenderState( shadowDepthTest );
-
-  Qt3DRender::QCullFace *shadowCullFace = new Qt3DRender::QCullFace;
-  shadowCullFace->setMode( Qt3DRender::QCullFace::CullingMode::Front );
-  mShadowRenderStateSet->addRenderState( shadowCullFace );
-
-  Qt3DRender::QPolygonOffset *polygonOffset = new Qt3DRender::QPolygonOffset;
-  polygonOffset->setDepthSteps( 4.0 );
-  polygonOffset->setScaleFactor( 1.1 );
-  mShadowRenderStateSet->addRenderState( polygonOffset );
-
-  return mLightCameraSelectorShadowPass;
-}
 
 Qt3DRender::QFrameGraphNode *QgsShadowRenderingFrameGraph::constructPostprocessingPass()
 {
   mPostProcessingCameraSelector = new Qt3DRender::QCameraSelector;
-  mPostProcessingCameraSelector->setCamera( mLightCamera );
+  // TODO ugly
+  mPostProcessingCameraSelector->setCamera( dynamic_cast<QgsShadowRenderView *>( renderView( "shadow" ) )->lightCamera() );
 
   mPostprocessPassLayerFilter = new Qt3DRender::QLayerFilter( mPostProcessingCameraSelector );
 
@@ -443,6 +397,7 @@ Qt3DRender::QFrameGraphNode *QgsShadowRenderingFrameGraph::constructDepthRenderP
   return mDepthRenderCameraSelector;
 }
 
+
 Qt3DCore::QEntity *QgsShadowRenderingFrameGraph::constructDepthRenderQuad()
 {
   Qt3DCore::QEntity *quad = new Qt3DCore::QEntity;
@@ -518,16 +473,13 @@ QgsShadowRenderingFrameGraph::QgsShadowRenderingFrameGraph( QSurface *surface, Q
 {
   mRootEntity = root;
   mMainCamera = mainCamera;
-  mLightCamera = new Qt3DRender::QCamera;
 
   mPreviewLayer = new Qt3DRender::QLayer;
-  mCastShadowsLayer = new Qt3DRender::QLayer;
   mForwardRenderLayer = new Qt3DRender::QLayer;
   mDepthRenderPassLayer = new Qt3DRender::QLayer;
   mTransparentObjectsPassLayer = new Qt3DRender::QLayer;
 
   mPreviewLayer->setRecursive( true );
-  mCastShadowsLayer->setRecursive( true );
   mForwardRenderLayer->setRecursive( true );
   mDepthRenderPassLayer->setRecursive( true );
   mTransparentObjectsPassLayer->setRecursive( true );
@@ -547,11 +499,6 @@ QgsShadowRenderingFrameGraph::QgsShadowRenderingFrameGraph( QSurface *surface, Q
   Qt3DRender::QFrameGraphNode *forwardRenderPass = constructForwardRenderPass();
   forwardRenderPass->setParent( mMainViewPort );
 
-  // shadow rendering pass
-
-  Qt3DRender::QFrameGraphNode *shadowRenderPass = constructShadowRenderPass();
-  shadowRenderPass->setParent( mMainViewPort );
-
   // depth buffer processing
   Qt3DRender::QFrameGraphNode *depthBufferProcessingPass = constructDepthRenderPass();
   depthBufferProcessingPass->setParent( mMainViewPort );
@@ -562,6 +509,24 @@ QgsShadowRenderingFrameGraph::QgsShadowRenderingFrameGraph( QSurface *surface, Q
 
   Qt3DRender::QFrameGraphNode *ambientOcclusionBlurPass = constructAmbientOcclusionBlurPass();
   ambientOcclusionBlurPass->setParent( mMainViewPort );
+
+  // TODO ugly
+  mShadowMapTexture = new Qt3DRender::QTexture2D;
+  mShadowMapTexture->setWidth( mShadowMapResolution );
+  mShadowMapTexture->setHeight( mShadowMapResolution );
+  mShadowMapTexture->setFormat( Qt3DRender::QTexture2D::TextureFormat::DepthFormat );
+  mShadowMapTexture->setGenerateMipMaps( false );
+  mShadowMapTexture->setMagnificationFilter( Qt3DRender::QTexture2D::Linear );
+  mShadowMapTexture->setMinificationFilter( Qt3DRender::QTexture2D::Linear );
+  mShadowMapTexture->wrapMode()->setX( Qt3DRender::QTextureWrapMode::ClampToEdge );
+  mShadowMapTexture->wrapMode()->setY( Qt3DRender::QTextureWrapMode::ClampToEdge );
+
+  mShadowRenderTargetOutput = new Qt3DRender::QRenderTargetOutput;
+  mShadowRenderTargetOutput->setAttachmentPoint( Qt3DRender::QRenderTargetOutput::Depth );
+  mShadowRenderTargetOutput->setTexture( mShadowMapTexture );
+
+  auto srv = new QgsShadowRenderView( this, shadowRenderTargetOutput() );
+  registerRenderView( srv, "shadow" );
 
   // post process
   Qt3DRender::QFrameGraphNode *postprocessingPass = constructPostprocessingPass();
@@ -611,7 +576,7 @@ bool QgsShadowRenderingFrameGraph::registerRenderView( QgsAbstractRenderView *re
 
 void QgsShadowRenderingFrameGraph::setEnableRenderView( const QString &name, bool enable )
 {
-  if ( mRenderViewMap [name] != nullptr )
+  if ( mRenderViewMap [name] )
   {
     mRenderViewMap [name]->enableSubTree( enable );
   }
@@ -622,6 +587,10 @@ QgsAbstractRenderView *QgsShadowRenderingFrameGraph::renderView( const QString &
   return mRenderViewMap [name];
 }
 
+bool QgsShadowRenderingFrameGraph::isRenderViewEnabled( const QString &name )
+{
+  return mRenderViewMap [name] != nullptr && mRenderViewMap [name]->isSubTreeEnabled();
+}
 
 QgsPreviewQuad *QgsShadowRenderingFrameGraph::addTexturePreviewOverlay( Qt3DRender::QTexture2D *texture, const QPointF &centerTexCoords, const QSizeF &sizeTexCoords, QVector<Qt3DRender::QParameter *> additionalShaderParameters )
 {
@@ -632,112 +601,10 @@ QgsPreviewQuad *QgsShadowRenderingFrameGraph::addTexturePreviewOverlay( Qt3DRend
   return previewQuad;
 }
 
-// computes the portion of the Y=y plane the camera is looking at
-void calculateViewExtent( Qt3DRender::QCamera *camera, float shadowRenderingDistance, float y, float &minX, float &maxX, float &minY, float &maxY, float &minZ, float &maxZ )
-{
-  const QVector3D cameraPos = camera->position();
-  const QMatrix4x4 projectionMatrix = camera->projectionMatrix();
-  const QMatrix4x4 viewMatrix = camera->viewMatrix();
-  float depth = 1.0f;
-  QVector4D viewCenter =  viewMatrix * QVector4D( camera->viewCenter(), 1.0f );
-  viewCenter /= viewCenter.w();
-  viewCenter = projectionMatrix * viewCenter;
-  viewCenter /= viewCenter.w();
-  depth = viewCenter.z();
-  QVector<QVector3D> viewFrustumPoints =
-  {
-    QVector3D( 0.0f,  0.0f, depth ),
-    QVector3D( 0.0f,  1.0f, depth ),
-    QVector3D( 1.0f,  0.0f, depth ),
-    QVector3D( 1.0f,  1.0f, depth ),
-    QVector3D( 0.0f,  0.0f, 0 ),
-    QVector3D( 0.0f,  1.0f, 0 ),
-    QVector3D( 1.0f,  0.0f, 0 ),
-    QVector3D( 1.0f,  1.0f, 0 )
-  };
-  maxX = std::numeric_limits<float>::lowest();
-  maxY = std::numeric_limits<float>::lowest();
-  maxZ = std::numeric_limits<float>::lowest();
-  minX = std::numeric_limits<float>::max();
-  minY = std::numeric_limits<float>::max();
-  minZ = std::numeric_limits<float>::max();
-  for ( int i = 0; i < viewFrustumPoints.size(); ++i )
-  {
-    // convert from view port space to world space
-    viewFrustumPoints[i] = viewFrustumPoints[i].unproject( viewMatrix, projectionMatrix, QRect( 0, 0, 1, 1 ) );
-    minX = std::min( minX, viewFrustumPoints[i].x() );
-    maxX = std::max( maxX, viewFrustumPoints[i].x() );
-    minY = std::min( minY, viewFrustumPoints[i].y() );
-    maxY = std::max( maxY, viewFrustumPoints[i].y() );
-    minZ = std::min( minZ, viewFrustumPoints[i].z() );
-    maxZ = std::max( maxZ, viewFrustumPoints[i].z() );
-    // find the intersection between the line going from cameraPos to the frustum quad point
-    // and the horizontal plane Y=y
-    // if the intersection is on the back side of the viewing panel we get a point that is
-    // shadowRenderingDistance units in front of the camera
-    const QVector3D pt = cameraPos;
-    const QVector3D vect = ( viewFrustumPoints[i] - pt ).normalized();
-    float t = ( y - pt.y() ) / vect.y();
-    if ( t < 0 )
-      t = shadowRenderingDistance;
-    else
-      t = std::min( t, shadowRenderingDistance );
-    viewFrustumPoints[i] = pt + t * vect;
-    minX = std::min( minX, viewFrustumPoints[i].x() );
-    maxX = std::max( maxX, viewFrustumPoints[i].x() );
-    minY = std::min( minY, viewFrustumPoints[i].y() );
-    maxY = std::max( maxY, viewFrustumPoints[i].y() );
-    minZ = std::min( minZ, viewFrustumPoints[i].z() );
-    maxZ = std::max( maxZ, viewFrustumPoints[i].z() );
-  }
-}
-
-void QgsShadowRenderingFrameGraph::setupDirectionalLight( const QgsDirectionalLightSettings &light, float maximumShadowRenderingDistance )
-{
-  float minX, maxX, minY, maxY, minZ, maxZ;
-  QVector3D lookingAt = mMainCamera->viewCenter();
-  const float d = 2 * ( mMainCamera->position() - mMainCamera->viewCenter() ).length();
-
-  const QVector3D vertical = QVector3D( 0.0f, d, 0.0f );
-  const QVector3D lightDirection = QVector3D( light.direction().x(), light.direction().y(), light.direction().z() ).normalized();
-  calculateViewExtent( mMainCamera, maximumShadowRenderingDistance, lookingAt.y(), minX, maxX, minY, maxY, minZ, maxZ );
-
-  lookingAt = QVector3D( 0.5 * ( minX + maxX ), mMainCamera->viewCenter().y(), 0.5 * ( minZ + maxZ ) );
-  const QVector3D lightPosition = lookingAt + vertical;
-  mLightCamera->setPosition( lightPosition );
-  mLightCamera->setViewCenter( lookingAt );
-  mLightCamera->setUpVector( QVector3D( 0.0f, 1.0f, 0.0f ) );
-  mLightCamera->rotateAboutViewCenter( QQuaternion::rotationTo( vertical.normalized(), -lightDirection.normalized() ) );
-
-  mLightCamera->setProjectionType( Qt3DRender::QCameraLens::ProjectionType::OrthographicProjection );
-  mLightCamera->lens()->setOrthographicProjection(
-    - 0.7 * ( maxX - minX ), 0.7 * ( maxX - minX ),
-    - 0.7 * ( maxZ - minZ ), 0.7 * ( maxZ - minZ ),
-    1.0f, 2 * ( lookingAt - lightPosition ).length() );
-
-  mPostprocessingEntity->setupShadowRenderingExtent( minX, maxX, minZ, maxZ );
-  mPostprocessingEntity->setupDirectionalLight( lightPosition, lightDirection );
-}
 
 void QgsShadowRenderingFrameGraph::setClearColor( const QColor &clearColor )
 {
   mForwardClearBuffers->setClearColor( clearColor );
-}
-
-void QgsShadowRenderingFrameGraph::setShadowRenderingEnabled( bool enabled )
-{
-  mShadowRenderingEnabled = enabled;
-  mPostprocessingEntity->setShadowRenderingEnabled( mShadowRenderingEnabled );
-  if ( mShadowRenderingEnabled )
-    mShadowSceneEntitiesFilter->setEnabled( true );
-  else
-    mShadowSceneEntitiesFilter->setEnabled( false );
-}
-
-void QgsShadowRenderingFrameGraph::setShadowBias( float shadowBias )
-{
-  mShadowBias = shadowBias;
-  mPostprocessingEntity->setShadowBias( mShadowBias );
 }
 
 void QgsShadowRenderingFrameGraph::setShadowMapResolution( int resolution )
