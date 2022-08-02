@@ -27,16 +27,18 @@
 
 #include <QVector3D>
 #include <QVector2D>
+#include <QScreen>
 
 #include <Qt3DRender/QLayer>
 #include <Qt3DRender/QBuffer>
 #include <Qt3DRender/QGeometryRenderer>
 
+#include "qgsmapsettings.h"
 #include "qgs3dmapsettings.h"
 
 
 Qgs3DAxisRenderView::Qgs3DAxisRenderView( QObject *parent, Qt3DExtras::Qt3DWindow *parentWindow,
-    Qt3DRender::QCamera *axisCamera, Qgs3DMapSettings &settings )
+    Qt3DRender::QCamera *axisCamera, Qgs3DMapSettings *settings )
   : QgsAbstractRenderView( parent )
   , mParentWindow( parentWindow )
   , mAxisCamera( axisCamera )
@@ -60,8 +62,7 @@ Qgs3DAxisRenderView::Qgs3DAxisRenderView( QObject *parent, Qt3DExtras::Qt3DWindo
   auto clearBuffers = new Qt3DRender::QClearBuffers( axisCameraSelector );
   clearBuffers->setBuffers( Qt3DRender::QClearBuffers::DepthBuffer );
 
-  Qgs3DAxisSettings axisSettings  = mMapSettings.get3dAxisSettings();
-  setAxisViewportPosition( mAxisViewportSize, axisSettings.verticalPosition(), axisSettings.horizontalPosition() );
+  onAxisViewportSizeUpdate();
 
   connect( mParentWindow, &Qt3DExtras::Qt3DWindow::widthChanged, this, &Qgs3DAxisRenderView::onAxisViewportSizeUpdate );
   connect( mParentWindow, &Qt3DExtras::Qt3DWindow::heightChanged, this, &Qgs3DAxisRenderView::onAxisViewportSizeUpdate );
@@ -80,6 +81,12 @@ void Qgs3DAxisRenderView::enableSubTree( bool enable )
   }
 }
 
+bool Qgs3DAxisRenderView::isSubTreeEnabled()
+{
+  return mShadowRendererEnabler != nullptr && mShadowRendererEnabler->isEnabled();
+}
+
+
 Qt3DRender::QFrameGraphNode *Qgs3DAxisRenderView::topGraphNode()
 {
   return mShadowRendererEnabler;
@@ -95,56 +102,110 @@ Qt3DRender::QLayer *Qgs3DAxisRenderView::layerToFilter()
   return mAxisSceneLayer;
 }
 
-void Qgs3DAxisRenderView::setAxisViewportPosition( int axisViewportSize, AxisViewportPosition axisViewportVertPos, AxisViewportPosition axisViewportHorizPos )
-{
-  mAxisViewportSize = axisViewportSize;
-  mAxisViewportVertPos = axisViewportVertPos;
-  mAxisViewportHorizPos = axisViewportHorizPos;
-  onAxisViewportSizeUpdate();
-  mParentWindow->requestUpdate();
-}
-
 void Qgs3DAxisRenderView::onAxisViewportSizeUpdate( int )
 {
-  float widthRatio = ( float )mAxisViewportSize / mParentWindow->width();
-  float heightRatio = ( float )mAxisViewportSize / mParentWindow->height();
+  Qgs3DAxisSettings settings = mMapSettings->get3DAxisSettings();
 
-  float xRatio;
-  float yRatio;
-  if ( mAxisViewportHorizPos == AxisViewportPosition::Begin )
-    xRatio = 0.0f;
-  else if ( mAxisViewportHorizPos == AxisViewportPosition::Middle )
-    xRatio = 0.5 - widthRatio / 2.0;
+  double windowWidth = ( double )mParentWindow->width();
+  double windowHeight = ( double )mParentWindow->height();
+
+  if ( 2 <= QgsLogger::debugLevel() )
+  {
+    QgsMapSettings set;
+    QgsDebugMsgLevel( QString( "onAxisViewportSizeUpdate window w/h: %1px / %2px" )
+                      .arg( windowWidth ).arg( windowHeight ), 2 );
+    QgsDebugMsgLevel( QString( "onAxisViewportSizeUpdate window physicalDpi %1 (%2, %3)" )
+                      .arg( mParentWindow->screen()->physicalDotsPerInch() )
+                      .arg( mParentWindow->screen()->physicalDotsPerInchX() )
+                      .arg( mParentWindow->screen()->physicalDotsPerInchY() ), 2 );
+    QgsDebugMsgLevel( QString( "onAxisViewportSizeUpdate window logicalDotsPerInch %1 (%2, %3)" )
+                      .arg( mParentWindow->screen()->logicalDotsPerInch() )
+                      .arg( mParentWindow->screen()->logicalDotsPerInchX() )
+                      .arg( mParentWindow->screen()->logicalDotsPerInchY() ), 2 );
+
+    QgsDebugMsgLevel( QString( "onAxisViewportSizeUpdate window pixel ratio %1" )
+                      .arg( mParentWindow->screen()->devicePixelRatio() ), 2 );
+
+    QgsDebugMsgLevel( QString( "onAxisViewportSizeUpdate set pixel ratio %1" )
+                      .arg( set.devicePixelRatio() ), 2 );
+    QgsDebugMsgLevel( QString( "onAxisViewportSizeUpdate set outputDpi %1" )
+                      .arg( set.outputDpi() ), 2 );
+    QgsDebugMsgLevel( QString( "onAxisViewportSizeUpdate set dpiTarget %1" )
+                      .arg( set.dpiTarget() ), 2 );
+  }
+
+  // default viewport size in pixel according to 92 dpi
+  double defaultViewportPixelSize = ( ( double )settings.defaultViewportSize() / 25.4 ) * 92.0;
+
+  // computes the viewport size according to screen dpi but as the viewport size growths too fast
+  // then we limit the growth by using a factor on the dpi difference.
+  double viewportPixelSize = defaultViewportPixelSize + ( ( double )settings.defaultViewportSize() / 25.4 )
+                             * ( mParentWindow->screen()->physicalDotsPerInch() - 92.0 ) * 0.7;
+  QgsDebugMsgLevel( QString( "onAxisViewportSizeUpdate viewportPixelSize %1" ).arg( viewportPixelSize ), 2 );
+  double widthRatio = viewportPixelSize / windowWidth;
+  double heightRatio = widthRatio * windowWidth / windowHeight;
+
+  QgsDebugMsgLevel( QString( "3DAxis viewport ratios width: %1% / height: %2%" ).arg( widthRatio ).arg( heightRatio ), 2 );
+
+  if ( heightRatio * windowHeight < viewportPixelSize )
+  {
+    heightRatio = viewportPixelSize / windowHeight;
+    widthRatio = heightRatio * windowHeight / windowWidth;
+    QgsDebugMsgLevel( QString( "3DAxis viewport, height too small, ratios adjusted to width: %1% / height: %2%" ).arg( widthRatio ).arg( heightRatio ), 2 );
+  }
+
+  if ( heightRatio > settings.maxViewportRatio() || widthRatio > settings.maxViewportRatio() )
+  {
+    QgsDebugMsgLevel( "viewport takes too much place into the 3d view, disabling it", 2 );
+    // take too much place into the 3d view
+    mAxisViewport->setEnabled( false );
+    emit viewportScaleFactorChanged( 0.0 );
+  }
   else
-    xRatio = 1.0 - widthRatio;
+  {
+    if ( ! mAxisViewport->isEnabled() )
+    {
+      // will be used to adjust the axis label translations/sizes
+      emit viewportScaleFactorChanged( viewportPixelSize / defaultViewportPixelSize );
+    }
+    mAxisViewport->setEnabled( true );
 
-  if ( mAxisViewportVertPos == AxisViewportPosition::Begin )
-    yRatio = 0.0f;
-  else if ( mAxisViewportVertPos == AxisViewportPosition::Middle )
-    yRatio = 0.5 - heightRatio / 2.0;
-  else
-    yRatio = 1.0 - heightRatio;
+    float xRatio = 1.0f;
+    float yRatio = 1.0f;
+    if ( settings.horizontalPosition() == Qt::AnchorPoint::AnchorLeft )
+      xRatio = 0.0f;
+    else if ( settings.horizontalPosition() == Qt::AnchorPoint::AnchorHorizontalCenter )
+      xRatio = 0.5f - widthRatio / 2.0f;
+    else
+      xRatio = 1.0f - widthRatio;
 
-#ifdef DEBUG
-  qDebug() << "Axis, update viewport" << xRatio << yRatio << widthRatio << heightRatio;
-#endif
-  mAxisViewport->setNormalizedRect( QRectF( xRatio, yRatio, widthRatio, heightRatio ) );
+    if ( settings.verticalPosition() == Qt::AnchorPoint::AnchorTop )
+      yRatio = 0.0f;
+    else if ( settings.verticalPosition() == Qt::AnchorPoint::AnchorVerticalCenter )
+      yRatio = 0.5f - heightRatio / 2.0f;
+    else
+      yRatio = 1.0f - heightRatio;
+
+    QgsDebugMsgLevel( QString( "Qgs3DAxis: update viewport: %1 x %2 x %3 x %4" ).arg( xRatio ).arg( yRatio ).arg( widthRatio ).arg( heightRatio ), 2 );
+    mAxisViewport->setNormalizedRect( QRectF( xRatio, yRatio, widthRatio, heightRatio ) );
+  }
+
 }
 
 
 
-void Qgs3DAxisRenderView::onAxisHorizPositionChanged( Qgs3DAxisRenderView::AxisViewportPosition pos )
+void Qgs3DAxisRenderView::onAxisHorizPositionChanged( Qt::AnchorPoint pos )
 {
-  setAxisViewportPosition( mAxisViewportSize, mAxisViewportVertPos, pos );
-  Qgs3DAxisSettings s = mMapSettings.get3dAxisSettings();
+  Qgs3DAxisSettings s = mMapSettings->get3DAxisSettings();
   s.setHorizontalPosition( pos );
-  mMapSettings.set3dAxisSettings( s );
+  mMapSettings->set3DAxisSettings( s );
+  onAxisViewportSizeUpdate();
 }
 
-void Qgs3DAxisRenderView::onAxisVertPositionChanged( Qgs3DAxisRenderView::AxisViewportPosition pos )
+void Qgs3DAxisRenderView::onAxisVertPositionChanged( Qt::AnchorPoint pos )
 {
-  setAxisViewportPosition( mAxisViewportSize, pos, mAxisViewportHorizPos );
-  Qgs3DAxisSettings s = mMapSettings.get3dAxisSettings();
+  Qgs3DAxisSettings s = mMapSettings->get3DAxisSettings();
   s.setVerticalPosition( pos );
-  mMapSettings.set3dAxisSettings( s );
+  mMapSettings->set3DAxisSettings( s );
+  onAxisViewportSizeUpdate();
 }

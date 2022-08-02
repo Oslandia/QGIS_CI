@@ -39,6 +39,7 @@
 
 #include <QtWidgets/QMenu>
 #include "qgs3daxisrenderview.h"
+#include "qgs3dmapsettings.h"
 
 #define SIP_NO_FILE
 
@@ -75,31 +76,6 @@ class _3D_EXPORT Qgs3DAxis : public QObject
     ~Qgs3DAxis() override;
 
     /**
-     * \brief set axis viewport position parameters. Wrapper to Qgs3DAxisRenderView::setAxisViewportPosition
-     * \param axisViewportSize height/width size in pixel
-     * @param axisViewportVertPos start vertical position
-     * @param axisViewportHorizPos start horizontal position
-     */
-// TODO   void setAxisViewportPosition( int axisViewportSize,
-//                                  Qgs3DAxisRenderView::AxisViewportPosition axisViewportVertPos,
-//                                  Qgs3DAxisRenderView::AxisViewportPosition axisViewportHorizPos );
-
-    /**
-     * \brief Returns axis viewport size. Wrapper to Qgs3DAxisRenderView::axisViewportSize
-     */
-// TODO    int axisViewportSize() const;
-
-    /**
-     * \brief Returns axis viewport horizontal position. Wrapper to Qgs3DAxisRenderView::axisViewportHorizontalPosition
-     */
-// TODO    Qgs3DAxisRenderView::AxisViewportPosition axisViewportHorizontalPosition() const;
-
-    /**
-     * \brief Returns axis viewport vertical position. Wrapper to Qgs3DAxisRenderView::axisViewportVerticalPosition
-     */
-// TODO    Qgs3DAxisRenderView::AxisViewportPosition axisViewportVerticalPosition() const;
-
-    /**
      * \brief project a 3D position from sourceCamera (in sourceViewport) to a 2D position for destCamera (in destViewport). destCamera and the destViewport act as a billboarding layer. The labels displayed by this process will always face the camera.
      *
      * \param sourcePos 3D label coordinates
@@ -121,7 +97,8 @@ class _3D_EXPORT Qgs3DAxis : public QObject
 
   private slots:
     void onCameraUpdate( );
-    void onViewportSizeUpdate( int val = 0 );
+    void onAxisViewportSizeUpdate( int val = 0 );
+    void onViewportScaleFactorChanged( double scaleFactor );
 
     // axis picking and menu
     void onTouchedByRay( const Qt3DRender::QAbstractRayCaster::Hits &hits );
@@ -194,6 +171,8 @@ class _3D_EXPORT Qgs3DAxis : public QObject
     Qt3DRender::QCamera *mTwoDLabelCamera  = nullptr;
     Qt3DCore::QEntity *mTwoDLabelSceneEntity = nullptr;
     Qt3DRender::QViewport *mTwoDLabelViewport = nullptr;
+
+    bool mIsFrameGraphDestroyed = false;
 
     // axis picking and menu
     Qt3DRender::QScreenRayCaster *mScreenRayCaster = nullptr;

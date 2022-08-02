@@ -51,7 +51,7 @@ class Qgs3DMapSettings;
 
 /**
  * \ingroup 3d
- * \brief Base class for 3D render view
+ * \brief 3d axis render view class
  *
  * \note Not available in Python bindings
  * \since QGIS 3.26
@@ -62,23 +62,10 @@ class _3D_EXPORT Qgs3DAxisRenderView : public QgsAbstractRenderView
   public:
 
     /**
-     * \brief The AxisViewportPosition enum
-     */
-    enum class AxisViewportPosition
-    {
-      //! top or left
-      Begin = 1,
-      Middle = 2,
-      //! bottom or right
-      End = 3
-    };
-    Q_ENUM( AxisViewportPosition )
-
-    /**
      * Constructor for Qgs3DAxisRenderView with the specified \a parent object.
      */
     Qgs3DAxisRenderView( QObject *parent, Qt3DExtras::Qt3DWindow *parentWindow,
-                         Qt3DRender::QCamera *axisCamera, Qgs3DMapSettings &settings );
+                         Qt3DRender::QCamera *axisCamera, Qgs3DMapSettings *settings );
 
     //! Sets root entity of the 3D scene
     virtual void setRootEntity( Qt3DCore::QEntity *root ) ;
@@ -95,30 +82,22 @@ class _3D_EXPORT Qgs3DAxisRenderView : public QgsAbstractRenderView
     //! Enable or disable via \a enable the renderview sub tree
     virtual void enableSubTree( bool enable );
 
-    //! Return viewport side length (as it is a square)
-    int axisViewportSize() const { return mAxisViewportSize; }
-
-    //! Returns axis viewport horizontal position
-    AxisViewportPosition axisViewportHorizontalPosition() const { return mAxisViewportHorizPos;}
-
-    //! Returns axis viewport vertical position
-    AxisViewportPosition axisViewportVerticalPosition() const { return mAxisViewportVertPos;}
-
-    //! Updates viewport \a size, horizontal position (\a horizPos) and vertical position (\a vertPos).
-    void setAxisViewportPosition( int size,
-                                  AxisViewportPosition vertPos,
-                                  AxisViewportPosition horizPos );
+    //! Returns true if renderview is enabled
+    virtual bool isSubTreeEnabled();
 
   public slots:
     //! Updates viewport horizontal \a position
 
-    void onAxisHorizPositionChanged( AxisViewportPosition position );
+    void onAxisHorizPositionChanged( Qt::AnchorPoint position );
 
     //! Updates viewport vertical \a position
-    void onAxisVertPositionChanged( AxisViewportPosition position );
+    void onAxisVertPositionChanged( Qt::AnchorPoint position );
 
     //! Updates viewport \a size
     void onAxisViewportSizeUpdate( int size = 0 );
+
+  signals:
+    void viewportScaleFactorChanged( double scaleFactor );
 
   private:
     Qt3DExtras::Qt3DWindow *mParentWindow;
@@ -126,12 +105,7 @@ class _3D_EXPORT Qgs3DAxisRenderView : public QgsAbstractRenderView
     Qt3DRender::QLayer *mAxisSceneLayer = nullptr;
     Qt3DRender::QViewport *mAxisViewport = nullptr;
     Qt3DRender::QSubtreeEnabler *mShadowRendererEnabler = nullptr;
-    Qgs3DMapSettings &mMapSettings;
-
-    int mAxisViewportSize = 160;
-    AxisViewportPosition mAxisViewportVertPos = AxisViewportPosition::Begin;
-    AxisViewportPosition mAxisViewportHorizPos = AxisViewportPosition::End;
-
+    Qgs3DMapSettings *mMapSettings;
 };
 
 

@@ -20,7 +20,6 @@
 #include <QMap>
 
 #include "qgs3daxisrenderview.h"
-#include "qgs3daxis.h"
 
 class QgsReadWriteContext;
 class QDomElement;
