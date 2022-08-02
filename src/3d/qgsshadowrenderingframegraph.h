@@ -215,6 +215,9 @@ class QgsShadowRenderingFrameGraph : public Qt3DCore::QEntity
     QgsAbstractRenderView *renderView( const QString &name );
     Qt3DRender::QLayer *filterLayer( const QString &name );
 
+    static const QString SHADOW_RENDERVIEW;
+    static const QString AXIS3D_RENDERVIEW;
+
   private:
     Qt3DRender::QRenderSurfaceSelector *mRenderSurfaceSelector = nullptr;
     Qt3DRender::QViewport *mMainViewPort = nullptr;
@@ -238,7 +241,7 @@ class QgsShadowRenderingFrameGraph : public Qt3DCore::QEntity
 
     // Shadow rendering pass texture related objects:
     // TODO ugly
-    Qt3DRender::QTexture2D *mShadowMapTexture = nullptr;
+    //Qt3DRender::QTexture2D *mShadowMapTexture = nullptr;
     Qt3DRender::QRenderTargetOutput *mShadowRenderTargetOutput = nullptr;
 
     // - The depth buffer render pass is made to copy the depth buffer into
@@ -286,8 +289,7 @@ class QgsShadowRenderingFrameGraph : public Qt3DCore::QEntity
     Qt3DRender::QDepthTest *mPreviewDepthTest = nullptr;
     Qt3DRender::QCullFace *mPreviewCullFace = nullptr;
 
-    // TODO ugly
-    int mShadowMapResolution = 2048;
+    static constexpr int mDefaultShadowMapResolution = 2048;
 
     // Ambient occlusion related settings
     bool mAmbientOcclusionEnabled = false;
@@ -321,6 +323,7 @@ class QgsShadowRenderingFrameGraph : public Qt3DCore::QEntity
 
     QVector<QgsPreviewQuad *> mPreviewQuads;
 
+    void constructShadowRenderPass();
     Qt3DRender::QFrameGraphNode *constructForwardRenderPass();
     Qt3DRender::QFrameGraphNode *constructTexturesPreviewPass();
     Qt3DRender::QFrameGraphNode *constructPostprocessingPass();

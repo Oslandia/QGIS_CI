@@ -34,25 +34,31 @@
 #include <Qt3DRender/QRenderCapture>
 #include <Qt3DRender/QSubtreeEnabler>
 
-QgsShadowRenderView::QgsShadowRenderView( QObject *parent, Qt3DRender::QRenderTargetOutput *targetOutput )
+QgsShadowRenderView::QgsShadowRenderView( QObject *parent )
   : QgsAbstractRenderView( parent )
-  , mTargetOutput( targetOutput )
 {
-
   mLightCamera = new Qt3DRender::QCamera;
   mCastShadowsLayer = new Qt3DRender::QLayer;
   mCastShadowsLayer->setRecursive( true );
 
-  // shadow rendering pass
   mShadowRendererEnabler = new Qt3DRender::QSubtreeEnabler;
   mShadowRendererEnabler->setEnablement( Qt3DRender::QSubtreeEnabler::Persistent );
 
+  // shadow rendering pass
   constructShadowRenderPass();
 }
 
-void QgsShadowRenderView::setRootEntity( Qt3DCore::QEntity *root )
+void QgsShadowRenderView::onTargetOutputUpdate()
 {
+  if ( ! mTargetOutputs.isEmpty() && mShadowRenderTargetSelector )
+  {
+    Qt3DRender::QRenderTarget *shadowRenderTarget = new Qt3DRender::QRenderTarget;
 
+    for ( Qt3DRender::QRenderTargetOutput *targetOutput : qAsConst( mTargetOutputs ) )
+      shadowRenderTarget->addOutput( targetOutput );
+
+    mShadowRenderTargetSelector->setTarget( shadowRenderTarget );
+  }
 }
 
 Qt3DRender::QLayer *QgsShadowRenderView::layerToFilter()
@@ -122,11 +128,8 @@ Qt3DRender::QFrameGraphNode *QgsShadowRenderView::constructShadowRenderPass()
   mShadowSceneEntitiesFilter = new Qt3DRender::QLayerFilter( mLightCameraSelectorShadowPass );
   mShadowSceneEntitiesFilter->addLayer( mCastShadowsLayer );
 
-  Qt3DRender::QRenderTarget *shadowRenderTarget = new Qt3DRender::QRenderTarget;
-  shadowRenderTarget->addOutput( mTargetOutput );
-
   mShadowRenderTargetSelector = new Qt3DRender::QRenderTargetSelector( mShadowSceneEntitiesFilter );
-  mShadowRenderTargetSelector->setTarget( shadowRenderTarget );
+  // no target output for now, updateTargetOutput() will be called later
 
   mShadowClearBuffers = new Qt3DRender::QClearBuffers( mShadowRenderTargetSelector );
   mShadowClearBuffers->setBuffers( Qt3DRender::QClearBuffers::BufferType::ColorDepthBuffer );

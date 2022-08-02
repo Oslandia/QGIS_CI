@@ -39,6 +39,7 @@ namespace Qt3DRender
   class QLayer;
   class QViewport;
   class QSubtreeEnabler;
+  class QRenderTargetSelector;
 }
 
 namespace Qt3DExtras
@@ -66,9 +67,6 @@ class _3D_EXPORT Qgs3DAxisRenderView : public QgsAbstractRenderView
      */
     Qgs3DAxisRenderView( QObject *parent, Qt3DExtras::Qt3DWindow *parentWindow,
                          Qt3DRender::QCamera *axisCamera, Qgs3DMapSettings *settings );
-
-    //! Sets root entity of the 3D scene
-    virtual void setRootEntity( Qt3DCore::QEntity *root ) ;
 
     //! Returns the layer to be used by entities to be included in this renderview
     virtual Qt3DRender::QLayer *layerToFilter();
@@ -104,8 +102,12 @@ class _3D_EXPORT Qgs3DAxisRenderView : public QgsAbstractRenderView
     Qt3DRender::QCamera *mAxisCamera;
     Qt3DRender::QLayer *mAxisSceneLayer = nullptr;
     Qt3DRender::QViewport *mAxisViewport = nullptr;
-    Qt3DRender::QSubtreeEnabler *mShadowRendererEnabler = nullptr;
+    Qt3DRender::QSubtreeEnabler *mRendererEnabler = nullptr;
     Qgs3DMapSettings *mMapSettings;
+    Qt3DRender::QRenderTargetSelector *mRenderTargetSelector = nullptr;
+
+    //! Handles target outputs changes
+    virtual void onTargetOutputUpdate();
 };
 
 

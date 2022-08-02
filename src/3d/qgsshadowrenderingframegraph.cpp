@@ -52,6 +52,9 @@ typedef Qt3DCore::QGeometry Qt3DQGeometry;
 #include <Qt3DRender/QBlendEquationArguments>
 #include "qgsshadowrenderview.h"
 
+const QString QgsShadowRenderingFrameGraph::SHADOW_RENDERVIEW = "shadow";
+const QString QgsShadowRenderingFrameGraph::AXIS3D_RENDERVIEW = "3daxis";
+
 Qt3DRender::QFrameGraphNode *QgsShadowRenderingFrameGraph::constructTexturesPreviewPass()
 {
   mPreviewLayerFilter = new Qt3DRender::QLayerFilter;
@@ -184,11 +187,33 @@ Qt3DRender::QFrameGraphNode *QgsShadowRenderingFrameGraph::constructForwardRende
 }
 
 
+void QgsShadowRenderingFrameGraph::constructShadowRenderPass()
+{
+  Qt3DRender::QTexture2D *shadowMapTexture = new Qt3DRender::QTexture2D;
+  shadowMapTexture->setWidth( QgsShadowRenderingFrameGraph::mDefaultShadowMapResolution );
+  shadowMapTexture->setHeight( QgsShadowRenderingFrameGraph::mDefaultShadowMapResolution );
+  shadowMapTexture->setFormat( Qt3DRender::QTexture2D::TextureFormat::DepthFormat );
+  shadowMapTexture->setGenerateMipMaps( false );
+  shadowMapTexture->setMagnificationFilter( Qt3DRender::QTexture2D::Linear );
+  shadowMapTexture->setMinificationFilter( Qt3DRender::QTexture2D::Linear );
+  shadowMapTexture->wrapMode()->setX( Qt3DRender::QTextureWrapMode::ClampToEdge );
+  shadowMapTexture->wrapMode()->setY( Qt3DRender::QTextureWrapMode::ClampToEdge );
+
+  mShadowRenderTargetOutput = new Qt3DRender::QRenderTargetOutput;
+  mShadowRenderTargetOutput->setAttachmentPoint( Qt3DRender::QRenderTargetOutput::Depth );
+  mShadowRenderTargetOutput->setTexture( shadowMapTexture );
+
+  QgsShadowRenderView *srv = new QgsShadowRenderView( this );
+  srv->setTargetOutputs( { mShadowRenderTargetOutput } );
+  registerRenderView( srv, SHADOW_RENDERVIEW );
+}
+
 Qt3DRender::QFrameGraphNode *QgsShadowRenderingFrameGraph::constructPostprocessingPass()
 {
   mPostProcessingCameraSelector = new Qt3DRender::QCameraSelector;
   // TODO ugly
-  mPostProcessingCameraSelector->setCamera( dynamic_cast<QgsShadowRenderView *>( renderView( "shadow" ) )->lightCamera() );
+  QgsShadowRenderView *srv = dynamic_cast<QgsShadowRenderView *>( renderView( SHADOW_RENDERVIEW ) );
+  mPostProcessingCameraSelector->setCamera( srv->lightCamera() );
 
   mPostprocessPassLayerFilter = new Qt3DRender::QLayerFilter( mPostProcessingCameraSelector );
 
@@ -510,23 +535,8 @@ QgsShadowRenderingFrameGraph::QgsShadowRenderingFrameGraph( QSurface *surface, Q
   Qt3DRender::QFrameGraphNode *ambientOcclusionBlurPass = constructAmbientOcclusionBlurPass();
   ambientOcclusionBlurPass->setParent( mMainViewPort );
 
-  // TODO ugly
-  mShadowMapTexture = new Qt3DRender::QTexture2D;
-  mShadowMapTexture->setWidth( mShadowMapResolution );
-  mShadowMapTexture->setHeight( mShadowMapResolution );
-  mShadowMapTexture->setFormat( Qt3DRender::QTexture2D::TextureFormat::DepthFormat );
-  mShadowMapTexture->setGenerateMipMaps( false );
-  mShadowMapTexture->setMagnificationFilter( Qt3DRender::QTexture2D::Linear );
-  mShadowMapTexture->setMinificationFilter( Qt3DRender::QTexture2D::Linear );
-  mShadowMapTexture->wrapMode()->setX( Qt3DRender::QTextureWrapMode::ClampToEdge );
-  mShadowMapTexture->wrapMode()->setY( Qt3DRender::QTextureWrapMode::ClampToEdge );
-
-  mShadowRenderTargetOutput = new Qt3DRender::QRenderTargetOutput;
-  mShadowRenderTargetOutput->setAttachmentPoint( Qt3DRender::QRenderTargetOutput::Depth );
-  mShadowRenderTargetOutput->setTexture( mShadowMapTexture );
-
-  auto srv = new QgsShadowRenderView( this, shadowRenderTargetOutput() );
-  registerRenderView( srv, "shadow" );
+  // shadow rendering pass
+  constructShadowRenderPass();
 
   // post process
   Qt3DRender::QFrameGraphNode *postprocessingPass = constructPostprocessingPass();
@@ -540,7 +550,11 @@ QgsShadowRenderingFrameGraph::QgsShadowRenderingFrameGraph( QSurface *surface, Q
   Qt3DRender::QParameter *shadowMapIsDepthParam = new Qt3DRender::QParameter( "isDepth", true );
 
   mDebugDepthMapPreviewQuad = this->addTexturePreviewOverlay( mForwardDepthTexture, QPointF( 0.9f, 0.9f ), QSizeF( 0.1, 0.1 ), QVector<Qt3DRender::QParameter *> { depthMapIsDepthParam } );
-  mDebugShadowMapPreviewQuad = this->addTexturePreviewOverlay( mShadowMapTexture, QPointF( 0.9f, 0.9f ), QSizeF( 0.1, 0.1 ), QVector<Qt3DRender::QParameter *> { shadowMapIsDepthParam } );
+
+  QgsAbstractRenderView *srv = renderView( QgsShadowRenderingFrameGraph::SHADOW_RENDERVIEW );
+  Qt3DRender::QTexture2D *shadowDepthTexture = srv->outputTexture( Qt3DRender::QRenderTargetOutput::Depth );
+  mDebugShadowMapPreviewQuad = this->addTexturePreviewOverlay( shadowDepthTexture, QPointF( 0.9f, 0.9f ), QSizeF( 0.1, 0.1 ), QVector<Qt3DRender::QParameter *> { shadowMapIsDepthParam } );
+
   mDebugDepthMapPreviewQuad->setEnabled( false );
   mDebugShadowMapPreviewQuad->setEnabled( false );
 

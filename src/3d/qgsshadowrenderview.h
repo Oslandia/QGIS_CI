@@ -65,10 +65,7 @@ class QgsShadowRenderView : public QgsAbstractRenderView
 {
     Q_OBJECT
   public:
-    QgsShadowRenderView( QObject *parent, Qt3DRender::QRenderTargetOutput *targetOutput );
-
-    //! Sets root entity of the 3D scene
-    virtual void setRootEntity( Qt3DCore::QEntity *root ) ;
+    QgsShadowRenderView( QObject *parent );
 
     //! Returns the layer to be used by entities to be included in this renderview
     virtual Qt3DRender::QLayer *layerToFilter();
@@ -84,9 +81,6 @@ class QgsShadowRenderView : public QgsAbstractRenderView
 
     //! Returns true if renderview is enabled
     virtual bool isSubTreeEnabled();
-
-    //! Returns a layer object used to indicate that an entity will cast shadows
-    Qt3DRender::QLayer *castShadowsLayer() { return mCastShadowsLayer; }
 
     //! Returns the shadow bias value
     float shadowBias() const { return mShadowBias; }
@@ -111,7 +105,6 @@ class QgsShadowRenderView : public QgsAbstractRenderView
     float mShadowBias = 0.00001f;
 
     Qt3DRender::QSubtreeEnabler *mShadowRendererEnabler = nullptr;
-    Qt3DRender::QRenderTargetOutput *mTargetOutput = nullptr;
     Qt3DRender::QLayer *mCastShadowsLayer = nullptr;
     // Shadow rendering pass branch nodes:
     Qt3DRender::QCameraSelector *mLightCameraSelectorShadowPass = nullptr;
@@ -123,6 +116,9 @@ class QgsShadowRenderView : public QgsAbstractRenderView
     Qt3DRender::QCamera *mLightCamera = nullptr;
 
     Qt3DRender::QFrameGraphNode *constructShadowRenderPass();
+
+    //! Handles target outputs changes
+    virtual void onTargetOutputUpdate();
 
     static void calculateViewExtent( const Qt3DRender::QCamera *camera, float shadowRenderingDistance, float y, float &minX, float &maxX, float &minY, float &maxY, float &minZ, float &maxZ );
 

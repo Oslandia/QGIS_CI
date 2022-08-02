@@ -1081,7 +1081,7 @@ void Qgs3DMapScene::onSkyboxSettingsChanged()
 
 void Qgs3DMapScene::onShadowSettingsChanged()
 {
-  QgsShadowRenderingFrameGraph *shadowRenderingFrameGraph = mEngine->frameGraph();
+  QgsShadowRenderingFrameGraph *frameGraph = mEngine->frameGraph();
 
   const QList< QgsLightSource * > lightSources = mMap.lightSources();
   QList< QgsDirectionalLightSettings * > directionalLightSources;
@@ -1093,20 +1093,22 @@ void Qgs3DMapScene::onShadowSettingsChanged()
     }
   }
 
-  QgsShadowSettings shadowSettings = mMap.shadowSettings();
-  int selectedLight = shadowSettings.selectedDirectionalLight();
-  if ( shadowSettings.renderShadows() && selectedLight >= 0 && selectedLight < directionalLightSources.count() &&
-       shadowRenderingFrameGraph->renderView( "shadow" ) )
+  QgsShadowRenderView *srv = dynamic_cast<QgsShadowRenderView *>( frameGraph->renderView( QgsShadowRenderingFrameGraph::SHADOW_RENDERVIEW ) ) ;
+  if ( srv )
   {
-    QgsShadowRenderView *srv = dynamic_cast<QgsShadowRenderView *>( shadowRenderingFrameGraph->renderView( "shadow" ) ) ;
-    srv->enableSubTree( true );
-    srv->setShadowBias( shadowSettings.shadowBias() );
-    shadowRenderingFrameGraph->setShadowMapResolution( shadowSettings.shadowMapResolution() );
-    QgsDirectionalLightSettings light = *directionalLightSources.at( selectedLight );
-    srv->setupDirectionalLight( light, shadowSettings.maximumShadowRenderingDistance(), shadowRenderingFrameGraph->mainCamera() );
+    QgsShadowSettings shadowSettings = mMap.shadowSettings();
+    int selectedLight = shadowSettings.selectedDirectionalLight();
+    if ( shadowSettings.renderShadows() && selectedLight >= 0 && selectedLight < directionalLightSources.count() )
+    {
+      srv->setShadowBias( shadowSettings.shadowBias() );
+      srv->updateTargetOutputSize( shadowSettings.shadowMapResolution(), shadowSettings.shadowMapResolution() );
+      QgsDirectionalLightSettings light = *directionalLightSources.at( selectedLight );
+      srv->setupDirectionalLight( light, shadowSettings.maximumShadowRenderingDistance(), frameGraph->mainCamera() );
+      srv->enableSubTree( true );
+    }
+    else
+      srv->enableSubTree( false );
   }
-  else
-    shadowRenderingFrameGraph->setEnableRenderView( "shadow", false );
 }
 
 void Qgs3DMapScene::onAmbientOcclusionSettingsChanged()

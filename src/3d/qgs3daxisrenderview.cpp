@@ -44,14 +44,15 @@ Qgs3DAxisRenderView::Qgs3DAxisRenderView( QObject *parent, Qt3DExtras::Qt3DWindo
   , mAxisCamera( axisCamera )
   , mMapSettings( settings )
 {
-  mShadowRendererEnabler = new Qt3DRender::QSubtreeEnabler;
-  mShadowRendererEnabler->setEnablement( Qt3DRender::QSubtreeEnabler::Persistent );
+  mRendererEnabler = new Qt3DRender::QSubtreeEnabler;
+  mRendererEnabler->setEnablement( Qt3DRender::QSubtreeEnabler::Persistent );
 
-  mAxisViewport = new Qt3DRender::QViewport( mShadowRendererEnabler );
+  mAxisViewport = new Qt3DRender::QViewport( mRendererEnabler );
 
   mAxisSceneLayer = new Qt3DRender::QLayer;
   mAxisSceneLayer->setRecursive( true );
 
+  // render pass
   auto axisLayerFilter = new Qt3DRender::QLayerFilter( mAxisViewport );
   axisLayerFilter->addLayer( mAxisSceneLayer );
 
@@ -59,37 +60,49 @@ Qgs3DAxisRenderView::Qgs3DAxisRenderView( QObject *parent, Qt3DExtras::Qt3DWindo
   axisCameraSelector->setParent( axisLayerFilter );
   axisCameraSelector->setCamera( mAxisCamera );
 
-  auto clearBuffers = new Qt3DRender::QClearBuffers( axisCameraSelector );
+  mRenderTargetSelector = new Qt3DRender::QRenderTargetSelector( axisCameraSelector );
+  // no target output for now, updateTargetOutput() will be called later
+
+  auto clearBuffers = new Qt3DRender::QClearBuffers( mRenderTargetSelector );
   clearBuffers->setBuffers( Qt3DRender::QClearBuffers::DepthBuffer );
 
+  // update viewport size
   onAxisViewportSizeUpdate();
 
   connect( mParentWindow, &Qt3DExtras::Qt3DWindow::widthChanged, this, &Qgs3DAxisRenderView::onAxisViewportSizeUpdate );
   connect( mParentWindow, &Qt3DExtras::Qt3DWindow::heightChanged, this, &Qgs3DAxisRenderView::onAxisViewportSizeUpdate );
 }
 
-//! Sets root entity of the 3D scene
-void Qgs3DAxisRenderView::setRootEntity( Qt3DCore::QEntity *root )
+void Qgs3DAxisRenderView::onTargetOutputUpdate()
 {
+  if ( ! mTargetOutputs.isEmpty() && mRenderTargetSelector )
+  {
+    Qt3DRender::QRenderTarget *renderTarget = new Qt3DRender::QRenderTarget;
+
+    for ( Qt3DRender::QRenderTargetOutput *targetOutput : qAsConst( mTargetOutputs ) )
+      renderTarget->addOutput( targetOutput );
+
+    mRenderTargetSelector->setTarget( renderTarget );
+  }
 }
 
 void Qgs3DAxisRenderView::enableSubTree( bool enable )
 {
-  if ( mShadowRendererEnabler != nullptr )
+  if ( mRendererEnabler != nullptr )
   {
-    mShadowRendererEnabler->setEnabled( enable );
+    mRendererEnabler->setEnabled( enable );
   }
 }
 
 bool Qgs3DAxisRenderView::isSubTreeEnabled()
 {
-  return mShadowRendererEnabler != nullptr && mShadowRendererEnabler->isEnabled();
+  return mRendererEnabler != nullptr && mRendererEnabler->isEnabled();
 }
 
 
 Qt3DRender::QFrameGraphNode *Qgs3DAxisRenderView::topGraphNode()
 {
-  return mShadowRendererEnabler;
+  return mRendererEnabler;
 }
 
 Qt3DRender::QViewport *Qgs3DAxisRenderView::viewport()

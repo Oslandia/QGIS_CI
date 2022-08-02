@@ -22,3 +22,24 @@ QgsAbstractRenderView::QgsAbstractRenderView( QObject *parent )
 {
 
 }
+
+void QgsAbstractRenderView::setTargetOutputs( const QList<Qt3DRender::QRenderTargetOutput *> &targetOutputList )
+{
+  mTargetOutputs = targetOutputList;
+  onTargetOutputUpdate();
+}
+
+void QgsAbstractRenderView::updateTargetOutputSize( int width, int height )
+{
+  for ( Qt3DRender::QRenderTargetOutput *targetOutput : qAsConst( mTargetOutputs ) )
+    targetOutput->texture()->setSize( width, height );
+}
+
+Qt3DRender::QTexture2D *QgsAbstractRenderView::outputTexture( Qt3DRender::QRenderTargetOutput::AttachmentPoint attachment )
+{
+  for ( Qt3DRender::QRenderTargetOutput *targetOutput : qAsConst( mTargetOutputs ) )
+    if ( targetOutput->attachmentPoint() == attachment )
+      return ( Qt3DRender::QTexture2D * )targetOutput->texture();
+
+  return nullptr;
+}
