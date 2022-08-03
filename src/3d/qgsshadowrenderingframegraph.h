@@ -203,11 +203,6 @@ class QgsShadowRenderingFrameGraph : public Qt3DCore::QEntity
 
     Qt3DRender::QCamera *mMainCamera = nullptr;
 
-    // Shadow rendering pass texture related objects:
-    // TODO ugly
-    //Qt3DRender::QTexture2D *mShadowMapTexture = nullptr;
-    Qt3DRender::QRenderTargetOutput *mShadowRenderTargetOutput = nullptr;
-
     // - The depth buffer render pass is made to copy the depth buffer into
     //    an RGB texture that can be captured into a QImage and sent to the CPU for
     //    calculating real 3D points from mouse coordinates (for zoom, rotation, drag..)

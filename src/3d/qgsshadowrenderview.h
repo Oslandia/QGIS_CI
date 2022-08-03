@@ -83,7 +83,7 @@ class QgsShadowRenderView : public QgsAbstractRenderView
     virtual bool isSubTreeEnabled();
 
     //! Returns the shadow bias value
-    float shadowBias() const { return mShadowBias; }
+    float shadowBias() const { return mBias; }
     //! Sets the shadow bias value
     void setShadowBias( float shadowBias );
 
@@ -102,20 +102,20 @@ class QgsShadowRenderView : public QgsAbstractRenderView
     void shadowRenderingEnabled( bool isEnabled );
 
   private:
-    float mShadowBias = 0.00001f;
+    float mBias = 0.00001f;
 
-    Qt3DRender::QSubtreeEnabler *mShadowRendererEnabler = nullptr;
-    Qt3DRender::QLayer *mCastShadowsLayer = nullptr;
+    Qt3DRender::QSubtreeEnabler *mRendererEnabler = nullptr;
+    Qt3DRender::QLayer *mLayer = nullptr;
     // Shadow rendering pass branch nodes:
-    Qt3DRender::QCameraSelector *mLightCameraSelectorShadowPass = nullptr;
-    Qt3DRender::QLayerFilter *mShadowSceneEntitiesFilter = nullptr;
-    Qt3DRender::QRenderTargetSelector *mShadowRenderTargetSelector = nullptr;
-    Qt3DRender::QClearBuffers *mShadowClearBuffers = nullptr;
-    Qt3DRender::QRenderStateSet *mShadowRenderStateSet = nullptr;
+    Qt3DRender::QCameraSelector *mLightCameraSelector = nullptr;
+    Qt3DRender::QLayerFilter *mLayerFilter = nullptr;
+    Qt3DRender::QRenderTargetSelector *mRenderTargetSelector = nullptr;
+    Qt3DRender::QClearBuffers *mClearBuffers = nullptr;
+    Qt3DRender::QRenderStateSet *mRenderStateSet = nullptr;
 
     Qt3DRender::QCamera *mLightCamera = nullptr;
 
-    Qt3DRender::QFrameGraphNode *constructShadowRenderPass();
+    Qt3DRender::QFrameGraphNode *constructRenderPass();
 
     //! Handles target outputs changes
     virtual void onTargetOutputUpdate();

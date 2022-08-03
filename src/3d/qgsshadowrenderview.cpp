@@ -38,32 +38,32 @@ QgsShadowRenderView::QgsShadowRenderView( QObject *parent )
   : QgsAbstractRenderView( parent )
 {
   mLightCamera = new Qt3DRender::QCamera;
-  mCastShadowsLayer = new Qt3DRender::QLayer;
-  mCastShadowsLayer->setRecursive( true );
+  mLayer = new Qt3DRender::QLayer;
+  mLayer->setRecursive( true );
 
-  mShadowRendererEnabler = new Qt3DRender::QSubtreeEnabler;
-  mShadowRendererEnabler->setEnablement( Qt3DRender::QSubtreeEnabler::Persistent );
+  mRendererEnabler = new Qt3DRender::QSubtreeEnabler;
+  mRendererEnabler->setEnablement( Qt3DRender::QSubtreeEnabler::Persistent );
 
   // shadow rendering pass
-  constructShadowRenderPass();
+  constructRenderPass();
 }
 
 void QgsShadowRenderView::onTargetOutputUpdate()
 {
-  if ( ! mTargetOutputs.isEmpty() && mShadowRenderTargetSelector )
+  if ( ! mTargetOutputs.isEmpty() && mRenderTargetSelector )
   {
-    Qt3DRender::QRenderTarget *shadowRenderTarget = new Qt3DRender::QRenderTarget;
+    Qt3DRender::QRenderTarget *renderTarget = new Qt3DRender::QRenderTarget;
 
     for ( Qt3DRender::QRenderTargetOutput *targetOutput : qAsConst( mTargetOutputs ) )
-      shadowRenderTarget->addOutput( targetOutput );
+      renderTarget->addOutput( targetOutput );
 
-    mShadowRenderTargetSelector->setTarget( shadowRenderTarget );
+    mRenderTargetSelector->setTarget( renderTarget );
   }
 }
 
 Qt3DRender::QLayer *QgsShadowRenderView::layerToFilter()
 {
-  return mCastShadowsLayer;
+  return mLayer;
 }
 
 Qt3DRender::QViewport *QgsShadowRenderView::viewport()
@@ -73,22 +73,22 @@ Qt3DRender::QViewport *QgsShadowRenderView::viewport()
 
 Qt3DRender::QFrameGraphNode *QgsShadowRenderView::topGraphNode()
 {
-  return mShadowRendererEnabler;
+  return mRendererEnabler;
 }
 
 void QgsShadowRenderView::enableSubTree( bool enable )
 {
-  if ( mShadowRendererEnabler != nullptr )
+  if ( mRendererEnabler != nullptr )
   {
-    mShadowRendererEnabler->setEnabled( enable );
+    mRendererEnabler->setEnabled( enable );
     emit shadowRenderingEnabled( enable );
-    mShadowSceneEntitiesFilter->setEnabled( enable );
+    mLayerFilter->setEnabled( enable );
   }
 }
 
 bool QgsShadowRenderView::isSubTreeEnabled()
 {
-  return mShadowRendererEnabler != nullptr && mShadowRendererEnabler->isEnabled();
+  return mRendererEnabler != nullptr && mRendererEnabler->isEnabled();
 }
 
 
@@ -120,43 +120,43 @@ void QgsShadowRenderView::setupDirectionalLight( const QgsDirectionalLightSettin
   emit shadowDirectionLightUpdated( lightPosition, lightDirection );
 }
 
-Qt3DRender::QFrameGraphNode *QgsShadowRenderView::constructShadowRenderPass()
+Qt3DRender::QFrameGraphNode *QgsShadowRenderView::constructRenderPass()
 {
-  mLightCameraSelectorShadowPass = new Qt3DRender::QCameraSelector( mShadowRendererEnabler );
-  mLightCameraSelectorShadowPass->setCamera( mLightCamera );
+  mLightCameraSelector = new Qt3DRender::QCameraSelector( mRendererEnabler );
+  mLightCameraSelector->setCamera( mLightCamera );
 
-  mShadowSceneEntitiesFilter = new Qt3DRender::QLayerFilter( mLightCameraSelectorShadowPass );
-  mShadowSceneEntitiesFilter->addLayer( mCastShadowsLayer );
+  mLayerFilter = new Qt3DRender::QLayerFilter( mLightCameraSelector );
+  mLayerFilter->addLayer( mLayer );
 
-  mShadowRenderTargetSelector = new Qt3DRender::QRenderTargetSelector( mShadowSceneEntitiesFilter );
+  mRenderTargetSelector = new Qt3DRender::QRenderTargetSelector( mLayerFilter );
   // no target output for now, updateTargetOutput() will be called later
 
-  mShadowClearBuffers = new Qt3DRender::QClearBuffers( mShadowRenderTargetSelector );
-  mShadowClearBuffers->setBuffers( Qt3DRender::QClearBuffers::BufferType::ColorDepthBuffer );
-  mShadowClearBuffers->setClearColor( QColor::fromRgbF( 0.0f, 1.0f, 0.0f ) );
+  mClearBuffers = new Qt3DRender::QClearBuffers( mRenderTargetSelector );
+  mClearBuffers->setBuffers( Qt3DRender::QClearBuffers::BufferType::ColorDepthBuffer );
+  mClearBuffers->setClearColor( QColor::fromRgbF( 0.0f, 1.0f, 0.0f ) );
 
-  mShadowRenderStateSet = new Qt3DRender::QRenderStateSet( mShadowClearBuffers );
+  mRenderStateSet = new Qt3DRender::QRenderStateSet( mClearBuffers );
 
-  Qt3DRender::QDepthTest *shadowDepthTest = new Qt3DRender::QDepthTest;
-  shadowDepthTest->setDepthFunction( Qt3DRender::QDepthTest::Less );
-  mShadowRenderStateSet->addRenderState( shadowDepthTest );
+  Qt3DRender::QDepthTest *depthTest = new Qt3DRender::QDepthTest;
+  depthTest->setDepthFunction( Qt3DRender::QDepthTest::Less );
+  mRenderStateSet->addRenderState( depthTest );
 
-  Qt3DRender::QCullFace *shadowCullFace = new Qt3DRender::QCullFace;
-  shadowCullFace->setMode( Qt3DRender::QCullFace::CullingMode::Front );
-  mShadowRenderStateSet->addRenderState( shadowCullFace );
+  Qt3DRender::QCullFace *cullFace = new Qt3DRender::QCullFace;
+  cullFace->setMode( Qt3DRender::QCullFace::CullingMode::Front );
+  mRenderStateSet->addRenderState( cullFace );
 
   Qt3DRender::QPolygonOffset *polygonOffset = new Qt3DRender::QPolygonOffset;
   polygonOffset->setDepthSteps( 4.0 );
   polygonOffset->setScaleFactor( 1.1 );
-  mShadowRenderStateSet->addRenderState( polygonOffset );
+  mRenderStateSet->addRenderState( polygonOffset );
 
-  return mLightCameraSelectorShadowPass;
+  return mLightCameraSelector;
 }
 
-void QgsShadowRenderView::setShadowBias( float shadowBias )
+void QgsShadowRenderView::setShadowBias( float bias )
 {
-  mShadowBias = shadowBias;
-  emit shadowBiasChanged( mShadowBias );
+  mBias = bias;
+  emit shadowBiasChanged( mBias );
 }
 
 // computes the portion of the Y=y plane the camera is looking at
