@@ -48,6 +48,7 @@ Qgs3DAxisRenderView::Qgs3DAxisRenderView( QObject *parent, Qt3DExtras::Qt3DWindo
   mRendererEnabler->setEnablement( Qt3DRender::QSubtreeEnabler::Persistent );
 
   mViewport = new Qt3DRender::QViewport( mRendererEnabler );
+  mViewport->setObjectName( "3D axis view Viewport" );
 
   mLayer = new Qt3DRender::QLayer;
   mLayer->setRecursive( true );

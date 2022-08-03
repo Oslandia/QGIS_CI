@@ -186,11 +186,22 @@ class QgsShadowRenderingFrameGraph : public Qt3DCore::QEntity
      */
     void setDebugOverlayEnabled( bool enabled );
 
+    //! Registers a new the render view \a renderView with name \a name
     bool registerRenderView( QgsAbstractRenderView *renderView, const QString &name );
+
+    //! Unregisters the render view named \a name, if any
     void unregisterRenderView( const QString &name );
+
+    //! Enables or disables the render view named \a name according to \a enable
     void setEnableRenderView( const QString &name, bool enable );
+
+    //! Returns true if the render view named \a name is enabled
     bool isRenderViewEnabled( const QString &name );
+
+    //! Returns the render view named \a name, if any
     QgsAbstractRenderView *renderView( const QString &name );
+
+    //! Returns the layer used to assign entities to the render view named \a name, if any
     Qt3DRender::QLayer *filterLayer( const QString &name );
 
     static const QString FORWARD_RENDERVIEW;

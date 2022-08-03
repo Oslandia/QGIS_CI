@@ -114,6 +114,7 @@ Qt3DRender::QFrameGraphNode *QgsForwardRenderView::constructRenderPass()
   // mClearBuffers      |
   // mDebugOverlay             |
   mMainCameraSelector = new Qt3DRender::QCameraSelector( mRendererEnabler );
+  mMainCameraSelector->setObjectName( "Forward render view CameraSelector" );
   mMainCameraSelector->setCamera( mMainCamera );
 
   mLayerFilter = new Qt3DRender::QLayerFilter( mMainCameraSelector );

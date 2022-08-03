@@ -123,6 +123,7 @@ void QgsShadowRenderView::setupDirectionalLight( const QgsDirectionalLightSettin
 Qt3DRender::QFrameGraphNode *QgsShadowRenderView::constructRenderPass()
 {
   mLightCameraSelector = new Qt3DRender::QCameraSelector( mRendererEnabler );
+  mLightCameraSelector->setObjectName( "Shadow render view CameraSelector" );
   mLightCameraSelector->setCamera( mLightCamera );
 
   mLayerFilter = new Qt3DRender::QLayerFilter( mLightCameraSelector );
