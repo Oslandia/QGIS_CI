@@ -85,23 +85,22 @@ class _3D_EXPORT Qgs3DAxisRenderView : public QgsAbstractRenderView
 
   public slots:
     //! Updates viewport horizontal \a position
-
-    void onAxisHorizPositionChanged( Qt::AnchorPoint position );
+    void onHorizPositionChanged( Qt::AnchorPoint position );
 
     //! Updates viewport vertical \a position
-    void onAxisVertPositionChanged( Qt::AnchorPoint position );
+    void onVertPositionChanged( Qt::AnchorPoint position );
 
     //! Updates viewport \a size
-    void onAxisViewportSizeUpdate( int size = 0 );
+    void onViewportSizeUpdate( int size = 0 );
 
   signals:
     void viewportScaleFactorChanged( double scaleFactor );
 
   private:
     Qt3DExtras::Qt3DWindow *mParentWindow;
-    Qt3DRender::QCamera *mAxisCamera;
-    Qt3DRender::QLayer *mAxisSceneLayer = nullptr;
-    Qt3DRender::QViewport *mAxisViewport = nullptr;
+    Qt3DRender::QCamera *mCamera;
+    Qt3DRender::QLayer *mLayer = nullptr;
+    Qt3DRender::QViewport *mViewport = nullptr;
     Qt3DRender::QSubtreeEnabler *mRendererEnabler = nullptr;
     Qgs3DMapSettings *mMapSettings;
     Qt3DRender::QRenderTargetSelector *mRenderTargetSelector = nullptr;

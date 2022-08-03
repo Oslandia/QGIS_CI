@@ -77,8 +77,8 @@ Qgs3DAxis::Qgs3DAxis( Qt3DExtras::Qt3DWindow *parentWindow
   mTwoDLabelViewport->setParent( mParentWindow->activeFrameGraph() );
 
   connect( cameraCtrl, &QgsCameraController::cameraChanged, this, &Qgs3DAxis::onCameraUpdate );
-  connect( mParentWindow, &Qt3DExtras::Qt3DWindow::widthChanged, mRenderView, &Qgs3DAxisRenderView::onAxisViewportSizeUpdate );
-  connect( mParentWindow, &Qt3DExtras::Qt3DWindow::heightChanged, mRenderView, &Qgs3DAxisRenderView::onAxisViewportSizeUpdate );
+  connect( mParentWindow, &Qt3DExtras::Qt3DWindow::widthChanged, mRenderView, &Qgs3DAxisRenderView::onViewportSizeUpdate );
+  connect( mParentWindow, &Qt3DExtras::Qt3DWindow::heightChanged, mRenderView, &Qgs3DAxisRenderView::onViewportSizeUpdate );
   connect( mMapScene->engine()->frameGraph(), &QObject::destroyed, this, [this]( QObject * ) {mIsFrameGraphDestroyed = true;} );
   // callback for Qgs3DAxisRenderView::onAxisViewportSizeUpdate:
   connect( mRenderView, &Qgs3DAxisRenderView::viewportScaleFactorChanged, this, &Qgs3DAxis::onViewportScaleFactorChanged );
@@ -588,9 +588,9 @@ void Qgs3DAxis::createMenu()
   hPosGroup->addAction( hPosMiddleAct );
   hPosGroup->addAction( hPosRightAct );
 
-  connect( hPosLeftAct, &QAction::triggered, this, [this]( bool ) {mRenderView->onAxisHorizPositionChanged( Qt::AnchorPoint::AnchorLeft );} );
-  connect( hPosMiddleAct, &QAction::triggered, this, [this]( bool ) {mRenderView->onAxisHorizPositionChanged( Qt::AnchorPoint::AnchorHorizontalCenter );} );
-  connect( hPosRightAct, &QAction::triggered, this, [this]( bool ) {mRenderView->onAxisHorizPositionChanged( Qt::AnchorPoint::AnchorRight );} );
+  connect( hPosLeftAct, &QAction::triggered, this, [this]( bool ) {mRenderView->onHorizPositionChanged( Qt::AnchorPoint::AnchorLeft );} );
+  connect( hPosMiddleAct, &QAction::triggered, this, [this]( bool ) {mRenderView->onHorizPositionChanged( Qt::AnchorPoint::AnchorHorizontalCenter );} );
+  connect( hPosRightAct, &QAction::triggered, this, [this]( bool ) {mRenderView->onHorizPositionChanged( Qt::AnchorPoint::AnchorRight );} );
 
   QMenu *horizPosMenu = new QMenu( QStringLiteral( "Horizontal Position" ), mMenu );
   horizPosMenu->addAction( hPosLeftAct );
@@ -628,9 +628,9 @@ void Qgs3DAxis::createMenu()
   vPosGroup->addAction( vPosMiddleAct );
   vPosGroup->addAction( vPosBottomAct );
 
-  connect( vPosTopAct, &QAction::triggered, this, [this]( bool ) {mRenderView->onAxisVertPositionChanged( Qt::AnchorPoint::AnchorTop );} );
-  connect( vPosMiddleAct, &QAction::triggered, this, [this]( bool ) {mRenderView->onAxisVertPositionChanged( Qt::AnchorPoint::AnchorVerticalCenter );} );
-  connect( vPosBottomAct, &QAction::triggered, this, [this]( bool ) {mRenderView->onAxisVertPositionChanged( Qt::AnchorPoint::AnchorBottom );} );
+  connect( vPosTopAct, &QAction::triggered, this, [this]( bool ) {mRenderView->onVertPositionChanged( Qt::AnchorPoint::AnchorTop );} );
+  connect( vPosMiddleAct, &QAction::triggered, this, [this]( bool ) {mRenderView->onVertPositionChanged( Qt::AnchorPoint::AnchorVerticalCenter );} );
+  connect( vPosBottomAct, &QAction::triggered, this, [this]( bool ) {mRenderView->onVertPositionChanged( Qt::AnchorPoint::AnchorBottom );} );
 
   QMenu *vertPosMenu = new QMenu( QStringLiteral( "Vertical Position" ), mMenu );
   vertPosMenu->addAction( vPosTopAct );
@@ -989,7 +989,7 @@ void Qgs3DAxis::onAxisSettingsChanged()
 
 void Qgs3DAxis::onAxisViewportSizeUpdate( int )
 {
-  mRenderView->onAxisViewportSizeUpdate(); // will call onViewportScaleFactorChanged as callback
+  mRenderView->onViewportSizeUpdate(); // will call onViewportScaleFactorChanged as callback
 
   Qgs3DAxisSettings settings = mMapSettings->get3DAxisSettings();
   double windowWidth = ( double )mParentWindow->width();

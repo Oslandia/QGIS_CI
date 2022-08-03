@@ -41,36 +41,36 @@ Qgs3DAxisRenderView::Qgs3DAxisRenderView( QObject *parent, Qt3DExtras::Qt3DWindo
     Qt3DRender::QCamera *axisCamera, Qgs3DMapSettings *settings )
   : QgsAbstractRenderView( parent )
   , mParentWindow( parentWindow )
-  , mAxisCamera( axisCamera )
+  , mCamera( axisCamera )
   , mMapSettings( settings )
 {
   mRendererEnabler = new Qt3DRender::QSubtreeEnabler;
   mRendererEnabler->setEnablement( Qt3DRender::QSubtreeEnabler::Persistent );
 
-  mAxisViewport = new Qt3DRender::QViewport( mRendererEnabler );
+  mViewport = new Qt3DRender::QViewport( mRendererEnabler );
 
-  mAxisSceneLayer = new Qt3DRender::QLayer;
-  mAxisSceneLayer->setRecursive( true );
+  mLayer = new Qt3DRender::QLayer;
+  mLayer->setRecursive( true );
 
   // render pass
-  auto axisLayerFilter = new Qt3DRender::QLayerFilter( mAxisViewport );
-  axisLayerFilter->addLayer( mAxisSceneLayer );
+  Qt3DRender::QLayerFilter *layerFilter = new Qt3DRender::QLayerFilter( mViewport );
+  layerFilter->addLayer( mLayer );
 
-  auto axisCameraSelector = new Qt3DRender::QCameraSelector;
-  axisCameraSelector->setParent( axisLayerFilter );
-  axisCameraSelector->setCamera( mAxisCamera );
+  Qt3DRender::QCameraSelector *cameraSelector = new Qt3DRender::QCameraSelector;
+  cameraSelector->setParent( layerFilter );
+  cameraSelector->setCamera( mCamera );
 
-  mRenderTargetSelector = new Qt3DRender::QRenderTargetSelector( axisCameraSelector );
+  mRenderTargetSelector = new Qt3DRender::QRenderTargetSelector( cameraSelector );
   // no target output for now, updateTargetOutput() will be called later
 
-  auto clearBuffers = new Qt3DRender::QClearBuffers( mRenderTargetSelector );
+  Qt3DRender::QClearBuffers *clearBuffers = new Qt3DRender::QClearBuffers( mRenderTargetSelector );
   clearBuffers->setBuffers( Qt3DRender::QClearBuffers::DepthBuffer );
 
   // update viewport size
-  onAxisViewportSizeUpdate();
+  onViewportSizeUpdate();
 
-  connect( mParentWindow, &Qt3DExtras::Qt3DWindow::widthChanged, this, &Qgs3DAxisRenderView::onAxisViewportSizeUpdate );
-  connect( mParentWindow, &Qt3DExtras::Qt3DWindow::heightChanged, this, &Qgs3DAxisRenderView::onAxisViewportSizeUpdate );
+  connect( mParentWindow, &Qt3DExtras::Qt3DWindow::widthChanged, this, &Qgs3DAxisRenderView::onViewportSizeUpdate );
+  connect( mParentWindow, &Qt3DExtras::Qt3DWindow::heightChanged, this, &Qgs3DAxisRenderView::onViewportSizeUpdate );
 }
 
 void Qgs3DAxisRenderView::onTargetOutputUpdate()
@@ -107,15 +107,15 @@ Qt3DRender::QFrameGraphNode *Qgs3DAxisRenderView::topGraphNode()
 
 Qt3DRender::QViewport *Qgs3DAxisRenderView::viewport()
 {
-  return mAxisViewport;
+  return mViewport;
 }
 
 Qt3DRender::QLayer *Qgs3DAxisRenderView::layerToFilter()
 {
-  return mAxisSceneLayer;
+  return mLayer;
 }
 
-void Qgs3DAxisRenderView::onAxisViewportSizeUpdate( int )
+void Qgs3DAxisRenderView::onViewportSizeUpdate( int )
 {
   Qgs3DAxisSettings settings = mMapSettings->get3DAxisSettings();
 
@@ -171,17 +171,17 @@ void Qgs3DAxisRenderView::onAxisViewportSizeUpdate( int )
   {
     QgsDebugMsgLevel( "viewport takes too much place into the 3d view, disabling it", 2 );
     // take too much place into the 3d view
-    mAxisViewport->setEnabled( false );
+    mViewport->setEnabled( false );
     emit viewportScaleFactorChanged( 0.0 );
   }
   else
   {
-    if ( ! mAxisViewport->isEnabled() )
+    if ( ! mViewport->isEnabled() )
     {
       // will be used to adjust the axis label translations/sizes
       emit viewportScaleFactorChanged( viewportPixelSize / defaultViewportPixelSize );
     }
-    mAxisViewport->setEnabled( true );
+    mViewport->setEnabled( true );
 
     float xRatio = 1.0f;
     float yRatio = 1.0f;
@@ -200,25 +200,24 @@ void Qgs3DAxisRenderView::onAxisViewportSizeUpdate( int )
       yRatio = 1.0f - heightRatio;
 
     QgsDebugMsgLevel( QString( "Qgs3DAxis: update viewport: %1 x %2 x %3 x %4" ).arg( xRatio ).arg( yRatio ).arg( widthRatio ).arg( heightRatio ), 2 );
-    mAxisViewport->setNormalizedRect( QRectF( xRatio, yRatio, widthRatio, heightRatio ) );
+    mViewport->setNormalizedRect( QRectF( xRatio, yRatio, widthRatio, heightRatio ) );
   }
 
 }
 
 
-
-void Qgs3DAxisRenderView::onAxisHorizPositionChanged( Qt::AnchorPoint pos )
+void Qgs3DAxisRenderView::onHorizPositionChanged( Qt::AnchorPoint pos )
 {
   Qgs3DAxisSettings s = mMapSettings->get3DAxisSettings();
   s.setHorizontalPosition( pos );
   mMapSettings->set3DAxisSettings( s );
-  onAxisViewportSizeUpdate();
+  onViewportSizeUpdate();
 }
 
-void Qgs3DAxisRenderView::onAxisVertPositionChanged( Qt::AnchorPoint pos )
+void Qgs3DAxisRenderView::onVertPositionChanged( Qt::AnchorPoint pos )
 {
   Qgs3DAxisSettings s = mMapSettings->get3DAxisSettings();
   s.setVerticalPosition( pos );
   mMapSettings->set3DAxisSettings( s );
-  onAxisViewportSizeUpdate();
+  onViewportSizeUpdate();
 }
