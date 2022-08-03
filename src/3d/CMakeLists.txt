@@ -19,6 +19,8 @@ set(QGIS_3D_SRCS
   qgs3dutils.cpp
   qgscameracontroller.cpp
   qgscamerapose.cpp
+  qgsdepthentity.cpp
+  qgsdepthrenderview.cpp
   qgsfeature3dhandler_p.cpp
   qgsforwardrenderview.cpp
   qgsimagetexture.cpp
@@ -125,6 +127,8 @@ set(QGIS_3D_HDRS
   qgsabstractvectorlayer3drenderer.h
   qgscameracontroller.h
   qgscamerapose.h
+  qgsdepthentity.h
+  qgsdepthrenderview.h
   qgsforwardrenderview.h
   qgslayoutitem3dmap.h
   qgsmeshlayer3drenderer.h
