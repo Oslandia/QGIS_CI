@@ -51,7 +51,9 @@ typedef Qt3DCore::QGeometry Qt3DQGeometry;
 #include <Qt3DRender/QNoDepthMask>
 #include <Qt3DRender/QBlendEquationArguments>
 #include "qgsshadowrenderview.h"
+#include "qgsforwardrenderview.h"
 
+const QString QgsShadowRenderingFrameGraph::FORWARD_RENDERVIEW = "forward";
 const QString QgsShadowRenderingFrameGraph::SHADOW_RENDERVIEW = "shadow";
 const QString QgsShadowRenderingFrameGraph::AXIS3D_RENDERVIEW = "3daxis";
 
@@ -71,121 +73,47 @@ Qt3DRender::QFrameGraphNode *QgsShadowRenderingFrameGraph::constructTexturesPrev
   return mPreviewLayerFilter;
 }
 
-Qt3DRender::QFrameGraphNode *QgsShadowRenderingFrameGraph::constructForwardRenderPass()
+void QgsShadowRenderingFrameGraph::constructForwardRenderPass()
 {
-  // The branch structure:
-  // mMainCameraSelector
-  // mForwardRenderLayerFilter
-  // mForwardRenderTargetSelector
-  // opaqueObjectsFilter       | transparentObjectsLayerFilter
-  // forwaredRenderStateSet    | sortPolicy
-  // mFrustumCulling           | transparentObjectsRenderStateSet
-  // mForwardClearBuffers      |
-  // mDebugOverlay             |
-  mMainCameraSelector = new Qt3DRender::QCameraSelector;
-  mMainCameraSelector->setCamera( mMainCamera );
+  Qt3DRender::QTexture2D *forwardColorTexture = new Qt3DRender::QTexture2D;
+  forwardColorTexture->setWidth( mSize.width() );
+  forwardColorTexture->setHeight( mSize.height() );
+  forwardColorTexture->setFormat( Qt3DRender::QAbstractTexture::RGB8_UNorm );
+  forwardColorTexture->setGenerateMipMaps( false );
+  forwardColorTexture->setMagnificationFilter( Qt3DRender::QTexture2D::Linear );
+  forwardColorTexture->setMinificationFilter( Qt3DRender::QTexture2D::Linear );
+  forwardColorTexture->wrapMode()->setX( Qt3DRender::QTextureWrapMode::ClampToEdge );
+  forwardColorTexture->wrapMode()->setY( Qt3DRender::QTextureWrapMode::ClampToEdge );
 
-  mForwardRenderLayerFilter = new Qt3DRender::QLayerFilter( mMainCameraSelector );
-  mForwardRenderLayerFilter->addLayer( mForwardRenderLayer );
+  Qt3DRender::QTexture2D *forwardDepthTexture = new Qt3DRender::QTexture2D;
+  forwardDepthTexture->setWidth( mSize.width() );
+  forwardDepthTexture->setHeight( mSize.height() );
+  forwardDepthTexture->setFormat( Qt3DRender::QTexture2D::TextureFormat::DepthFormat );
+  forwardDepthTexture->setGenerateMipMaps( false );
+  forwardDepthTexture->setMagnificationFilter( Qt3DRender::QTexture2D::Linear );
+  forwardDepthTexture->setMinificationFilter( Qt3DRender::QTexture2D::Linear );
+  forwardDepthTexture->wrapMode()->setX( Qt3DRender::QTextureWrapMode::ClampToEdge );
+  forwardDepthTexture->wrapMode()->setY( Qt3DRender::QTextureWrapMode::ClampToEdge );
 
-  mForwardColorTexture = new Qt3DRender::QTexture2D;
-  mForwardColorTexture->setWidth( mSize.width() );
-  mForwardColorTexture->setHeight( mSize.height() );
-  mForwardColorTexture->setFormat( Qt3DRender::QAbstractTexture::RGB8_UNorm );
-  mForwardColorTexture->setGenerateMipMaps( false );
-  mForwardColorTexture->setMagnificationFilter( Qt3DRender::QTexture2D::Linear );
-  mForwardColorTexture->setMinificationFilter( Qt3DRender::QTexture2D::Linear );
-  mForwardColorTexture->wrapMode()->setX( Qt3DRender::QTextureWrapMode::ClampToEdge );
-  mForwardColorTexture->wrapMode()->setY( Qt3DRender::QTextureWrapMode::ClampToEdge );
-
-  mForwardDepthTexture = new Qt3DRender::QTexture2D;
-  mForwardDepthTexture->setWidth( mSize.width() );
-  mForwardDepthTexture->setHeight( mSize.height() );
-  mForwardDepthTexture->setFormat( Qt3DRender::QTexture2D::TextureFormat::DepthFormat );
-  mForwardDepthTexture->setGenerateMipMaps( false );
-  mForwardDepthTexture->setMagnificationFilter( Qt3DRender::QTexture2D::Linear );
-  mForwardDepthTexture->setMinificationFilter( Qt3DRender::QTexture2D::Linear );
-  mForwardDepthTexture->wrapMode()->setX( Qt3DRender::QTextureWrapMode::ClampToEdge );
-  mForwardDepthTexture->wrapMode()->setY( Qt3DRender::QTextureWrapMode::ClampToEdge );
-
-  Qt3DRender::QRenderTarget *forwardRenderTarget = new Qt3DRender::QRenderTarget;
   Qt3DRender::QRenderTargetOutput *forwardRenderTargetDepthOutput = new Qt3DRender::QRenderTargetOutput;
   forwardRenderTargetDepthOutput->setAttachmentPoint( Qt3DRender::QRenderTargetOutput::Depth );
-  forwardRenderTargetDepthOutput->setTexture( mForwardDepthTexture );
-  forwardRenderTarget->addOutput( forwardRenderTargetDepthOutput );
+  forwardRenderTargetDepthOutput->setTexture( forwardDepthTexture );
   Qt3DRender::QRenderTargetOutput *forwardRenderTargetColorOutput = new Qt3DRender::QRenderTargetOutput;
   forwardRenderTargetColorOutput->setAttachmentPoint( Qt3DRender::QRenderTargetOutput::Color0 );
-  forwardRenderTargetColorOutput->setTexture( mForwardColorTexture );
-  forwardRenderTarget->addOutput( forwardRenderTargetColorOutput );
+  forwardRenderTargetColorOutput->setTexture( forwardColorTexture );
 
-  mForwardRenderTargetSelector = new Qt3DRender::QRenderTargetSelector( mForwardRenderLayerFilter );
-  mForwardRenderTargetSelector->setTarget( forwardRenderTarget );
-
-  Qt3DRender::QLayerFilter *opaqueObjectsFilter = new Qt3DRender::QLayerFilter( mForwardRenderTargetSelector );
-  opaqueObjectsFilter->addLayer( mTransparentObjectsPassLayer );
-  opaqueObjectsFilter->setFilterMode( Qt3DRender::QLayerFilter::DiscardAnyMatchingLayers );
-
-  Qt3DRender::QRenderStateSet *forwaredRenderStateSet = new Qt3DRender::QRenderStateSet( opaqueObjectsFilter );
-
-  Qt3DRender::QDepthTest *depthTest = new Qt3DRender::QDepthTest;
-  depthTest->setDepthFunction( Qt3DRender::QDepthTest::Less );
-  forwaredRenderStateSet->addRenderState( depthTest );
-
-  Qt3DRender::QCullFace *cullFace = new Qt3DRender::QCullFace;
-  cullFace->setMode( Qt3DRender::QCullFace::CullingMode::Back );
-  forwaredRenderStateSet->addRenderState( cullFace );
-
-  mFrustumCulling = new Qt3DRender::QFrustumCulling( forwaredRenderStateSet );
-
-  mForwardClearBuffers = new Qt3DRender::QClearBuffers( mFrustumCulling );
-  mForwardClearBuffers->setClearColor( QColor::fromRgbF( 0.0, 0.0, 1.0, 1.0 ) );
-  mForwardClearBuffers->setBuffers( Qt3DRender::QClearBuffers::ColorDepthBuffer );
-  mForwardClearBuffers->setClearDepthValue( 1.0f );
-
-  Qt3DRender::QLayerFilter *transparentObjectsLayerFilter = new Qt3DRender::QLayerFilter( mForwardRenderTargetSelector );
-  transparentObjectsLayerFilter->addLayer( mTransparentObjectsPassLayer );
-  transparentObjectsLayerFilter->setFilterMode( Qt3DRender::QLayerFilter::AcceptAnyMatchingLayers );
-
-  Qt3DRender::QSortPolicy *sortPolicy = new Qt3DRender::QSortPolicy( transparentObjectsLayerFilter );
-  QVector<Qt3DRender::QSortPolicy::SortType> sortTypes;
-  sortTypes.push_back( Qt3DRender::QSortPolicy::BackToFront );
-  sortPolicy->setSortTypes( sortTypes );
-
-  Qt3DRender::QRenderStateSet *transparentObjectsRenderStateSet = new Qt3DRender::QRenderStateSet( sortPolicy );
-  {
-    Qt3DRender::QDepthTest *depthTest = new Qt3DRender::QDepthTest;
-    depthTest->setDepthFunction( Qt3DRender::QDepthTest::Less );
-    transparentObjectsRenderStateSet->addRenderState( depthTest );
-
-    Qt3DRender::QNoDepthMask *noDepthMask = new Qt3DRender::QNoDepthMask;
-    transparentObjectsRenderStateSet->addRenderState( noDepthMask );
-
-    Qt3DRender::QCullFace *cullFace = new Qt3DRender::QCullFace;
-    cullFace->setMode( Qt3DRender::QCullFace::CullingMode::NoCulling );
-    transparentObjectsRenderStateSet->addRenderState( cullFace );
-
-    Qt3DRender::QBlendEquation *blendEquation = new Qt3DRender::QBlendEquation;
-    blendEquation->setBlendFunction( Qt3DRender::QBlendEquation::Add );
-    transparentObjectsRenderStateSet->addRenderState( blendEquation );
-
-    Qt3DRender::QBlendEquationArguments *blenEquationArgs = new Qt3DRender::QBlendEquationArguments;
-    blenEquationArgs->setSourceRgb( Qt3DRender::QBlendEquationArguments::Blending::One );
-    blenEquationArgs->setDestinationRgb( Qt3DRender::QBlendEquationArguments::Blending::OneMinusSource1Alpha );
-    blenEquationArgs->setSourceAlpha( Qt3DRender::QBlendEquationArguments::Blending::One );
-    blenEquationArgs->setDestinationAlpha( Qt3DRender::QBlendEquationArguments::Blending::OneMinusSource1Alpha );
-    transparentObjectsRenderStateSet->addRenderState( blenEquationArgs );
-  }
-
-#if QT_VERSION >= QT_VERSION_CHECK(5, 15, 0)
-  mDebugOverlay = new Qt3DRender::QDebugOverlay( mForwardClearBuffers );
-  mDebugOverlay->setEnabled( false );
-#endif
-
-  // cppcheck wrongly believes transparentObjectsRenderStateSet will leak
-  // cppcheck-suppress memleak
-  return mMainCameraSelector;
+  QgsForwardRenderView *frv = new QgsForwardRenderView( this, mMainCamera );
+  frv->setTargetOutputs( { forwardRenderTargetDepthOutput, forwardRenderTargetColorOutput } );
+  registerRenderView( frv, FORWARD_RENDERVIEW );
 }
 
+Qt3DRender::QLayer *QgsShadowRenderingFrameGraph::transparentObjectLayer()
+{
+  QgsForwardRenderView *frv = dynamic_cast<QgsForwardRenderView *>( renderView( FORWARD_RENDERVIEW ) );
+  if ( frv )
+    return frv->transparentObjectLayer();
+  return nullptr;
+}
 
 void QgsShadowRenderingFrameGraph::constructShadowRenderPass()
 {
@@ -305,7 +233,9 @@ Qt3DRender::QFrameGraphNode *QgsShadowRenderingFrameGraph::constructAmbientOcclu
 
   mAmbientOcclusionRenderCaptureTargetSelector->setTarget( depthRenderTarget );
 
-  mAmbientOcclusionRenderEntity = new QgsAmbientOcclusionRenderEntity( mForwardDepthTexture, mMainCamera, mRootEntity );
+  QgsAbstractRenderView *frv = renderView( QgsShadowRenderingFrameGraph::FORWARD_RENDERVIEW );
+  Qt3DRender::QTexture2D *forwardDepthTexture = frv->outputTexture( Qt3DRender::QRenderTargetOutput::Depth );
+  mAmbientOcclusionRenderEntity = new QgsAmbientOcclusionRenderEntity( forwardDepthTexture, mMainCamera, mRootEntity );
   mAmbientOcclusionRenderLayerFilter->addLayer( mAmbientOcclusionRenderEntity->layer() );
 
   return mAmbientOcclusionRenderCameraSelector;
@@ -460,7 +390,9 @@ Qt3DCore::QEntity *QgsShadowRenderingFrameGraph::constructDepthRenderQuad()
   // construct material
 
   Qt3DRender::QMaterial *material = new Qt3DRender::QMaterial;
-  Qt3DRender::QParameter *textureParameter = new Qt3DRender::QParameter( "depthTexture", mForwardDepthTexture );
+  QgsAbstractRenderView *frv = renderView( FORWARD_RENDERVIEW );
+  Qt3DRender::QTexture2D *forwardDepthTexture = frv->outputTexture( Qt3DRender::QRenderTargetOutput::Depth );
+  Qt3DRender::QParameter *textureParameter = new Qt3DRender::QParameter( "depthTexture", forwardDepthTexture );
   Qt3DRender::QParameter *textureTransformParameter = new Qt3DRender::QParameter( "modelMatrix", QVariant::fromValue( modelMatrix ) );
   material->addParameter( textureParameter );
   material->addParameter( textureTransformParameter );
@@ -500,14 +432,10 @@ QgsShadowRenderingFrameGraph::QgsShadowRenderingFrameGraph( QSurface *surface, Q
   mMainCamera = mainCamera;
 
   mPreviewLayer = new Qt3DRender::QLayer;
-  mForwardRenderLayer = new Qt3DRender::QLayer;
   mDepthRenderPassLayer = new Qt3DRender::QLayer;
-  mTransparentObjectsPassLayer = new Qt3DRender::QLayer;
 
   mPreviewLayer->setRecursive( true );
-  mForwardRenderLayer->setRecursive( true );
   mDepthRenderPassLayer->setRecursive( true );
-  mTransparentObjectsPassLayer->setRecursive( true );
 
   mRenderSurfaceSelector = new Qt3DRender::QRenderSurfaceSelector;
 
@@ -521,8 +449,7 @@ QgsShadowRenderingFrameGraph::QgsShadowRenderingFrameGraph( QSurface *surface, Q
   mMainViewPort->setNormalizedRect( QRectF( 0.0f, 0.0f, 1.0f, 1.0f ) );
 
   // Forward render
-  Qt3DRender::QFrameGraphNode *forwardRenderPass = constructForwardRenderPass();
-  forwardRenderPass->setParent( mMainViewPort );
+  constructForwardRenderPass();
 
   // depth buffer processing
   Qt3DRender::QFrameGraphNode *depthBufferProcessingPass = constructDepthRenderPass();
@@ -549,7 +476,9 @@ QgsShadowRenderingFrameGraph::QgsShadowRenderingFrameGraph( QSurface *surface, Q
   Qt3DRender::QParameter *depthMapIsDepthParam = new Qt3DRender::QParameter( "isDepth", true );
   Qt3DRender::QParameter *shadowMapIsDepthParam = new Qt3DRender::QParameter( "isDepth", true );
 
-  mDebugDepthMapPreviewQuad = this->addTexturePreviewOverlay( mForwardDepthTexture, QPointF( 0.9f, 0.9f ), QSizeF( 0.1, 0.1 ), QVector<Qt3DRender::QParameter *> { depthMapIsDepthParam } );
+  QgsAbstractRenderView *frv = renderView( QgsShadowRenderingFrameGraph::FORWARD_RENDERVIEW );
+  Qt3DRender::QTexture2D *forwardDepthTexture = frv->outputTexture( Qt3DRender::QRenderTargetOutput::Depth );
+  mDebugDepthMapPreviewQuad = this->addTexturePreviewOverlay( forwardDepthTexture, QPointF( 0.9f, 0.9f ), QSizeF( 0.1, 0.1 ), QVector<Qt3DRender::QParameter *> { depthMapIsDepthParam } );
 
   QgsAbstractRenderView *srv = renderView( QgsShadowRenderingFrameGraph::SHADOW_RENDERVIEW );
   Qt3DRender::QTexture2D *shadowDepthTexture = srv->outputTexture( Qt3DRender::QRenderTargetOutput::Depth );
@@ -618,14 +547,9 @@ QgsPreviewQuad *QgsShadowRenderingFrameGraph::addTexturePreviewOverlay( Qt3DRend
 
 void QgsShadowRenderingFrameGraph::setClearColor( const QColor &clearColor )
 {
-  mForwardClearBuffers->setClearColor( clearColor );
-}
-
-void QgsShadowRenderingFrameGraph::setShadowMapResolution( int resolution )
-{
-  mShadowMapResolution = resolution;
-  mShadowMapTexture->setWidth( mShadowMapResolution );
-  mShadowMapTexture->setHeight( mShadowMapResolution );
+  QgsForwardRenderView *frv = dynamic_cast<QgsForwardRenderView *>( renderView( FORWARD_RENDERVIEW ) );
+  if ( frv )
+    frv->setClearColor( clearColor );
 }
 
 void QgsShadowRenderingFrameGraph::setAmbientOcclusionEnabled( bool enabled )
@@ -655,13 +579,9 @@ void QgsShadowRenderingFrameGraph::setAmbientOcclusionThreshold( float threshold
 
 void QgsShadowRenderingFrameGraph::setFrustumCullingEnabled( bool enabled )
 {
-  if ( enabled == mFrustumCullingEnabled )
-    return;
-  mFrustumCullingEnabled = enabled;
-  if ( mFrustumCullingEnabled )
-    mFrustumCulling->setParent( mForwardClearBuffers );
-  else
-    mFrustumCulling->setParent( ( Qt3DCore::QNode * )nullptr );
+  QgsForwardRenderView *frv = dynamic_cast<QgsForwardRenderView *>( renderView( FORWARD_RENDERVIEW ) );
+  if ( frv )
+    frv->enableFrustumCulling( enabled );
 }
 
 void QgsShadowRenderingFrameGraph::setupEyeDomeLighting( bool enabled, double strength, int distance )
@@ -724,8 +644,10 @@ void QgsShadowRenderingFrameGraph::setupDepthMapDebugging( bool enabled, Qt::Cor
 void QgsShadowRenderingFrameGraph::setSize( QSize s )
 {
   mSize = s;
-  mForwardColorTexture->setSize( mSize.width(), mSize.height() );
-  mForwardDepthTexture->setSize( mSize.width(), mSize.height() );
+  QgsForwardRenderView *frv = dynamic_cast<QgsForwardRenderView *>( renderView( FORWARD_RENDERVIEW ) );
+  if ( frv )
+    frv->updateTargetOutputSize( mSize.width(), mSize.height() );
+
   mRenderCaptureColorTexture->setSize( mSize.width(), mSize.height() );
   mRenderCaptureDepthTexture->setSize( mSize.width(), mSize.height() );
   mDepthRenderCaptureDepthTexture->setSize( mSize.width(), mSize.height() );
@@ -746,10 +668,7 @@ void QgsShadowRenderingFrameGraph::setRenderCaptureEnabled( bool enabled )
 
 void QgsShadowRenderingFrameGraph::setDebugOverlayEnabled( bool enabled )
 {
-#if QT_VERSION >= QT_VERSION_CHECK(5, 15, 0)
-  mDebugOverlay->setEnabled( enabled );
-#else
-  Q_UNUSED( enabled )
-  qDebug() << "Cannot display debug overlay. Qt version 5.15 or above is needed.";
-#endif
+  QgsForwardRenderView *frv = dynamic_cast<QgsForwardRenderView *>( renderView( FORWARD_RENDERVIEW ) );
+  if ( frv )
+    frv->enableDebugOverlay( enabled );
 }

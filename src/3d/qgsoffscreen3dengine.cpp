@@ -144,7 +144,8 @@ void QgsOffscreen3DEngine::setRootEntity( Qt3DCore::QEntity *root )
   // Parent the incoming scene root to our current root entity.
   mSceneRoot = root;
   mSceneRoot->setParent( mRoot );
-  root->addComponent( mFrameGraph->forwardRenderLayer() );
+  if ( mFrameGraph->renderView( QgsShadowRenderingFrameGraph::FORWARD_RENDERVIEW ) )
+    root->addComponent( mFrameGraph->renderView( QgsShadowRenderingFrameGraph::FORWARD_RENDERVIEW )->layerToFilter() );
   if ( mFrameGraph->renderView( QgsShadowRenderingFrameGraph::SHADOW_RENDERVIEW ) )
     root->addComponent( mFrameGraph->renderView( QgsShadowRenderingFrameGraph::SHADOW_RENDERVIEW )->layerToFilter() );
 }
