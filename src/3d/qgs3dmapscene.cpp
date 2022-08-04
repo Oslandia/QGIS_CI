@@ -85,6 +85,7 @@
 #include "qgspointcloudlayer.h"
 #include "qgspointcloudlayerchunkloader_p.h"
 #include "qgsshadowrenderview.h"
+#include "qgsterraintileloader_p.h"
 
 Qgs3DMapScene::Qgs3DMapScene( Qgs3DMapSettings &map, QgsAbstract3DEngine *engine )
   : mMap( map )
@@ -829,15 +830,24 @@ void Qgs3DMapScene::addLayerEntity( QgsMapLayer *layer )
 
       if ( QgsChunkedEntity *chunkedNewEntity = qobject_cast<QgsChunkedEntity *>( newEntity ) )
       {
+        // Will apply shadow only to:
+        // * non-terrain entities
+        bool isShadowableEntity = dynamic_cast<QgsTerrainTileLoader *>( chunkedNewEntity->rootNode()->loader() ) == nullptr;
+
         mChunkEntities.append( chunkedNewEntity );
         needsSceneUpdate = true;
 
         chunkedNewEntity->setPickingEnabled( !mPickHandlers.isEmpty() );
         connect( chunkedNewEntity, &QgsChunkedEntity::pickedObject, this, &Qgs3DMapScene::onLayerEntityPickedObject );
 
-        connect( chunkedNewEntity, &QgsChunkedEntity::newEntityCreated, this, [this]( Qt3DCore::QEntity * entity )
+        connect( chunkedNewEntity, &QgsChunkedEntity::newEntityCreated, this, [this, isShadowableEntity]( Qt3DCore::QEntity * entity )
         {
           finalizeNewEntity( entity );
+          if ( isShadowableEntity )
+          {
+            QgsShadowRenderView *srv = dynamic_cast<QgsShadowRenderView *>( mEngine->frameGraph()->renderView( QgsShadowRenderingFrameGraph::SHADOW_RENDERVIEW ) ) ;
+            entity->addComponent( srv->layerToFilter() );
+          }
         } );
 
         connect( chunkedNewEntity, &QgsChunkedEntity::pendingJobsCountChanged, this, &Qgs3DMapScene::totalPendingJobsCountChanged );
