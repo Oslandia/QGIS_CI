@@ -222,6 +222,10 @@ class _3D_EXPORT QgsCameraController : public Qt3DCore::QEntity
      */
     void depthBufferCaptured( const QImage &depthImage );
 
+  protected slots:
+    void onWheel( Qt3DInput::QWheelEvent *wheel );
+    void onMousePressed( Qt3DInput::QMouseEvent *mouse );
+
   private:
     void rotateCamera( float diffPitch, float diffYaw );
     void updateCameraFromPose();
@@ -260,8 +264,6 @@ class _3D_EXPORT QgsCameraController : public Qt3DCore::QEntity
 
   private slots:
     void onPositionChanged( Qt3DInput::QMouseEvent *mouse );
-    void onWheel( Qt3DInput::QWheelEvent *wheel );
-    void onMousePressed( Qt3DInput::QMouseEvent *mouse );
     void onMouseReleased( Qt3DInput::QMouseEvent *mouse );
     void onKeyPressed( Qt3DInput::QKeyEvent *event );
     void onKeyReleased( Qt3DInput::QKeyEvent *event );
@@ -276,6 +278,8 @@ class _3D_EXPORT QgsCameraController : public Qt3DCore::QEntity
 
     void handleTerrainNavigationWheelZoom();
 
+  protected:
+
     /**
      * Returns the minimum depth value in the square [px - 3, px + 3] * [py - 3, py + 3]
      * If the value is 1, the average depth of all non void pixels is returned instead.
@@ -284,7 +288,6 @@ class _3D_EXPORT QgsCameraController : public Qt3DCore::QEntity
 
     bool screenPointToWorldPos( QPoint position, Qt3DRender::QCamera *cameraBefore, double &depth, QVector3D &worldPosition );
 
-  private:
     //! Camera that is being controlled
     Qt3DRender::QCamera *mCamera = nullptr;
     //! used for computation of translation when dragging mouse
