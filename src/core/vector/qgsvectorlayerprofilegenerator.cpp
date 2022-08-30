@@ -657,6 +657,7 @@ QgsVectorLayerProfileGenerator::~QgsVectorLayerProfileGenerator() = default;
 
 bool QgsVectorLayerProfileGenerator::generateProfile( const QgsProfileGenerationContext & )
 {
+  std::cout << "generateProfile" << std::endl;
   if ( !mProfileCurve || mFeedback->isCanceled() )
     return false;
 
@@ -682,6 +683,9 @@ bool QgsVectorLayerProfileGenerator::generateProfile( const QgsProfileGeneration
 
   if ( mFeedback->isCanceled() )
     return false;
+    
+
+  std::cout << "result generation" << std::endl;
 
   mResults = std::make_unique< QgsVectorLayerProfileResults >();
   mResults->mLayer = mLayer;
@@ -689,6 +693,10 @@ bool QgsVectorLayerProfileGenerator::generateProfile( const QgsProfileGeneration
 
   mProfileCurveEngine.reset( new QgsGeos( mProfileCurve.get() ) );
   mProfileCurveEngine->prepareGeometry();
+  
+  mProfileBox = mProfileCurveEngine->buffer( mTolerance, 8, Qgis::EndCapStyle::Flat, Qgis::JoinStyle::Round, 2 );
+  mProfileBoxEngine.reset( new QgsGeos( mProfileBox) );
+  mProfileBoxEngine->prepareGeometry();
 
   mDataDefinedProperties.prepare( mExpressionContext );
 
@@ -698,22 +706,29 @@ bool QgsVectorLayerProfileGenerator::generateProfile( const QgsProfileGeneration
   switch ( QgsWkbTypes::geometryType( mWkbType ) )
   {
     case QgsWkbTypes::PointGeometry:
+      std::cout << "PointGeometry" << std::endl;
       if ( !generateProfileForPoints() )
         return false;
       break;
 
     case QgsWkbTypes::LineGeometry:
-      if ( !generateProfileForLines() )
+      std::cout << "LineGeometry" << std::endl;
+      if ( !generateProfileForLinesWithBox() )
         return false;
       break;
 
     case QgsWkbTypes::PolygonGeometry:
+      std::cout << "NullGePolygonGeometryometry" << std::endl;
       if ( !generateProfileForPolygons() )
         return false;
       break;
+  
+    case QgsWkbTypes::NullGeometry:    
+      std::cout << "NullGeometry" << std::endl;
+      return false;
 
-    case QgsWkbTypes::UnknownGeometry:
-    case QgsWkbTypes::NullGeometry:
+    case QgsWkbTypes::UnknownGeometry:      
+      std::cout << "UnknownGeometry" << std::endl;
       return false;
   }
 
@@ -895,6 +910,219 @@ bool QgsVectorLayerProfileGenerator::generateProfileForLines()
       for ( auto it = g.const_parts_begin(); it != g.const_parts_end(); ++it )
       {
         if ( !mProfileCurveEngine->intersects( *it ) )
+          continue;
+
+        processCurve( feature, qgsgeometry_cast< const QgsCurve * >( *it ) );
+      }
+    }
+    else
+    {
+      processCurve( feature, qgsgeometry_cast< const QgsCurve * >( g.constGet() ) );
+    }
+  }
+  return true;
+}
+
+bool QgsVectorLayerProfileGenerator::generateProfileForLinesWithBox()
+{
+  // get features from layer
+  QgsFeatureRequest request;
+  request.setDestinationCrs( mTargetCrs, mTransformContext );
+  request.setFilterRect( mProfileBox->boundingBox() );
+  request.setSubsetOfAttributes( mDataDefinedProperties.referencedFields( mExpressionContext ), mFields );
+  request.setFeedback( mFeedback.get() );
+
+
+  std::cout << "generateProfileForLinesWithBox" << std::endl;
+  
+
+  auto processCurve = [this]( const QgsFeature & feature, const QgsCurve * curve )
+  {
+    auto processPoint = [this, curve] (const QgsPoint& intersectionPoint, const QgsGeos& curveGeos,  const QgsFeature & feature)
+    {
+
+      QString error;
+
+      // unfortunately we need to do some work to interpolate the z value for the line -- GEOS doesn't give us this
+      const double distance = curveGeos.lineLocatePoint( intersectionPoint, &error );
+      std::unique_ptr< QgsPoint > interpolatedPoint( curve->interpolatePoint( distance ) );
+      std::cout << "interpolatedPoint x" << interpolatedPoint->x() << std::endl;
+      std::cout << "interpolatedPoint y" << interpolatedPoint->y() << std::endl;
+
+      const double offset = mDataDefinedProperties.valueAsDouble( QgsMapLayerElevationProperties::ZOffset, mExpressionContext, mOffset );
+
+      const double height = featureZToHeight( interpolatedPoint->x(), interpolatedPoint->y(), interpolatedPoint->z(), offset );
+      mResults->mRawPoints.append( QgsPoint( interpolatedPoint->x(), interpolatedPoint->y(), height ) );
+      mResults->minZ = std::min( mResults->minZ, height );
+      mResults->maxZ = std::max( mResults->maxZ, height );
+
+      const double distanceAlongProfileCurve = mProfileCurveEngine->lineLocatePoint( *interpolatedPoint, &error );
+      mResults->mDistanceToHeightMap.insert( distanceAlongProfileCurve, height );
+
+      QgsVectorLayerProfileResults::Feature resultFeature;
+      resultFeature.featureId = feature.id();
+      if ( mExtrusionEnabled )
+      {
+        const double extrusion = mDataDefinedProperties.valueAsDouble( QgsMapLayerElevationProperties::ExtrusionHeight, mExpressionContext, mExtrusionHeight );
+
+        resultFeature.geometry = QgsGeometry( new QgsLineString( QgsPoint( interpolatedPoint->x(), interpolatedPoint->y(), height ),
+                                              QgsPoint( interpolatedPoint->x(), interpolatedPoint->y(), height + extrusion ) ) );
+        resultFeature.crossSectionGeometry = QgsGeometry( new QgsLineString( QgsPoint( distanceAlongProfileCurve, height ),
+                                            QgsPoint( distanceAlongProfileCurve, height + extrusion ) ) );
+        mResults->minZ = std::min( mResults->minZ, height + extrusion );
+        mResults->maxZ = std::max( mResults->maxZ, height + extrusion );
+      }
+      else
+      {
+        resultFeature.geometry = QgsGeometry( new QgsPoint( interpolatedPoint->x(), interpolatedPoint->y(), height ) );
+        resultFeature.crossSectionGeometry = QgsGeometry( new QgsPoint( distanceAlongProfileCurve, height ) );
+      }
+      mResults->features[resultFeature.featureId].append( resultFeature );
+    };
+
+    auto processLineString = [this, curve] (const QgsLineString& originalLas, const QgsGeos& curveGeos,  const QgsFeature & feature)
+    {
+      QgsLineString ls = originalLas;
+
+
+      std::cout << "linestring intersection " <<ls.asWkt(3).toStdString() << std::endl;
+
+      bool isEmpty = ls.isEmpty();
+
+      if (isEmpty)
+      {
+        ls = *qgsgeometry_cast<const QgsLineString*>( feature.geometry().constGet() );
+        std::cout << "linestring is empty " <<ls.asWkt(3).toStdString() << std::endl;
+      }
+
+      QString error;
+      QVector< QgsGeometry > transformedParts;
+      QVector< QgsGeometry > crossSectionParts;
+
+      QString lastError;
+      QgsVectorLayerProfileResults::Feature resultFeature;
+      resultFeature.featureId = feature.id();
+
+      for ( auto it = ls.vertices_begin(); it != ls.vertices_end(); ++it )
+      {
+
+        std::cout << "linestring intersection part " << (*it).geometryType().toStdString() << std::endl;
+
+        const QgsPoint& intersectionPoint = (*it);
+        std::cout << "intersectionPoint " <<intersectionPoint.asWkt(3).toStdString() << std::endl;
+
+        // unfortunately we need to do some work to interpolate the z value for the line -- GEOS doesn't give us this
+        const double distance = curveGeos.lineLocatePoint( intersectionPoint, &error );
+        std::cout << "linestring intersection distance " << distance << std::endl;
+        std::unique_ptr< QgsPoint > interpolatedPoint( curve->interpolatePoint( distance ) );
+        if( isEmpty)
+        {
+          interpolatedPoint->setZ(intersectionPoint.z());
+        }
+        std::cout << "interpolatedPoint x" << interpolatedPoint->x() << std::endl;
+        std::cout << "interpolatedPoint y" << interpolatedPoint->y() << std::endl;
+        std::cout << "interpolatedPoint z" << interpolatedPoint->z() << std::endl;
+
+        const double offset = mDataDefinedProperties.valueAsDouble( QgsMapLayerElevationProperties::ZOffset, mExpressionContext, mOffset );
+
+        const double height = featureZToHeight( interpolatedPoint->x(), interpolatedPoint->y(), interpolatedPoint->z(), offset );
+        mResults->mRawPoints.append( QgsPoint( interpolatedPoint->x(), interpolatedPoint->y(), height ) );
+        mResults->minZ = std::min( mResults->minZ, height );
+        mResults->maxZ = std::max( mResults->maxZ, height );
+
+        const double distanceAlongProfileCurve = mProfileCurveEngine->lineLocatePoint( *interpolatedPoint, &error );
+        mResults->mDistanceToHeightMap.insert( distanceAlongProfileCurve, height );
+
+        if ( mExtrusionEnabled )
+        {
+          const double extrusion = mDataDefinedProperties.valueAsDouble( QgsMapLayerElevationProperties::ExtrusionHeight, mExpressionContext, mExtrusionHeight );
+
+          transformedParts.append( QgsGeometry( new QgsLineString( QgsPoint( interpolatedPoint->x(), interpolatedPoint->y(), height ),
+                                                QgsPoint( interpolatedPoint->x(), interpolatedPoint->y(), height + extrusion ) ) ));
+          crossSectionParts.append(QgsGeometry( new QgsLineString( QgsPoint( distanceAlongProfileCurve, height ),
+                                              QgsPoint( distanceAlongProfileCurve, height + extrusion ) ) ));
+          mResults->minZ = std::min( mResults->minZ, height + extrusion );
+          mResults->maxZ = std::max( mResults->maxZ, height + extrusion );
+        }
+        else
+        {
+          transformedParts.append( QgsGeometry( new QgsPoint( interpolatedPoint->x(), interpolatedPoint->y(), height ) ));
+          crossSectionParts.append( QgsGeometry( new QgsPoint( distanceAlongProfileCurve, height )));
+        }
+      }
+
+      resultFeature.geometry = transformedParts.size() > 1 ? QgsGeometry::collectGeometry( transformedParts ) : transformedParts.value( 0 );
+      if ( !crossSectionParts.empty() )
+      {
+        QgsGeometry unioned = QgsGeometry::unaryUnion( crossSectionParts );
+        if ( unioned.type() == QgsWkbTypes::LineGeometry )
+          unioned = unioned.mergeLines();
+        resultFeature.crossSectionGeometry = unioned;
+      }      
+
+      mResults->features[resultFeature.featureId].append( resultFeature );      
+    };
+
+    QString error;
+    std::unique_ptr< QgsAbstractGeometry > intersection( mProfileBoxEngine->intersection( curve, &error ) );
+    if ( !intersection )
+    {
+      std::cout << "not intersected" << std::endl;
+      return;
+    }
+    else
+    {
+      std::cout << "intersection " << intersection->partCount() << " error" << error.toStdString() << std::endl;
+      std::cout << "intersection geometry"  << intersection->geometryType().toStdString() << std::endl;
+    }
+
+    if ( mFeedback->isCanceled() )
+      return;
+
+    QgsGeos curveGeos( curve );
+    curveGeos.prepareGeometry();
+
+    if ( mFeedback->isCanceled() )
+      return;
+
+    for ( auto it = intersection->const_parts_begin(); it != intersection->const_parts_end(); ++it )
+    {
+
+      std::cout << "intersection geometry contains" << (*it)->geometryType().toStdString() << std::endl;
+
+      if ( mFeedback->isCanceled() )
+        return;
+
+      if ( const QgsPoint *intersectionPoint = qgsgeometry_cast< const QgsPoint * >( *it ) )
+      {
+        processPoint(*intersectionPoint, curveGeos,feature);
+        
+      }
+      else if(const QgsLineString *intersectionLine = qgsgeometry_cast< const QgsLineString * >( *it ) )
+      {
+        processLineString(*intersectionLine, curveGeos,feature);
+      }
+    }
+  };
+
+  QgsFeature feature;
+  QgsFeatureIterator it = mSource->getFeatures( request );
+  while ( it.nextFeature( feature ) )
+  {
+    if ( mFeedback->isCanceled() )
+      return false;
+
+    if ( !mProfileBoxEngine->intersects( feature.geometry().constGet() ) )
+      continue;
+
+    mExpressionContext.setFeature( feature );
+
+    const QgsGeometry g = feature.geometry();
+    if ( g.isMultipart() )
+    {
+      for ( auto it = g.const_parts_begin(); it != g.const_parts_end(); ++it )
+      {
+        if ( !mProfileBoxEngine->intersects( *it ) )
           continue;
 
         processCurve( feature, qgsgeometry_cast< const QgsCurve * >( *it ) );

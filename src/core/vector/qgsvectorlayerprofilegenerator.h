@@ -120,6 +120,7 @@ class CORE_EXPORT QgsVectorLayerProfileGenerator : public QgsAbstractProfileSurf
 
     bool generateProfileForPoints();
     bool generateProfileForLines();
+    bool generateProfileForLinesWithBox();
     bool generateProfileForPolygons();
 
     double terrainHeight( double x, double y );
@@ -133,6 +134,9 @@ class CORE_EXPORT QgsVectorLayerProfileGenerator : public QgsAbstractProfileSurf
 
     std::unique_ptr< QgsCurve > mProfileCurve;
     std::unique_ptr< QgsGeos > mProfileCurveEngine;
+
+    QgsAbstractGeometry* mProfileBox;
+    std::unique_ptr< QgsGeos > mProfileBoxEngine;
 
     std::unique_ptr< QgsAbstractTerrainProvider > mTerrainProvider;
 
