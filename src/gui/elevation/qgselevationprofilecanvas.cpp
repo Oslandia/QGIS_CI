@@ -36,9 +36,12 @@
 #include "qgsmaplayerelevationproperties.h"
 #include "qgsapplication.h"
 #include "qgsscreenhelper.h"
+#include "qgsprojectdisplaysettings.h"
+#include "qgsbearingnumericformat.h"
 
 #include <QWheelEvent>
 #include <QTimer>
+#include <QtMath>
 
 ///@cond PRIVATE
 class QgsElevationProfilePlotItem : public Qgs2DPlot, public QgsPlotCanvasItem
@@ -317,6 +320,98 @@ class QgsElevationProfileCrossHairsItem : public QgsPlotCanvasItem
     QgsProfilePoint mPoint;
     QgsElevationProfilePlotItem *mPlotItem = nullptr;
 };
+
+class QgsElevationProfileCurveVertexItem : public QgsPlotCanvasItem
+{
+  public:
+
+    QgsElevationProfileCurveVertexItem( QgsElevationProfileCanvas *canvas, QgsElevationProfilePlotItem *plotItem )
+      : QgsPlotCanvasItem( canvas )
+      , mPlotItem( plotItem )
+    {
+    }
+
+    void setProfileCurve( QgsCurve *curve )
+    {
+      mProfileCurve.reset( curve );
+    }
+
+    void updateRect()
+    {
+      mRect = mCanvas->rect();
+
+      prepareGeometryChange();
+      setPos( mRect.topLeft() );
+      update();
+    }
+
+    QRectF boundingRect() const override
+    {
+      return mRect;
+    }
+
+    void paint( QPainter *painter ) override
+    {
+      if ( !mProfileCurve )
+        return;
+
+      painter->save();
+
+      painter->setBrush( Qt::NoBrush );
+
+      QPen linePen;
+      linePen.setCosmetic( true );
+      linePen.setWidthF( 1 );
+      linePen.setStyle( Qt::SolidLine );
+      linePen.setCapStyle( Qt::FlatCap );
+      linePen.setColor( "red" );
+      painter->setPen( linePen );
+
+      const QgsBearingNumericFormat *bearingFormat = QgsProject::instance()->displaySettings()->bearingFormat();
+      QgsNumericFormatContext contextFormat = QgsNumericFormatContext();
+
+      for ( int i = 0; i < mProfileCurve->numPoints() ; i++ )
+      {
+        QgsPoint point;
+        Qgis::VertexType ignored;
+        if ( mProfileCurve->pointAt( i, point, ignored ) )
+        {
+          QgsPointXY canvasPointCanvas = mCanvas->toCanvasCoordinates( point );
+          if ( !canvasPointCanvas.isEmpty() )
+          {
+            painter->drawLine( QPointF( canvasPointCanvas.x(), mPlotItem->plotArea().top() ), QPointF( canvasPointCanvas.x(), mPlotItem->plotArea().bottom() ) );
+
+            //Calculate angle between point
+            if ( i != mProfileCurve->numPoints() - 1 )
+            {
+              QgsPoint nextPoint;
+              mProfileCurve->pointAt( i + 1, nextPoint, ignored );
+              double angle = QgsGeometryUtils::lineAngle( point.x(), point.y(), nextPoint.x(), nextPoint.y() );
+              QString text = bearingFormat->formatDouble( qRadiansToDegrees( angle ), contextFormat );
+              drawRotatedText( *painter, canvasPointCanvas.x(), mPlotItem->plotArea().top(), 90.0, text );
+            }
+          }
+        }
+      }
+
+      painter->restore();
+    }
+
+    void drawRotatedText( QPainter &p, int x, int y, float angle, const QString text )
+    {
+      p.translate( x, y );
+      p.rotate( angle );
+      p.drawText( 0, 0, text );
+      p.rotate( -1 * angle );
+      p.translate( -1 * x, -1 * y );
+    }
+
+  private:
+
+    QRectF mRect;
+    QgsElevationProfilePlotItem *mPlotItem = nullptr;
+    std::unique_ptr< QgsCurve> mProfileCurve;
+};
 ///@endcond PRIVATE
 
 
@@ -329,6 +424,9 @@ QgsElevationProfileCanvas::QgsElevationProfileCanvas( QWidget *parent )
   mCrossHairsItem = new QgsElevationProfileCrossHairsItem( this, mPlotItem );
   mCrossHairsItem->setZValue( 100 );
   mCrossHairsItem->hide();
+
+  mCurveVertexItem = new QgsElevationProfileCurveVertexItem( this, mPlotItem );
+  mCurveVertexItem->setZValue( 110 );
 
   // updating the profile plot is deferred on a timer, so that we don't trigger it too often
   mDeferredRegenerationTimer = new QTimer( this );
@@ -870,6 +968,7 @@ void QgsElevationProfileCanvas::setCrs( const QgsCoordinateReferenceSystem &crs 
 void QgsElevationProfileCanvas::setProfileCurve( QgsCurve *curve )
 {
   mProfileCurve.reset( curve );
+  mCurveVertexItem->setProfileCurve( curve ? curve->clone() : nullptr );
 }
 
 QgsCurve *QgsElevationProfileCanvas::profileCurve() const
@@ -919,6 +1018,7 @@ void QgsElevationProfileCanvas::resizeEvent( QResizeEvent *event )
   QgsPlotCanvas::resizeEvent( event );
   mPlotItem->updateRect();
   mCrossHairsItem->updateRect();
+  mCurveVertexItem->updateRect();
 }
 
 void QgsElevationProfileCanvas::paintEvent( QPaintEvent *event )
@@ -931,6 +1031,7 @@ void QgsElevationProfileCanvas::paintEvent( QPaintEvent *event )
     mFirstDrawOccurred = true;
     mPlotItem->updateRect();
     mCrossHairsItem->updateRect();
+    mCurveVertexItem->updateRect();
   }
 }
 
