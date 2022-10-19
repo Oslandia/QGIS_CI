@@ -28,6 +28,7 @@
 
 class QgsElevationProfilePlotItem;
 class QgsElevationProfileCrossHairsItem;
+class QgsElevationProfileCurveVertexItem;
 class QgsAbstractProfileResults;
 class QgsProfilePlotRenderer;
 class QgsCurve;
@@ -283,6 +284,7 @@ class GUI_EXPORT QgsElevationProfileCanvas : public QgsPlotCanvas
 
     QgsElevationProfilePlotItem *mPlotItem = nullptr;
     QgsElevationProfileCrossHairsItem *mCrossHairsItem = nullptr;
+    QgsElevationProfileCurveVertexItem *mCurveVertexItem = nullptr;
 
     QgsProfilePlotRenderer *mCurrentJob = nullptr;
     QTimer *mDeferredRegenerationTimer = nullptr;
