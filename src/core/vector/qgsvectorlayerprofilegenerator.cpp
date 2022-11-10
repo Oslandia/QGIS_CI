@@ -657,7 +657,6 @@ QgsVectorLayerProfileGenerator::~QgsVectorLayerProfileGenerator() = default;
 
 bool QgsVectorLayerProfileGenerator::generateProfile( const QgsProfileGenerationContext & )
 {
-  std::cout << "generateProfile" << std::endl;
   if ( !mProfileCurve || mFeedback->isCanceled() )
     return false;
 
@@ -684,9 +683,6 @@ bool QgsVectorLayerProfileGenerator::generateProfile( const QgsProfileGeneration
   if ( mFeedback->isCanceled() )
     return false;
 
-
-  std::cout << "result generation" << std::endl;
-
   mResults = std::make_unique< QgsVectorLayerProfileResults >();
   mResults->mLayer = mLayer;
   mResults->copyPropertiesFromGenerator( this );
@@ -706,29 +702,24 @@ bool QgsVectorLayerProfileGenerator::generateProfile( const QgsProfileGeneration
   switch ( QgsWkbTypes::geometryType( mWkbType ) )
   {
     case QgsWkbTypes::PointGeometry:
-      std::cout << "PointGeometry" << std::endl;
       if ( !generateProfileForPoints() )
         return false;
       break;
 
     case QgsWkbTypes::LineGeometry:
-      std::cout << "LineGeometry" << std::endl;
       if ( !generateProfileForLinesWithBox() )
         return false;
       break;
 
     case QgsWkbTypes::PolygonGeometry:
-      std::cout << "NullGePolygonGeometryometry" << std::endl;
       if ( !generateProfileForPolygons() )
         return false;
       break;
 
     case QgsWkbTypes::NullGeometry:
-      std::cout << "NullGeometry" << std::endl;
       return false;
 
     case QgsWkbTypes::UnknownGeometry:
-      std::cout << "UnknownGeometry" << std::endl;
       return false;
   }
 
@@ -932,9 +923,7 @@ bool QgsVectorLayerProfileGenerator::generateProfileForLinesWithBox()
   request.setSubsetOfAttributes( mDataDefinedProperties.referencedFields( mExpressionContext ), mFields );
   request.setFeedback( mFeedback.get() );
 
-
   std::cout << "generateProfileForLinesWithBox" << std::endl;
-
 
   auto processCurve = [this]( const QgsFeature & feature, const QgsCurve * curve )
   {
@@ -980,20 +969,9 @@ bool QgsVectorLayerProfileGenerator::generateProfileForLinesWithBox()
       mResults->features[resultFeature.featureId].append( resultFeature );
     };
 
-    auto processLineString = [this, curve]( const QgsLineString & originalLas, const QgsGeos & curveGeos,  const QgsFeature & feature )
+    auto processIntersectionCurve = [this, curve]( const QgsCurve & intersectionCurve, const QgsGeos & curveGeos,  const QgsFeature & feature )
     {
-      QgsLineString ls = originalLas;
-
-
-      std::cout << "linestring intersection " << ls.asWkt( 3 ).toStdString() << std::endl;
-
-      bool isEmpty = ls.isEmpty();
-
-      if ( isEmpty )
-      {
-        ls = *qgsgeometry_cast<const QgsLineString *>( feature.geometry().constGet() );
-        std::cout << "linestring is empty " << ls.asWkt( 3 ).toStdString() << std::endl;
-      }
+      std::cout << "curve intersection " << intersectionCurve.asWkt( 3 ).toStdString() << std::endl;
 
       QString error;
       QVector< QgsGeometry > transformedParts;
@@ -1004,22 +982,19 @@ bool QgsVectorLayerProfileGenerator::generateProfileForLinesWithBox()
       resultFeature.featureId = feature.id();
       double lastDistanceAlongProfileCurve = 0.0;
 
-      for ( auto it = ls.vertices_begin(); it != ls.vertices_end(); ++it )
+      for ( auto it = intersectionCurve.vertices_begin(); it != intersectionCurve.vertices_end(); ++it )
       {
 
-        std::cout << "linestring intersection part " << ( *it ).geometryType().toStdString() << std::endl;
+        std::cout << "curve intersection part " << ( *it ).geometryType().toStdString() << std::endl;
 
         const QgsPoint &intersectionPoint = ( *it );
         std::cout << "intersectionPoint " << intersectionPoint.asWkt( 3 ).toStdString() << std::endl;
 
         // unfortunately we need to do some work to interpolate the z value for the line -- GEOS doesn't give us this
         const double distance = curveGeos.lineLocatePoint( intersectionPoint, &error );
-        std::cout << "linestring intersection distance " << distance << std::endl;
+        std::cout << "curve intersection distance " << distance << std::endl;
         std::unique_ptr< QgsPoint > interpolatedPoint( curve->interpolatePoint( distance ) );
-        if ( isEmpty )
-        {
-          interpolatedPoint->setZ( intersectionPoint.z() );
-        }
+        
         std::cout << "interpolatedPoint x" << interpolatedPoint->x() << std::endl;
         std::cout << "interpolatedPoint y" << interpolatedPoint->y() << std::endl;
         std::cout << "interpolatedPoint z" << interpolatedPoint->z() << std::endl;
@@ -1052,12 +1027,9 @@ bool QgsVectorLayerProfileGenerator::generateProfileForLinesWithBox()
           crossSectionParts.append( QgsGeometry( new QgsPoint( distanceAlongProfileCurve, height ) ) );
         }
       }
-
-      if ( !isEmpty )
-      {
-        mResults->mDistanceToHeightMap.insert( lastDistanceAlongProfileCurve + 0.001, qQNaN() );
-      }
-
+      
+      mResults->mDistanceToHeightMap.insert( lastDistanceAlongProfileCurve + 0.001, qQNaN() );
+      
       resultFeature.geometry = transformedParts.size() > 1 ? QgsGeometry::unaryUnion( transformedParts ) : transformedParts.value( 0 );
       if ( !crossSectionParts.empty() )
       {
@@ -1101,6 +1073,20 @@ bool QgsVectorLayerProfileGenerator::generateProfileForLinesWithBox()
     if ( mFeedback->isCanceled() )
       return;
 
+    bool isEmpty = intersection->isEmpty();
+
+
+    // Intersection is empty : GEOS issue for vertical intersection : use feature geometry as intersection
+    if ( isEmpty)
+    {
+      std::string wkt_std = intersection->asWkt().toStdString();
+      std::cout << "intersection wkt " << wkt_std << std::endl;
+      std::cout << "feature wkt " << feature.geometry().asWkt().toStdString() << std::endl;
+
+      intersection.reset(feature.geometry().constGet()->clone());
+      std::cout << "intersection is empty. New intersection" << intersection->asWkt( 3 ).toStdString() << std::endl;
+    }
+
     QgsGeos curveGeos( curve );
     curveGeos.prepareGeometry();
 
@@ -1120,9 +1106,9 @@ bool QgsVectorLayerProfileGenerator::generateProfileForLinesWithBox()
         processPoint( *intersectionPoint, curveGeos, feature );
 
       }
-      else if ( const QgsLineString *intersectionLine = qgsgeometry_cast< const QgsLineString * >( *it ) )
+      else if ( const QgsCurve *intersectionCurve = qgsgeometry_cast< const QgsCurve * >( *it ) )
       {
-        processLineString( *intersectionLine, curveGeos, feature );
+        processIntersectionCurve( *intersectionCurve, curveGeos, feature );
       }
     }
   };
@@ -1136,6 +1122,9 @@ bool QgsVectorLayerProfileGenerator::generateProfileForLinesWithBox()
 
     if ( !mProfileBoxEngine->intersects( feature.geometry().constGet() ) )
       continue;
+
+    
+    std::cout << "feature intersect with box" << std::endl;
 
     mExpressionContext.setFeature( feature );
 
