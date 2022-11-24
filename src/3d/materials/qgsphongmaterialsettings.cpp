@@ -15,6 +15,7 @@
 
 #include "qgsphongmaterialsettings.h"
 
+#include "qgs3dmapsettings.h"
 #include "qgssymbollayerutils.h"
 #include <Qt3DExtras/QDiffuseSpecularMaterial>
 #if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
@@ -108,27 +109,27 @@ Qt3DRender::QMaterial *QgsPhongMaterialSettings::toMaterial( const Qgs3DMapSetti
     case QgsMaterialSettingsRenderingTechnique::TrianglesWithFixedTexture:
     case QgsMaterialSettingsRenderingTechnique::TrianglesFromModel:
     {
-      if ( dataDefinedProperties().hasActiveProperties() )
-        return dataDefinedMaterial();
+      // if ( dataDefinedProperties().hasActiveProperties() )
+      return dataDefinedMaterial( mapSettings );
 
-      int opacity = mOpacity * 255;
-      Qt3DExtras::QDiffuseSpecularMaterial *material  = new Qt3DExtras::QDiffuseSpecularMaterial;
-      material->setDiffuse( QColor( mDiffuse.red(), mDiffuse.green(), mDiffuse.blue(), opacity ) );
-      material->setAmbient( QColor( mAmbient.red(), mAmbient.green(), mAmbient.blue(), opacity ) );
-      material->setSpecular( QColor( mSpecular.red(), mSpecular.green(), mSpecular.blue(), opacity ) );
-      material->setShininess( mShininess );
-      if ( mOpacity != 1 )
-      {
-        material->setAlphaBlendingEnabled( true );
-      }
+      // int opacity = mOpacity * 255;
+      // Qt3DExtras::QDiffuseSpecularMaterial *material  = new Qt3DExtras::QDiffuseSpecularMaterial;
+      // material->setDiffuse( QColor( mDiffuse.red(), mDiffuse.green(), mDiffuse.blue(), opacity ) );
+      // material->setAmbient( QColor( mAmbient.red(), mAmbient.green(), mAmbient.blue(), opacity ) );
+      // material->setSpecular( QColor( mSpecular.red(), mSpecular.green(), mSpecular.blue(), opacity ) );
+      // material->setShininess( mShininess );
+      // if ( mOpacity != 1 )
+      // {
+      //   material->setAlphaBlendingEnabled( true );
+      // }
 
-      if ( context.isSelected() )
-      {
-        // update the material with selection colors
-        material->setDiffuse( context.selectionColor() );
-        material->setAmbient( context.selectionColor().darker() );
-      }
-      return material;
+      // if ( context.isSelected() )
+      // {
+      //   // update the material with selection colors
+      //   material->setDiffuse( context.selectionColor() );
+      //   material->setAmbient( context.selectionColor().darker() );
+      // }
+      // return material;
     }
 
     case QgsMaterialSettingsRenderingTechnique::Lines:
@@ -164,9 +165,26 @@ void QgsPhongMaterialSettings::addParametersToEffect( Qt3DRender::QEffect *effec
 
 QByteArray QgsPhongMaterialSettings::dataDefinedVertexColorsAsByte( const QgsExpressionContext &expressionContext ) const
 {
-  const QColor ambient = dataDefinedProperties().valueAsColor( Ambient, expressionContext, mAmbient );
-  const QColor diffuse = dataDefinedProperties().valueAsColor( Diffuse, expressionContext, mDiffuse );
-  const QColor specular = dataDefinedProperties().valueAsColor( Specular, expressionContext, mSpecular );
+
+  QColor ambient;
+  QColor diffuse;
+  QColor specular;
+  if ( dataDefinedProperties().hasActiveProperties() )
+  {
+    ambient = dataDefinedProperties().valueAsColor( Ambient, expressionContext, mAmbient );
+    diffuse = dataDefinedProperties().valueAsColor( Diffuse, expressionContext, mDiffuse );
+    specular = dataDefinedProperties().valueAsColor( Specular, expressionContext, mSpecular );
+  }
+  else
+  {
+    ambient = mAmbient;
+    diffuse = mDiffuse;
+    specular = mSpecular;
+  }
+
+  // const QColor ambient = dataDefinedProperties().valueAsColor( Ambient, expressionContext, mAmbient );
+  // const QColor diffuse = dataDefinedProperties().valueAsColor( Diffuse, expressionContext, mDiffuse );
+  // const QColor specular = dataDefinedProperties().valueAsColor( Specular, expressionContext, mSpecular );
 
   QByteArray array;
   array.resize( sizeof( unsigned char ) * 9 );
@@ -229,9 +247,9 @@ void QgsPhongMaterialSettings::applyDataDefinedToGeometry( Qt3DQGeometry *geomet
   dataBuffer->setData( data );
 }
 
-Qt3DRender::QMaterial *QgsPhongMaterialSettings::dataDefinedMaterial() const
+Qt3DRender::QMaterial *QgsPhongMaterialSettings::dataDefinedMaterial( const Qgs3DMapSettings *mapSettings ) const
 {
-  qDebug() << "PHONG MATGRIAL";
+  qDebug() << "PHONG MATERIAL";
   Qt3DRender::QMaterial *material = new Qt3DRender::QMaterial;
 
   Qt3DRender::QEffect *eff = new Qt3DRender::QEffect( material );
@@ -260,6 +278,12 @@ Qt3DRender::QMaterial *QgsPhongMaterialSettings::dataDefinedMaterial() const
 
   eff->addParameter( new Qt3DRender::QParameter( QStringLiteral( "shininess" ), mShininess ) );
   eff->addParameter( new Qt3DRender::QParameter( QStringLiteral( "opacity" ), mOpacity ) );
+
+  Qgs3DBoundingBoxSettings bbSettings = mapSettings->getBoundingBoxSettings();
+  QgsAABB bbCoords = bbSettings.coords();
+  eff->addParameter( new Qt3DRender::QParameter( QStringLiteral( "boundingBoxEnabled" ),  bbSettings.isEnabled() ) );
+  eff->addParameter( new Qt3DRender::QParameter( QStringLiteral( "boundingBoxMin" ),  QVector3D( bbCoords.xMin, bbCoords.yMin, bbCoords.zMin ) ) );
+  eff->addParameter( new Qt3DRender::QParameter( QStringLiteral( "boundingBoxMax" ),  QVector3D( bbCoords.xMax, bbCoords.yMax, bbCoords.zMax ) ) );
 
   eff->addTechnique( technique );
   material->setEffect( eff );

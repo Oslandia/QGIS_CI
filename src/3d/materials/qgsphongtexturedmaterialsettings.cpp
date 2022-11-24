@@ -119,7 +119,7 @@ Qt3DRender::QMaterial *QgsPhongTexturedMaterialSettings::toMaterial( const Qgs3D
         phongSettings.setOpacity( mOpacity );
         phongSettings.setShininess( mShininess );
         phongSettings.setSpecular( mSpecular );
-        Qt3DRender::QMaterial *material = phongSettings.toMaterial( technique, context );
+        Qt3DRender::QMaterial *material = phongSettings.toMaterial( mapSettings, technique, context );
         return material;
       }
 
