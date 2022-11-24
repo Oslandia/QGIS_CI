@@ -22,8 +22,8 @@ out vec4 oColor;
 
 void main(void)
 {
-    // if (!isInsideBoundingBox(worldPosition, boundingBoxEnabled, boundingBoxMin, boundingBoxMax))
-    if (worldPosition.x < 0.0)
+    if (!isInsideBoundingBox(worldPosition, boundingBoxEnabled, boundingBoxMin, boundingBoxMax))
+    // if (worldPosition.x < 0.0)
     {
         discard;
         return;

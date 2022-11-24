@@ -78,15 +78,14 @@ QgsLineMaterial::QgsLineMaterial( const Qgs3DMapSettings *mapSettings )
   technique->graphicsApiFilter()->setMajorVersion( 3 );
   technique->graphicsApiFilter()->setMinorVersion( 1 );
 
+  Qt3DRender::QEffect *effect = new Qt3DRender::QEffect( this );
+
   Qgs3DBoundingBoxSettings bbSettings = mapSettings->getBoundingBoxSettings();
   QgsAABB bbCoords = bbSettings.coords();
-  qDebug() << bbCoords.xMin << "x" << bbCoords.yMin << "x" << bbCoords.zMin;
-  qDebug() << bbCoords.xMax << "x" << bbCoords.yMax << "x" << bbCoords.zMax;
-  technique->addParameter( new Qt3DRender::QParameter( QStringLiteral( "boundingBoxEnabled" ),  bbSettings.isEnabled() ) );
-  technique->addParameter( new Qt3DRender::QParameter( QStringLiteral( "boundingBoxMin" ),  QVector3D( bbCoords.xMin, bbCoords.yMin, bbCoords.zMin ) ) );
-  technique->addParameter( new Qt3DRender::QParameter( QStringLiteral( "boundingBoxMax" ),  QVector3D( bbCoords.xMax, bbCoords.yMax, bbCoords.zMax ) ) );
+  effect->addParameter( new Qt3DRender::QParameter( QStringLiteral( "boundingBoxEnabled" ),  bbSettings.isEnabled() ) );
+  effect->addParameter( new Qt3DRender::QParameter( QStringLiteral( "boundingBoxMin" ),  QVector3D( bbCoords.xMin, bbCoords.yMin, bbCoords.zMin ) ) );
+  effect->addParameter( new Qt3DRender::QParameter( QStringLiteral( "boundingBoxMax" ),  QVector3D( bbCoords.xMax, bbCoords.yMax, bbCoords.zMax ) ) );
 
-  Qt3DRender::QEffect *effect = new Qt3DRender::QEffect( this );
   effect->addTechnique( technique );
 
   setEffect( effect );

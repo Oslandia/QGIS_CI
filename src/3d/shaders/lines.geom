@@ -9,6 +9,7 @@ layout( triangle_strip, max_vertices = 7 ) out;
 
 out vec3 worldPosition;
 
+uniform mat4 inverseViewProjectionMatrix;
 
 //in VertexData{
 //	vec3 mColor;
@@ -112,19 +113,19 @@ void main( void )
             VertexOut.mTexCoord = vec2( 0, 0 );
             //VertexOut.mColor = VertexIn[1].mColor;
             gl_Position = vec4( ( p1 + THICKNESS * n1 ) / WIN_SCALE, p1z, 1.0 );
-	    worldPosition = gl_Position.xyz;
+	    worldPosition = vec3(inverseViewProjectionMatrix * (gl_Position * px1.w));
             EmitVertex();
 
             VertexOut.mTexCoord = vec2( 0, 0 );
             //VertexOut.mColor = VertexIn[1].mColor;
             gl_Position = vec4( ( p1 + THICKNESS * n0 ) / WIN_SCALE, p1z, 1.0 );
-	    worldPosition = gl_Position.xyz;
+	    worldPosition = vec3(inverseViewProjectionMatrix * (gl_Position * px1.w));
             EmitVertex();
 
             VertexOut.mTexCoord = vec2( 0, 0.5 );
             //VertexOut.mColor = VertexIn[1].mColor;
             gl_Position = vec4( p1 / WIN_SCALE, p1z, 1.0 );
-	    worldPosition = gl_Position.xyz;
+	    worldPosition = vec3(inverseViewProjectionMatrix * (gl_Position * px1.w));
             EmitVertex();
 
             EndPrimitive();
@@ -133,19 +134,19 @@ void main( void )
             VertexOut.mTexCoord = vec2( 0, 1 );
             //VertexOut.mColor = VertexIn[1].mColor;
             gl_Position = vec4( ( p1 - THICKNESS * n0 ) / WIN_SCALE, p1z, 1.0 );
-	    worldPosition = gl_Position.xyz;
+	    worldPosition = vec3(inverseViewProjectionMatrix * (gl_Position * px1.w));
             EmitVertex();
 
             VertexOut.mTexCoord = vec2( 0, 1 );
             //VertexOut.mColor = VertexIn[1].mColor;
             gl_Position = vec4( ( p1 - THICKNESS * n1 ) / WIN_SCALE, p1z, 1.0 );
-	    worldPosition = gl_Position.xyz;
+	    worldPosition = vec3(inverseViewProjectionMatrix * (gl_Position * px1.w));
             EmitVertex();
 
             VertexOut.mTexCoord = vec2( 0, 0.5 );
             //VertexOut.mColor = VertexIn[1].mColor;
             gl_Position = vec4( p1 / WIN_SCALE, p1z, 1.0 );
-	    worldPosition = gl_Position.xyz;
+	    worldPosition = vec3(inverseViewProjectionMatrix * (gl_Position * px1.w));
             EmitVertex();
 
             EndPrimitive();
@@ -161,25 +162,25 @@ void main( void )
     VertexOut.mTexCoord = vec2( 0, 0 );
     //VertexOut.mColor = VertexIn[1].mColor;
     gl_Position = vec4( ( p1 + length_a * miter_a ) / WIN_SCALE, p1z, 1.0 );
-    worldPosition = gl_Position.xyz;
+    worldPosition = vec3(inverseViewProjectionMatrix * (gl_Position * px1.w));
     EmitVertex();
 
     VertexOut.mTexCoord = vec2( 0, 1 );
     //VertexOut.mColor = VertexIn[1].mColor;
     gl_Position = vec4( ( p1 - length_a * miter_a ) / WIN_SCALE, p1z, 1.0 );
-    worldPosition = gl_Position.xyz;
+    worldPosition = vec3(inverseViewProjectionMatrix * (gl_Position * px1.w));
     EmitVertex();
 
     VertexOut.mTexCoord = vec2( 0, 0 );
     //VertexOut.mColor = VertexIn[2].mColor;
     gl_Position = vec4( ( p2 + length_b * miter_b ) / WIN_SCALE, p2z, 1.0 );
-    worldPosition = gl_Position.xyz;
+    worldPosition = vec3(inverseViewProjectionMatrix * (gl_Position * px2.w));
     EmitVertex();
 
     VertexOut.mTexCoord = vec2( 0, 1 );
     //VertexOut.mColor = VertexIn[2].mColor;
     gl_Position = vec4( ( p2 - length_b * miter_b ) / WIN_SCALE, p2z, 1.0 );
-    worldPosition = gl_Position.xyz;
+    worldPosition = vec3(inverseViewProjectionMatrix * (gl_Position * px2.w));
     EmitVertex();
 
     EndPrimitive();
