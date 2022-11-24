@@ -15,6 +15,7 @@
 
 #include "qgsphongtexturedmaterialsettings.h"
 
+#include "qgs3dmapsettings.h"
 #include "qgssymbollayerutils.h"
 #include "qgsapplication.h"
 #include "qgsimagecache.h"
@@ -175,6 +176,12 @@ Qt3DRender::QMaterial *QgsPhongTexturedMaterialSettings::toMaterial( const Qgs3D
 
       effect->addParameter( new Qt3DRender::QParameter( QStringLiteral( "diffuseTexture" ), QVariant::fromValue( texture ) ) );
       effect->addParameter( new Qt3DRender::QParameter( QStringLiteral( "texCoordScale" ), mTextureScale ) );
+
+      Qgs3DBoundingBoxSettings bbSettings = mapSettings->getBoundingBoxSettings();
+      QgsAABB bbCoords = bbSettings.coords();
+      effect->addParameter( new Qt3DRender::QParameter( QStringLiteral( "boundingBoxEnabled" ),  bbSettings.isEnabled() ) );
+      effect->addParameter( new Qt3DRender::QParameter( QStringLiteral( "boundingBoxMin" ),  QVector3D( bbCoords.xMin, bbCoords.yMin, bbCoords.zMin ) ) );
+      effect->addParameter( new Qt3DRender::QParameter( QStringLiteral( "boundingBoxMax" ),  QVector3D( bbCoords.xMax, bbCoords.yMax, bbCoords.zMax ) ) );
 
       effect->addTechnique( technique );
       material->setEffect( effect );
