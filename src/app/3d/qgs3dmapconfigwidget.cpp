@@ -636,9 +636,9 @@ void Qgs3DMapConfigWidget::initBoundingBoxPage()
 
   // connect( mBoundingBoxExtentSelection, &QgsExtentWidget::toggleDialogVisibility, this, [ = ]( bool visible )
   // {
-  //   qDebug() << "REQUEST" << m3DMapCanvas->topLevelWidget() << m3DMapCanvas->topLevelWidget()->windowTitle() << this;
+  //   qDebug() << "REQUEST" << m3DMapCanvas->topLevelWidget() << m3DMapCanvas->topLevelWidget()->windowTitle() << this << visible;
   //   // m3DMapCanvas->topLevelWidget()->setVisible(false);
-  //   // this->parentWidget()->setVisible(visible);
+  //   this->parentWidget()->setVisible(visible);
   //   if ( !visible )
   //     this->parentWidget()->showMinimized();
   //   else
