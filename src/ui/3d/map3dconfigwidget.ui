@@ -853,10 +853,14 @@
                        </property>
                       </widget>
                      </item>
-                     <item row="1" column="0">
+                     <item row="1" column="0" colspan="3">
+                      <widget class="QgsExtentWidget" name="mBoundingBoxExtentSelection">
+                      </widget>
+                     </item>
+                     <item row="2" column="0">
                       <widget class="QLabel" name="bbempty"/>
                      </item>
-                     <item row="1" column="1">
+                     <item row="2" column="1">
                       <widget class="QLabel" name="bbmin">
                        <property name="text">
                         <string>min</string>
@@ -866,7 +870,7 @@
                        </property>
                       </widget>
                      </item>
-                     <item row="1" column="2">
+                     <item row="2" column="2">
                       <widget class="QLabel" name="bbmax">
                        <property name="text">
                         <string>max</string>
@@ -876,43 +880,43 @@
                        </property>
                       </widget>
                      </item>
-                     <item row="2" column="0">
+                     <item row="3" column="0">
                       <widget class="QLabel" name="bbx">
                        <property name="text">
                         <string>X</string>
                        </property>
                       </widget>
                      </item>
-                     <item row="2" column="1">
+                     <item row="3" column="1">
                       <widget class="QDoubleSpinBox" name="mBoundingBoxXMin"/>
                      </item>
-                     <item row="2" column="2">
+                     <item row="3" column="2">
                       <widget class="QDoubleSpinBox" name="mBoundingBoxXMax"/>
                      </item>
-                     <item row="3" column="0">
+                     <item row="4" column="0">
                       <widget class="QLabel" name="bby">
                        <property name="text">
                         <string>Y</string>
                        </property>
                       </widget>
                      </item>
-                     <item row="3" column="1">
+                     <item row="4" column="1">
                       <widget class="QDoubleSpinBox" name="mBoundingBoxYMin"/>
                      </item>
-                     <item row="3" column="2">
+                     <item row="4" column="2">
                       <widget class="QDoubleSpinBox" name="mBoundingBoxYMax"/>
                      </item>
-                     <item row="4" column="0">
+                     <item row="5" column="0">
                       <widget class="QLabel" name="bbz">
                        <property name="text">
                         <string>Z</string>
                        </property>
                       </widget>
                      </item>
-                     <item row="4" column="1">
+                     <item row="5" column="1">
                       <widget class="QDoubleSpinBox" name="mBoundingBoxZMin"/>
                      </item>
-                     <item row="4" column="2">
+                     <item row="5" column="2">
                       <widget class="QDoubleSpinBox" name="mBoundingBoxZMax"/>
                      </item>
                     </layout>
@@ -1413,6 +1417,12 @@
    <class>QgsAmbientOcclusionSettingsWidget</class>
    <extends>QWidget</extends>
    <header>qgsambientocclusionsettingswidget.h</header>
+   <container>1</container>
+  </customwidget>
+  <customwidget>
+   <class>QgsExtentWidget</class>
+   <extends>QWidget</extends>
+   <header>qgsextentwidget.h</header>
    <container>1</container>
   </customwidget>
  </customwidgets>

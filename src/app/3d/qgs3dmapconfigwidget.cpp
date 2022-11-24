@@ -418,7 +418,7 @@ void Qgs3DMapConfigWidget::apply()
   bool boundingBoxEnabled = mGroupBoundingBox->isChecked();
   Qgs3DBoundingBoxSettings boundingBoxSettings = Qgs3DBoundingBoxSettings(
         boundingBoxEnabled, boundingBox, mBoundingBoxNrTicks->value(),
-	mBoundingBoxColor->color(), mBoundingBoxFull->isChecked(), mBoundingBoxShowIn2DView->isChecked() );
+        mBoundingBoxColor->color(), mBoundingBoxFull->isChecked(), mBoundingBoxShowIn2DView->isChecked() );
   if ( boundingBoxSettings != mMap->getBoundingBoxSettings() )
     mMap->setBoundingBoxSettings( boundingBoxSettings );
 
@@ -627,6 +627,37 @@ void Qgs3DMapConfigWidget::initBoundingBoxPage()
 
   Qgs3DBoundingBoxSettings boundingBoxSettings = mMap->getBoundingBoxSettings();
   QgsAABB boundingBoxCoords = boundingBoxSettings.coords();
+
+  const QgsRectangle sceneExtent0 = m3DMapCanvas->scene()->sceneExtent();
+  mBoundingBoxExtentSelection->setOriginalExtent( sceneExtent0, mMap->crs() );
+  mBoundingBoxExtentSelection->setCurrentExtent( sceneExtent0, mMap->crs() );
+  mBoundingBoxExtentSelection->setOutputCrs( mMap->crs() );
+  mBoundingBoxExtentSelection->setMapCanvas( mMainCanvas );
+
+  // connect( mBoundingBoxExtentSelection, &QgsExtentWidget::toggleDialogVisibility, this, [ = ]( bool visible )
+  // {
+  //   qDebug() << "REQUEST" << m3DMapCanvas->topLevelWidget() << m3DMapCanvas->topLevelWidget()->windowTitle() << this;
+  //   // m3DMapCanvas->topLevelWidget()->setVisible(false);
+  //   // this->parentWidget()->setVisible(visible);
+  //   if ( !visible )
+  //     this->parentWidget()->showMinimized();
+  //   else
+  //   {
+  //     this->parentWidget()->showNormal();
+  //     this->parentWidget()->raise();
+  //     this->parentWidget()->activateWindow();
+  //   }
+  // } );
+
+  connect( mBoundingBoxExtentSelection, &QgsExtentWidget::extentChanged, this, [ = ]( const QgsRectangle & extent )
+  {
+    qDebug() << "extentchanged" << extent.xMinimum() << "x" << extent.xMaximum();
+    qDebug() << "extentchanged" << extent.yMinimum() << "x" << extent.yMaximum();
+    mBoundingBoxXMin->setValue( extent.xMinimum() );
+    mBoundingBoxYMin->setValue( extent.yMinimum() );
+    mBoundingBoxXMax->setValue( extent.xMaximum() );
+    mBoundingBoxYMax->setValue( extent.yMaximum() );
+  } );
 
   // if the coordinates are not defined, use the scene extent
   if ( boundingBoxCoords.xMin == 0.0f && boundingBoxCoords.yMin == 0.0f
