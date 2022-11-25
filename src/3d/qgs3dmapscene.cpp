@@ -399,7 +399,7 @@ QgsChunkedEntity::SceneState _sceneState( QgsCameraController *cameraController,
   state.screenSizePx = std::max( rect.width(), rect.height() ); // TODO: is this correct?
   state.viewProjectionMatrix = camera->projectionMatrix() * camera->viewMatrix();
   Qgs3DBoundingBoxSettings bbSettings = mapSettings.getBoundingBoxSettings();
-  if ( bbSettings.isEnabled() )
+  if ( bbSettings.isEnabled() && bbSettings.cutLayers() )
     state.boundingBox = bbSettings.coords();
   else
     state.boundingBox = QgsAABB( std::numeric_limits<float>::lowest(), std::numeric_limits<float>::lowest(), std::numeric_limits<float>::lowest(),

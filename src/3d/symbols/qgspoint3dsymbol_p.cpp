@@ -197,7 +197,7 @@ Qt3DRender::QMaterial *QgsInstancedPoint3DSymbolHandler::material( const QgsPoin
 
   Qgs3DBoundingBoxSettings bbSettings = mapSettings->getBoundingBoxSettings();
   QgsAABB bbCoords = bbSettings.coords();
-  technique->addParameter( new Qt3DRender::QParameter( QStringLiteral( "boundingBoxEnabled" ),  bbSettings.isEnabled() ) );
+  technique->addParameter( new Qt3DRender::QParameter( QStringLiteral( "boundingBoxEnabled" ), bbSettings.isEnabled() && bbSettings.cutLayers() ) );
   technique->addParameter( new Qt3DRender::QParameter( QStringLiteral( "boundingBoxMin" ),  QVector3D( bbCoords.xMin, bbCoords.yMin, bbCoords.zMin ) ) );
   technique->addParameter( new Qt3DRender::QParameter( QStringLiteral( "boundingBoxMax" ),  QVector3D( bbCoords.xMax, bbCoords.yMax, bbCoords.zMax ) ) );
 

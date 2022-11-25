@@ -82,7 +82,7 @@ QgsLineMaterial::QgsLineMaterial( const Qgs3DMapSettings *mapSettings )
 
   Qgs3DBoundingBoxSettings bbSettings = mapSettings->getBoundingBoxSettings();
   QgsAABB bbCoords = bbSettings.coords();
-  effect->addParameter( new Qt3DRender::QParameter( QStringLiteral( "boundingBoxEnabled" ),  bbSettings.isEnabled() ) );
+  effect->addParameter( new Qt3DRender::QParameter( QStringLiteral( "boundingBoxEnabled" ), bbSettings.isEnabled() && bbSettings.cutLayers() ) );
   effect->addParameter( new Qt3DRender::QParameter( QStringLiteral( "boundingBoxMin" ),  QVector3D( bbCoords.xMin, bbCoords.yMin, bbCoords.zMin ) ) );
   effect->addParameter( new Qt3DRender::QParameter( QStringLiteral( "boundingBoxMax" ),  QVector3D( bbCoords.xMax, bbCoords.yMax, bbCoords.zMax ) ) );
 

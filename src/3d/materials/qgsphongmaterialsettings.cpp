@@ -281,7 +281,7 @@ Qt3DRender::QMaterial *QgsPhongMaterialSettings::dataDefinedMaterial( const Qgs3
 
   Qgs3DBoundingBoxSettings bbSettings = mapSettings->getBoundingBoxSettings();
   QgsAABB bbCoords = bbSettings.coords();
-  eff->addParameter( new Qt3DRender::QParameter( QStringLiteral( "boundingBoxEnabled" ),  bbSettings.isEnabled() ) );
+  eff->addParameter( new Qt3DRender::QParameter( QStringLiteral( "boundingBoxEnabled" ), bbSettings.isEnabled() && bbSettings.cutLayers() ) );
   eff->addParameter( new Qt3DRender::QParameter( QStringLiteral( "boundingBoxMin" ),  QVector3D( bbCoords.xMin, bbCoords.yMin, bbCoords.zMin ) ) );
   eff->addParameter( new Qt3DRender::QParameter( QStringLiteral( "boundingBoxMax" ),  QVector3D( bbCoords.xMax, bbCoords.yMax, bbCoords.zMax ) ) );
 
