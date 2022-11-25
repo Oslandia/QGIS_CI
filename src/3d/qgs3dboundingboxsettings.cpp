@@ -28,17 +28,19 @@ Qgs3DBoundingBoxSettings::Qgs3DBoundingBoxSettings( const Qgs3DBoundingBoxSettin
   , mColor( other.mColor )
   , mFull( other.mFull )
   , mShowIn2DView( other.mShowIn2DView )
+  , mCutLayers( other.mCutLayers )
 {
 
 }
 
-Qgs3DBoundingBoxSettings::Qgs3DBoundingBoxSettings( bool enabled, const QgsAABB &boundingBox, int nrTicks, QColor color, bool full, bool showIn2DView )
+Qgs3DBoundingBoxSettings::Qgs3DBoundingBoxSettings( bool enabled, const QgsAABB &boundingBox, int nrTicks, QColor color, bool full, bool showIn2DView, bool cutLayers )
   : mEnabled( enabled )
   , mBoundingBox( boundingBox )
   , mNrTicks( nrTicks )
   , mColor( color )
   , mFull( full )
   , mShowIn2DView( showIn2DView )
+  , mCutLayers( cutLayers )
 {
 
 }
@@ -51,6 +53,7 @@ Qgs3DBoundingBoxSettings &Qgs3DBoundingBoxSettings::operator=( Qgs3DBoundingBoxS
   this->mColor = rhs.mColor;
   this->mFull = rhs.mFull;
   this->mShowIn2DView = rhs.mShowIn2DView;
+  this->mCutLayers = rhs.mCutLayers;
   return *this;
 }
 
@@ -63,6 +66,7 @@ bool Qgs3DBoundingBoxSettings::operator==( Qgs3DBoundingBoxSettings const &rhs )
   out &= this->mColor == rhs.mColor;
   out &= this->mFull == rhs.mFull;
   out &= this->mShowIn2DView == rhs.mShowIn2DView;
+  out &= this->mCutLayers == rhs.mCutLayers;
   return out;
 }
 
@@ -89,6 +93,9 @@ void Qgs3DBoundingBoxSettings::readXml( const QDomElement &element, const QgsRea
 
   const QString showIn2DView = element.attribute( QStringLiteral( "show-in-2d-view" ), QStringLiteral( "0" ) );
   mShowIn2DView = showIn2DView.toInt() ? true : false;
+
+  const QString cutLayers = element.attribute( QStringLiteral( "cut-layers" ), QStringLiteral( "1" ) );
+  mCutLayers = cutLayers.toInt() ? true : false;
 }
 
 QDomElement Qgs3DBoundingBoxSettings::writeXml( QDomElement &element, const QgsReadWriteContext &context ) const
@@ -106,5 +113,7 @@ QDomElement Qgs3DBoundingBoxSettings::writeXml( QDomElement &element, const QgsR
   element.setAttribute( QStringLiteral( "full" ), full );
   QString showIn2DView = mShowIn2DView ? QStringLiteral( "1" ) : QStringLiteral( "0" );
   element.setAttribute( QStringLiteral( "show-in-2d-view" ),  showIn2DView );
+  QString cutLayers = mCutLayers ? QStringLiteral( "1" ) : QStringLiteral( "0" );
+  element.setAttribute( QStringLiteral( "cut-layers" ),  cutLayers );
   return element;
 }
