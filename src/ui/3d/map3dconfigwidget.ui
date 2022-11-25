@@ -976,13 +976,20 @@
                       </widget>
                      </item>
                      <item row="3" column="0" colspan="2">
+                      <widget class="QCheckBox" name="mBoundingBoxCutLayers">
+                       <property name="text">
+                        <string>Only show geometry inside the box</string>
+                       </property>
+                      </widget>
+                     </item>
+                     <item row="4" column="0" colspan="2">
                       <widget class="QCheckBox" name="mBoundingBoxFull">
                        <property name="text">
                         <string>Full</string>
                        </property>
                       </widget>
                      </item>
-                     <item row="4" column="0" colspan="2">
+                     <item row="5" column="0" colspan="2">
                       <widget class="QCheckBox" name="mBoundingBoxShowIn2DView">
                        <property name="text">
                         <string>Show in 2D Map View</string>
