@@ -537,6 +537,25 @@ void Qgs3DMapConfigWidget::validate()
       break;
   }
 
+  if ( mGroupBoundingBox->isChecked() )
+  {
+    if ( mBoundingBoxXMin->value() >= mBoundingBoxXMax->value() )
+    {
+      mMessageBar->pushMessage( tr( "Bounding box X coordinates are incorrect" ), Qgis::MessageLevel::Critical );
+      valid = false;
+    }
+    if ( mBoundingBoxYMin->value() >= mBoundingBoxYMax->value() )
+    {
+      mMessageBar->pushMessage( tr( "Bounding box Y coordinates are incorrect" ), Qgis::MessageLevel::Critical );
+      valid = false;
+    }
+    if ( mBoundingBoxZMin->value() >= mBoundingBoxZMax->value() )
+    {
+      mMessageBar->pushMessage( tr( "Bounding boz Z coordinates are incorrect" ), Qgis::MessageLevel::Critical );
+      valid = false;
+    }
+  }
+
   if ( valid && widgetLights->lightSourceCount() == 0 )
   {
     mMessageBar->pushMessage( tr( "No lights exist in the scene" ), Qgis::MessageLevel::Warning );
@@ -637,4 +656,12 @@ void Qgs3DMapConfigWidget::initBoundingBoxPage()
   }
 
   mGroupBoundingBox->setChecked( boundingBoxSettings.isEnabled() );
+
+  connect( mBoundingBoxXMin, static_cast<void ( QDoubleSpinBox::* )( double )>( &QDoubleSpinBox::valueChanged ), this, &Qgs3DMapConfigWidget::validate );
+  connect( mBoundingBoxXMax, static_cast<void ( QDoubleSpinBox::* )( double )>( &QDoubleSpinBox::valueChanged ), this, &Qgs3DMapConfigWidget::validate );
+  connect( mBoundingBoxYMin, static_cast<void ( QDoubleSpinBox::* )( double )>( &QDoubleSpinBox::valueChanged ), this, &Qgs3DMapConfigWidget::validate );
+  connect( mBoundingBoxYMax, static_cast<void ( QDoubleSpinBox::* )( double )>( &QDoubleSpinBox::valueChanged ), this, &Qgs3DMapConfigWidget::validate );
+  connect( mBoundingBoxZMin, static_cast<void ( QDoubleSpinBox::* )( double )>( &QDoubleSpinBox::valueChanged ), this, &Qgs3DMapConfigWidget::validate );
+  connect( mBoundingBoxZMax, static_cast<void ( QDoubleSpinBox::* )( double )>( &QDoubleSpinBox::valueChanged ), this, &Qgs3DMapConfigWidget::validate );
+  connect( mGroupBoundingBox, &QGroupBox::clicked, this, &Qgs3DMapConfigWidget::validate );
 }
