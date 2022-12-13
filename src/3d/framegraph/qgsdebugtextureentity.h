@@ -1,5 +1,5 @@
 /***************************************************************************
-  qgsdepthentity.h
+  qgsdebugtextureentity.h
   --------------------------------------
   Date                 : December 2022
   Email                : benoit dot de dot mezzo at oslandia dot com
@@ -12,32 +12,37 @@
  *                                                                         *
  ***************************************************************************/
 
-#ifndef QGSDEPTHENTITY_H
-#define QGSDEPTHENTITY_H
+#ifndef QGSDEBUGTEXTUREENTITY_H
+#define QGSDEBUGTEXTUREENTITY_H
 
-#include "qgsrenderpassquad.h"
+#include "qgspreviewquad.h"
+
+class QgsShadowRenderingFrameGraph;
+namespace Qt3DRender
+{
+  class QTexture2D;
+}
 
 #define SIP_NO_FILE
 
 /**
  * \ingroup 3d
- * \brief An entity that is responsible for capturing depth.
+ * \brief An entity that is responsible for debugging texture.
  *
  * \note Not available in Python bindings
  *
  * \since QGIS 3.30
  */
-class QgsDepthEntity : public QgsRenderPassQuad
+class QgsDebugTextureEntity : public QgsPreviewQuad
 {
     Q_OBJECT
 
   public:
     //! Constructor
-    QgsDepthEntity( Qt3DRender::QTexture2D *texture, QNode *parent = nullptr );
+    QgsDebugTextureEntity( QgsShadowRenderingFrameGraph *frameGraph, Qt3DRender::QTexture2D *texture );
 
-  private:
-    Qt3DRender::QParameter *mTextureParameter = nullptr;
-    Qt3DRender::QParameter *mTextureTransformParameter = nullptr;
+    //! Sets the texture debugging parameters
+    void onSettingsChanged( bool enabled, Qt::Corner corner, double size );
 };
 
-#endif // QGSDEPTHENTITY_H
+#endif // QGSDEBUGTEXTUREENTITY_H
