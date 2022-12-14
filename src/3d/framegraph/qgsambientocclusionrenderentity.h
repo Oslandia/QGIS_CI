@@ -35,12 +35,15 @@ class QgsAmbientOcclusionRenderEntity : public QgsRenderPassQuad
     //! Constructor
     QgsAmbientOcclusionRenderEntity( Qt3DRender::QTexture2D *depthTexture, Qt3DRender::QCamera *camera, QNode *parent = nullptr );
 
+    float intensity();
     //! Sets the intensity for the ambient occlusion effect
     void setIntensity( float intensity );
 
+    float radius();
     //! Sets the radius for the ambient occlusion effect
     void setRadius( float radius );
 
+    float threshold();
     //! Sets the amount of occlusion when the effects starts to kick in
     void setThreshold( float threshold );
 

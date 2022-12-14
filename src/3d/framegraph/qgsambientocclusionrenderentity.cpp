@@ -108,14 +108,29 @@ QgsAmbientOcclusionRenderEntity::QgsAmbientOcclusionRenderEntity( Qt3DRender::QT
   mShader->setFragmentShaderCode( Qt3DRender::QShaderProgram::loadSource( QUrl( fragmentShaderPath ) ) );
 }
 
+float QgsAmbientOcclusionRenderEntity::intensity()
+{
+  return mIntensityParameter->value().toFloat();
+}
+
 void QgsAmbientOcclusionRenderEntity::setIntensity( float intensity )
 {
   mIntensityParameter->setValue( intensity );
 }
 
+float QgsAmbientOcclusionRenderEntity::radius()
+{
+  return mRadiusParameter->value().toFloat();
+}
+
 void QgsAmbientOcclusionRenderEntity::setRadius( float radius )
 {
   mRadiusParameter->setValue( radius );
+}
+
+float QgsAmbientOcclusionRenderEntity::threshold()
+{
+  return mThresholdParameter->value().toFloat();
 }
 
 void QgsAmbientOcclusionRenderEntity::setThreshold( float threshold )
