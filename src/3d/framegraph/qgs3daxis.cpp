@@ -70,7 +70,7 @@ Qgs3DAxis::Qgs3DAxis( Qt3DExtras::Qt3DWindow *parentWindow
   constructAxisScene( parent3DScene );
 
   mRenderView = new Qgs3DAxisRenderView( this, mParentWindow, mAxisCamera, mMapSettings );
-  mMapScene->engine()->frameGraph()->registerRenderView( mRenderView, "3daxis" );
+  mMapScene->engine()->frameGraph()->registerRenderView( mRenderView, QgsShadowRenderingFrameGraph::AXIS3D_RENDERVIEW );
   mAxisSceneEntity->addComponent( mRenderView->layerToFilter() );
 
   mTwoDLabelViewport = constructLabelViewport( parent3DScene, QRectF( 0.0f, 0.0f, 1.0f, 1.0f ) );
@@ -97,7 +97,7 @@ Qgs3DAxis::~Qgs3DAxis()
   mMenu = nullptr;
   if ( mRenderView && mMapScene->engine() && ! mIsFrameGraphDestroyed )
   {
-    mMapScene->engine()->frameGraph()->unregisterRenderView( "3daxis" );
+    mMapScene->engine()->frameGraph()->unregisterRenderView( QgsShadowRenderingFrameGraph::AXIS3D_RENDERVIEW );
   }
 }
 

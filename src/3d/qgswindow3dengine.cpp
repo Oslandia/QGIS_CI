@@ -36,7 +36,7 @@ QgsWindow3DEngine::QgsWindow3DEngine( QObject *parent )
   mWindow3D->setActiveFrameGraph( mFrameGraph->frameGraphRoot() );
 
   // force switching to no shadow rendering
-  mFrameGraph->setEnableRenderView( "shadow", false );
+  mFrameGraph->setEnableRenderView( QgsShadowRenderingFrameGraph::SHADOW_RENDERVIEW, false );
 }
 
 QWindow *QgsWindow3DEngine::window()
