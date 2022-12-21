@@ -21,7 +21,6 @@
 #include <Qt3DRender/QRenderSettings>
 
 #include "qgsabstractrenderview.h"
-#include "qgspreviewquad.h"
 
 QgsWindow3DEngine::QgsWindow3DEngine( QObject *parent )
   : QgsAbstract3DEngine( parent )

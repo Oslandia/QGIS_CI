@@ -72,7 +72,6 @@ set(QGIS_3D_SRCS
   framegraph/qgsdepthrenderview.cpp
   framegraph/qgsforwardrenderview.cpp
   framegraph/qgspostprocessingentity.cpp
-  framegraph/qgspreviewquad.cpp
   framegraph/qgsrenderpassquad.cpp
   framegraph/qgsshadowrenderingframegraph.cpp
   framegraph/qgsshadowrenderview.cpp
@@ -164,7 +163,6 @@ set(QGIS_3D_HDRS
   framegraph/qgsdepthrenderview.h
   framegraph/qgsforwardrenderview.h
   framegraph/qgspostprocessingentity.h
-  framegraph/qgspreviewquad.h
   framegraph/qgsrenderpassquad.h
   framegraph/qgsshadowrenderview.h
   framegraph/qgsshadowrenderingframegraph.h

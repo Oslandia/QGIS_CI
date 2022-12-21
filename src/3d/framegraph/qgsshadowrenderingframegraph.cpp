@@ -19,7 +19,6 @@
 #include "qgsrectangle.h"
 #include "qgspostprocessingentity.h"
 #include "qgsdepthentity.h"
-#include "qgspreviewquad.h"
 #include "qgs3dutils.h"
 #include "qgsabstractrenderview.h"
 
