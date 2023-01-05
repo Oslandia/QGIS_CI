@@ -301,8 +301,6 @@ void QgsRasterLayer::setRendererForDrawingStyle( Qgis::RasterDrawingStyle drawin
 
 QgsRasterDataProvider *QgsRasterLayer::dataProvider()
 {
-  QGIS_PROTECT_QOBJECT_THREAD_ACCESS
-
   return mDataProvider;
 }
 

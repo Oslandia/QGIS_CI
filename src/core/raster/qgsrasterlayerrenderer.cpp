@@ -285,8 +285,6 @@ QgsRasterLayerRenderer::QgsRasterLayerRenderer( QgsRasterLayer *layer, QgsRender
   mClippingRegions = QgsMapClippingUtils::collectClippingRegionsForLayer( *renderContext(), layer );
 
   mFeedback->setRenderContext( rendererContext );
-
-  mPipe->moveToThread( nullptr );
 }
 
 QgsRasterLayerRenderer::~QgsRasterLayerRenderer()
@@ -304,8 +302,6 @@ bool QgsRasterLayerRenderer::render()
                              !( mProviderCapabilities &
                                 QgsRasterInterface::Capability::Prefetch ) ) )
     return true;
-
-  mPipe->moveToThread( QThread::currentThread() );
 
   QElapsedTimer time;
   time.start();
@@ -365,8 +361,6 @@ bool QgsRasterLayerRenderer::render()
 
   QgsDebugMsgLevel( QStringLiteral( "total raster draw time (ms):     %1" ).arg( time.elapsed(), 5 ), 4 );
   mReadyToCompose = true;
-
-  mPipe->moveToThread( nullptr );
 
   return !mFeedback->isCanceled();
 }

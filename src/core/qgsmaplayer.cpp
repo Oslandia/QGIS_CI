@@ -345,8 +345,6 @@ QString QgsMapLayer::source() const
 
 QgsRectangle QgsMapLayer::extent() const
 {
-  QGIS_PROTECT_QOBJECT_THREAD_ACCESS
-
   return mExtent;
 }
 

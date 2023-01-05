@@ -170,8 +170,6 @@ QgsDemHeightMapGenerator::~QgsDemHeightMapGenerator()
 
 static QByteArray _readDtmData( QgsRasterDataProvider *provider, const QgsRectangle &extent, int res, const QgsCoordinateReferenceSystem &destCrs )
 {
-  provider->moveToThread( QThread::currentThread() );
-
   QgsEventTracing::ScopedEvent e( QStringLiteral( "3D" ), QStringLiteral( "DEM" ) );
 
   // TODO: use feedback object? (but GDAL currently does not support cancellation anyway)
@@ -207,7 +205,6 @@ static QByteArray _readDtmData( QgsRasterDataProvider *provider, const QgsRectan
     }
   }
 
-  provider->moveToThread( nullptr );
 
   return data;
 }
@@ -240,7 +237,6 @@ int QgsDemHeightMapGenerator::render( const QgsChunkNodeId &nodeId )
   // make a clone of the data provider so it is safe to use in worker thread
   if ( mDtm )
   {
-    mClonedProvider->moveToThread( nullptr );
     jd.future = QtConcurrent::run( _readDtmData, mClonedProvider, extent, mResolution, mTilingScheme.crs() );
   }
   else
