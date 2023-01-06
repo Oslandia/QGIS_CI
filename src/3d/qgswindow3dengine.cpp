@@ -63,8 +63,7 @@ void QgsWindow3DEngine::setRootEntity( Qt3DCore::QEntity *root )
 {
   mSceneRoot = root;
   mSceneRoot->setParent( mRoot );
-  if ( mFrameGraph->renderView( QgsShadowRenderingFrameGraph::FORWARD_RENDERVIEW ) )
-    mSceneRoot->addComponent( mFrameGraph->renderView( QgsShadowRenderingFrameGraph::FORWARD_RENDERVIEW )->layerToFilter() );
+  mSceneRoot->addComponent( mFrameGraph->filterLayer( QgsShadowRenderingFrameGraph::FORWARD_RENDERVIEW ) );
 }
 
 Qt3DRender::QRenderSettings *QgsWindow3DEngine::renderSettings()

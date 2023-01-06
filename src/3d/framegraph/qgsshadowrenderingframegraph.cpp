@@ -414,6 +414,11 @@ QgsAbstractRenderView *QgsShadowRenderingFrameGraph::renderView( const QString &
   return mRenderViewMap [name];
 }
 
+Qt3DRender::QLayer *QgsShadowRenderingFrameGraph::filterLayer( const QString &name )
+{
+  return mRenderViewMap [name]->layerToFilter();
+}
+
 bool QgsShadowRenderingFrameGraph::isRenderViewEnabled( const QString &name )
 {
   return mRenderViewMap [name] != nullptr && mRenderViewMap [name]->isSubTreeEnabled();
@@ -464,13 +469,11 @@ void QgsShadowRenderingFrameGraph::setupEyeDomeLighting( bool enabled, double st
 void QgsShadowRenderingFrameGraph::setSize( QSize s )
 {
   mSize = s;
-  QgsForwardRenderView *frv = dynamic_cast<QgsForwardRenderView *>( renderView( FORWARD_RENDERVIEW ) );
-  if ( frv )
-    frv->updateTargetOutputSize( mSize.width(), mSize.height() );
 
-  QgsDepthRenderView *drv = dynamic_cast<QgsDepthRenderView *>( renderView( DEPTH_RENDERVIEW ) );
-  if ( drv )
-    drv->updateTargetOutputSize( mSize.width(), mSize.height() );
+  for ( QgsAbstractRenderView *rv : qAsConst( mRenderViewMap ) )
+  {
+    rv->updateTargetOutputSize( mSize.width(), mSize.height() );
+  }
 
   mRenderCaptureColorTexture->setSize( mSize.width(), mSize.height() );
   mRenderCaptureDepthTexture->setSize( mSize.width(), mSize.height() );
