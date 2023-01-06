@@ -19,9 +19,14 @@
 
 #include <Qt3DRender/QParameter>
 
-QgsAmbientOcclusionRenderEntity::QgsAmbientOcclusionRenderEntity( Qt3DRender::QTexture2D *depthTexture, Qt3DRender::QCamera *camera, QNode *parent )
-  : QgsRenderPassQuad( parent )
+QgsAmbientOcclusionRenderEntity::QgsAmbientOcclusionRenderEntity( Qt3DRender::QTexture2D *depthTexture
+    , Qt3DRender::QLayer *layer
+    , Qt3DRender::QCamera *camera
+    , QNode *parent )
+  : QgsRenderPassQuad( )
 {
+  setParent( parent );
+
   mDepthTextureParameter = new Qt3DRender::QParameter( QStringLiteral( "depthTexture" ), depthTexture );
   mMaterial->addParameter( mDepthTextureParameter );
 
@@ -106,6 +111,8 @@ QgsAmbientOcclusionRenderEntity::QgsAmbientOcclusionRenderEntity( Qt3DRender::QT
 
   mShader->setVertexShaderCode( Qt3DRender::QShaderProgram::loadSource( QUrl( vertexShaderPath ) ) );
   mShader->setFragmentShaderCode( Qt3DRender::QShaderProgram::loadSource( QUrl( fragmentShaderPath ) ) );
+
+  addComponent( layer );
 }
 
 float QgsAmbientOcclusionRenderEntity::intensity()

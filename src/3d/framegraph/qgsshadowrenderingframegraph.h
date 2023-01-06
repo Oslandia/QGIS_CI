@@ -101,54 +101,6 @@ class QgsShadowRenderingFrameGraph : public Qt3DCore::QEntity
     //! Sets whether frustum culling is enabled
     void setFrustumCullingEnabled( bool enabled );
 
-    /**
-     * Sets whether Screen Space Ambient Occlusion will be enabled
-     * \since QGIS 3.28
-     */
-    void setAmbientOcclusionEnabled( bool enabled );
-
-    /**
-     * Returns whether Screen Space Ambient Occlusion is enabled
-     * \since QGIS 3.28
-     */
-    bool ambientOcclusionEnabled() const { return mAmbientOcclusionRenderEntity->isEnabled(); }
-
-    /**
-     * Sets the ambient occlusion intensity
-     * \since QGIS 3.28
-     */
-    void setAmbientOcclusionIntensity( float intensity );
-
-    /**
-     * Returns the ambient occlusion intensity
-     * \since QGIS 3.28
-     */
-    float ambientOcclusionIntensity() const { return mAmbientOcclusionRenderEntity->intensity(); }
-
-    /**
-     * Sets the ambient occlusion radius
-     * \since QGIS 3.28
-     */
-    void setAmbientOcclusionRadius( float radius );
-
-    /**
-     * Returns the ambient occlusion radius
-     * \since QGIS 3.28
-     */
-    float ambientOcclusionRadius() const { return mAmbientOcclusionRenderEntity->radius(); }
-
-    /**
-     * Sets the ambient occlusion threshold
-     * \since QGIS 3.28
-     */
-    void setAmbientOcclusionThreshold( float threshold );
-
-    /**
-     * Returns the ambient occlusion threshold
-     * \since QGIS 3.28
-     */
-    float ambientOcclusionThreshold() const { return mAmbientOcclusionRenderEntity->threshold(); }
-
     //! Sets the clear color of the scene (background color)
     void setClearColor( const QColor &clearColor );
 
@@ -198,6 +150,8 @@ class QgsShadowRenderingFrameGraph : public Qt3DCore::QEntity
     static const QString AXIS3D_RENDERVIEW;
     static const QString DEPTH_RENDERVIEW;
     static const QString DEBUG_RENDERVIEW;
+    //! Ambient occlusion render view name
+    static const QString AO_RENDERVIEW;
 
   private:
     Qt3DRender::QRenderSurfaceSelector *mRenderSurfaceSelector = nullptr;
@@ -215,9 +169,6 @@ class QgsShadowRenderingFrameGraph : public Qt3DCore::QEntity
     Qt3DRender::QTexture2D *mRenderCaptureColorTexture = nullptr;
     Qt3DRender::QTexture2D *mRenderCaptureDepthTexture = nullptr;
 
-    // Ambient occlusion factor generation pass texture related objects:
-    Qt3DRender::QTexture2D *mAmbientOcclusionRenderTexture = nullptr;
-
     // Ambient occlusion factor blur pass texture related objects:
     Qt3DRender::QTexture2D *mAmbientOcclusionBlurTexture = nullptr;
 
@@ -230,14 +181,13 @@ class QgsShadowRenderingFrameGraph : public Qt3DCore::QEntity
     Qt3DCore::QEntity *mRootEntity = nullptr;
 
     QgsPostprocessingEntity *mPostprocessingEntity = nullptr;
-    QgsAmbientOcclusionRenderEntity *mAmbientOcclusionRenderEntity = nullptr;
 
     void constructShadowRenderPass();
     void constructForwardRenderPass();
     void constructDebugTexturePass();
     Qt3DRender::QFrameGraphNode *constructPostprocessingPass();
     void constructDepthRenderPass();
-    Qt3DRender::QFrameGraphNode *constructAmbientOcclusionRenderPass();
+    void constructAmbientOcclusionRenderPass();
     Qt3DRender::QFrameGraphNode *constructAmbientOcclusionBlurPass();
 
     bool mRenderCaptureEnabled = true;

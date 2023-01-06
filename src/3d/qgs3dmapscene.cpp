@@ -1124,12 +1124,22 @@ void Qgs3DMapScene::onShadowSettingsChanged()
 
 void Qgs3DMapScene::onAmbientOcclusionSettingsChanged()
 {
-  QgsShadowRenderingFrameGraph *shadowRenderingFrameGraph = mEngine->frameGraph();
+  if ( ! mAmbientOcclusionRenderEntity )
+  {
+    QgsAbstractRenderView *frv = mEngine->frameGraph()->renderView( QgsShadowRenderingFrameGraph::FORWARD_RENDERVIEW );
+    Qt3DRender::QTexture2D *forwardDepthTexture = frv->outputTexture( Qt3DRender::QRenderTargetOutput::Depth );
+
+    Qt3DRender::QLayer *layerToFilter = mEngine->frameGraph()->filterLayer( QgsShadowRenderingFrameGraph::AO_RENDERVIEW );
+
+    mAmbientOcclusionRenderEntity = new QgsAmbientOcclusionRenderEntity( forwardDepthTexture, layerToFilter, mEngine->camera(), mEngine->frameGraph()->rootEntity() );
+  }
+
   QgsAmbientOcclusionSettings ambientOcclusionSettings = mMap.ambientOcclusionSettings();
-  shadowRenderingFrameGraph->setAmbientOcclusionEnabled( ambientOcclusionSettings.isEnabled() );
-  shadowRenderingFrameGraph->setAmbientOcclusionRadius( ambientOcclusionSettings.radius() );
-  shadowRenderingFrameGraph->setAmbientOcclusionIntensity( ambientOcclusionSettings.intensity() );
-  shadowRenderingFrameGraph->setAmbientOcclusionThreshold( ambientOcclusionSettings.threshold() );
+  mAmbientOcclusionRenderEntity->setEnabled( ambientOcclusionSettings.isEnabled() );
+  mEngine->frameGraph()->setEnableRenderView( QgsShadowRenderingFrameGraph::AO_RENDERVIEW, ambientOcclusionSettings.isEnabled() );
+  mAmbientOcclusionRenderEntity->setRadius( ambientOcclusionSettings.radius() );
+  mAmbientOcclusionRenderEntity->setIntensity( ambientOcclusionSettings.intensity() );
+  mAmbientOcclusionRenderEntity->setThreshold( ambientOcclusionSettings.threshold() );
 }
 
 void Qgs3DMapScene::onDebugShadowMapSettingsChanged()

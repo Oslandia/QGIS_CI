@@ -33,7 +33,10 @@ class QgsAmbientOcclusionRenderEntity : public QgsRenderPassQuad
     Q_OBJECT
   public:
     //! Constructor
-    QgsAmbientOcclusionRenderEntity( Qt3DRender::QTexture2D *depthTexture, Qt3DRender::QCamera *camera, QNode *parent = nullptr );
+    QgsAmbientOcclusionRenderEntity( Qt3DRender::QTexture2D *depthTexture
+                                     , Qt3DRender::QLayer *layer
+                                     , Qt3DRender::QCamera *camera
+                                     , QNode *parent = nullptr );
 
     float intensity();
     //! Sets the intensity for the ambient occlusion effect
