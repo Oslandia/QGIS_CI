@@ -93,6 +93,7 @@ class TestQgs3DRendering : public QgsTest
     void testBillboardRendering();
     void testInstancedRendering();
     void testDepthBuffer();
+    void testAmbientOcclusion();
 
   private:
     // color tolerance < 2 was failing polygon3d_extrusion test
@@ -1351,6 +1352,68 @@ void TestQgs3DRendering::testEpsg4978LineRendering()
   delete layerLines;
 
   QVERIFY( renderCheck( "4978_line_rendering_2", img2, 40, 15 ) );
+}
+
+void TestQgs3DRendering::testAmbientOcclusion()
+{
+  // =============================================
+  // =========== creating Qgs3DMapSettings
+  const QString dataDir( TEST_DATA_DIR );
+  QgsRasterLayer *layerDtm = new QgsRasterLayer( dataDir + "/3d/dtm.tif", "dtm", "gdal" );
+  QVERIFY( layerDtm->isValid() );
+  QgsProject project; // = QgsProject::instance();
+  project.addMapLayer( layerDtm );
+  project.addMapLayer( mLayerBuildings );
+
+  const QgsRectangle fullExtent = layerDtm->extent();
+
+  Qgs3DMapSettings mapSettings;
+  mapSettings.setCrs( QgsProject::instance()->crs() );
+  mapSettings.setOrigin( QgsVector3D( fullExtent.center().x(), fullExtent.center().y(), 0 ) );
+  mapSettings.setLayers( {layerDtm, mLayerBuildings} );
+
+  mapSettings.setTransformContext( QgsProject::instance()->transformContext() );
+  mapSettings.setPathResolver( QgsProject::instance()->pathResolver() );
+  mapSettings.setMapThemeCollection( QgsProject::instance()->mapThemeCollection() );
+
+  QgsDemTerrainGenerator *demTerrain = new QgsDemTerrainGenerator;
+  demTerrain->setLayer( layerDtm );
+  mapSettings.setTerrainGenerator( demTerrain );
+  mapSettings.setTerrainVerticalScale( 3 );
+
+  QgsPointLightSettings defaultPointLight;
+  defaultPointLight.setPosition( QgsVector3D( 0, 400, 0 ) );
+  defaultPointLight.setConstantAttenuation( 0 );
+  mapSettings.setLightSources( {defaultPointLight.clone() } );
+  mapSettings.setOutputDpi( 92 );
+
+  // =========== creating Qgs3DMapScene
+  QgsOffscreen3DEngine engine;
+  Qgs3DMapScene *scene = new Qgs3DMapScene( mapSettings, &engine );
+  engine.setRootEntity( scene );
+
+  // =========== set camera position
+  scene->cameraController()->camera()->setPosition( QVector3D( 50, 250, 300 ) );
+
+  QgsAmbientOcclusionSettings aoSettings = mapSettings.ambientOcclusionSettings();
+  aoSettings.setEnabled( false );
+  mapSettings.setAmbientOcclusionSettings( aoSettings );
+
+  QImage img = Qgs3DUtils::captureSceneImage( engine, scene );
+  QVERIFY( renderCheck( "ambient_occlusion_1", img, 40, 15 ) );
+
+  aoSettings.setEnabled( true );
+  mapSettings.setAmbientOcclusionSettings( aoSettings );
+
+  img = Qgs3DUtils::captureSceneImage( engine, scene );
+  QVERIFY( renderCheck( "ambient_occlusion_2", img, 40, 15 ) );
+
+  project.layerStore()->removeAllMapLayers();
+  delete scene;
+  mapSettings.setLayers( {} );
+  // SEGFAULT:
+  // delete demTerrain;
+  // delete layerDtm;
 }
 
 void TestQgs3DRendering::testDepthBuffer()
