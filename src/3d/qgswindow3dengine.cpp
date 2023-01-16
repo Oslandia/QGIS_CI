@@ -30,7 +30,7 @@ QgsWindow3DEngine::QgsWindow3DEngine( QObject *parent )
   mRoot = new Qt3DCore::QEntity;
   mWindow3D->setRootEntity( mRoot );
 
-  mFrameGraph = new QgsShadowRenderingFrameGraph( mWindow3D, QSize( 1024, 768 ), mWindow3D->camera(), mRoot );
+  mFrameGraph = new QgsShadowRenderingFrameGraph( mWindow3D, mSize, mWindow3D->camera(), mRoot );
   mFrameGraph->setRenderCaptureEnabled( false );
   mWindow3D->setActiveFrameGraph( mFrameGraph->frameGraphRoot() );
 
@@ -61,6 +61,13 @@ void QgsWindow3DEngine::setFrustumCullingEnabled( bool enabled )
 
 void QgsWindow3DEngine::setRootEntity( Qt3DCore::QEntity *root )
 {
+  // Make sure any existing scene root is unparented.
+  if ( mSceneRoot )
+  {
+    mSceneRoot->setParent( static_cast<Qt3DCore::QNode *>( nullptr ) );
+  }
+
+  // Parent the incoming scene root to our current root entity.
   mSceneRoot = root;
   mSceneRoot->setParent( mRoot );
   mSceneRoot->addComponent( mFrameGraph->filterLayer( QgsShadowRenderingFrameGraph::FORWARD_RENDERVIEW ) );

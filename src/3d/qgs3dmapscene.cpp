@@ -1124,42 +1124,57 @@ void Qgs3DMapScene::onShadowSettingsChanged()
 
 void Qgs3DMapScene::onAmbientOcclusionSettingsChanged()
 {
-  if ( ! mAmbientOcclusionRenderEntity )
+  QgsAmbientOcclusionSettings ambientOcclusionSettings = mMap.ambientOcclusionSettings();
+
+  if ( ! mAmbientOcclusionRenderEntity && ambientOcclusionSettings.isEnabled() )
   {
     QgsAbstractRenderView *frv = mEngine->frameGraph()->renderView( QgsShadowRenderingFrameGraph::FORWARD_RENDERVIEW );
     Qt3DRender::QTexture2D *forwardDepthTexture = frv->outputTexture( Qt3DRender::QRenderTargetOutput::Depth );
+    Q_ASSERT( forwardDepthTexture != nullptr );
 
     Qt3DRender::QLayer *layerToFilter = mEngine->frameGraph()->filterLayer( QgsShadowRenderingFrameGraph::AO_RENDERVIEW );
+    Q_ASSERT( layerToFilter != nullptr );
 
-    mAmbientOcclusionRenderEntity = new QgsAmbientOcclusionRenderEntity( forwardDepthTexture, layerToFilter, mEngine->camera(), mEngine->frameGraph()->rootEntity() );
+    mAmbientOcclusionRenderEntity = new QgsAmbientOcclusionRenderEntity( forwardDepthTexture
+        , layerToFilter
+        , mEngine->camera()
+        , mEngine->frameGraph()->rootEntity() );
+    qDebug() << "Qgs3DMapScene::onAmbientOcclusionSettingsChanged:" << "mAmbientOcclusionRenderEntity created";
   }
 
-  QgsAmbientOcclusionSettings ambientOcclusionSettings = mMap.ambientOcclusionSettings();
-  mAmbientOcclusionRenderEntity->setEnabled( ambientOcclusionSettings.isEnabled() );
+  if ( mAmbientOcclusionRenderEntity )
+  {
+    mAmbientOcclusionRenderEntity->setEnabled( ambientOcclusionSettings.isEnabled() );
+    mAmbientOcclusionRenderEntity->setRadius( ambientOcclusionSettings.radius() );
+    mAmbientOcclusionRenderEntity->setIntensity( ambientOcclusionSettings.intensity() );
+    mAmbientOcclusionRenderEntity->setThreshold( ambientOcclusionSettings.threshold() );
+  }
+
+  mEngine->frameGraph()->postprocessingEntity()->setAmbientOcclusionEnabled( ambientOcclusionSettings.isEnabled() );
   mEngine->frameGraph()->setEnableRenderView( QgsShadowRenderingFrameGraph::AO_RENDERVIEW, ambientOcclusionSettings.isEnabled() );
-  mAmbientOcclusionRenderEntity->setRadius( ambientOcclusionSettings.radius() );
-  mAmbientOcclusionRenderEntity->setIntensity( ambientOcclusionSettings.intensity() );
-  mAmbientOcclusionRenderEntity->setThreshold( ambientOcclusionSettings.threshold() );
 }
 
 void Qgs3DMapScene::onDebugShadowMapSettingsChanged()
 {
-  if ( ! mShadowTextureDebugging )
+  if ( ! mShadowTextureDebugging && mMap.debugShadowMapEnabled() )
   {
-    QgsAbstractRenderView *frv = mEngine->frameGraph()->renderView( QgsShadowRenderingFrameGraph::SHADOW_RENDERVIEW );
-    Qt3DRender::QTexture2D *depthTexture = frv->outputTexture( Qt3DRender::QRenderTargetOutput::Depth );
+    QgsAbstractRenderView *frv = mEngine->frameGraph()->renderView( QgsShadowRenderingFrameGraph::AO_RENDERVIEW );
+    Qt3DRender::QTexture2D *depthTexture = frv->outputTexture( Qt3DRender::QRenderTargetOutput::Color0 );
 
     Qt3DRender::QLayer *layerToFilter = mEngine->frameGraph()->filterLayer( QgsShadowRenderingFrameGraph::DEBUG_RENDERVIEW );
 
     mShadowTextureDebugging = new QgsDebugTextureEntity( depthTexture, layerToFilter, mEngine->frameGraph()->rootEntity() );
   }
 
-  mShadowTextureDebugging->onSettingsChanged( mMap.debugShadowMapEnabled(), mMap.debugShadowMapCorner(), mMap.debugShadowMapSize() );
+  if ( mShadowTextureDebugging )
+  {
+    mShadowTextureDebugging->onSettingsChanged( mMap.debugShadowMapEnabled(), mMap.debugShadowMapCorner(), mMap.debugShadowMapSize() );
+  }
 }
 
 void Qgs3DMapScene::onDebugDepthMapSettingsChanged()
 {
-  if ( ! mDepthTextureDebugging )
+  if ( ! mDepthTextureDebugging && mMap.debugShadowMapEnabled() )
   {
     QgsAbstractRenderView *frv = mEngine->frameGraph()->renderView( QgsShadowRenderingFrameGraph::FORWARD_RENDERVIEW );
     Qt3DRender::QTexture2D *depthTexture = frv->outputTexture( Qt3DRender::QRenderTargetOutput::Depth );
@@ -1169,7 +1184,10 @@ void Qgs3DMapScene::onDebugDepthMapSettingsChanged()
     mDepthTextureDebugging = new QgsDebugTextureEntity( depthTexture, layerToFilter, mEngine->frameGraph()->rootEntity() );
   }
 
-  mDepthTextureDebugging->onSettingsChanged( mMap.debugDepthMapEnabled(), mMap.debugDepthMapCorner(), mMap.debugDepthMapSize() );
+  if ( mDepthTextureDebugging )
+  {
+    mDepthTextureDebugging->onSettingsChanged( mMap.debugDepthMapEnabled(), mMap.debugDepthMapCorner(), mMap.debugDepthMapSize() );
+  }
 }
 
 void Qgs3DMapScene::onDebugOverlayEnabledChanged()

@@ -29,11 +29,13 @@ QgsAbstract3DEngine::QgsAbstract3DEngine( QObject *parent )
 void QgsAbstract3DEngine::requestCaptureImage()
 {
   Qt3DRender::QRenderCaptureReply *captureReply;
+  mFrameGraph->setRenderCaptureEnabled( true );
   captureReply = mFrameGraph->renderCapture()->requestCapture();
 
   connect( captureReply, &Qt3DRender::QRenderCaptureReply::completed, this, [ = ]
   {
     emit imageCaptured( captureReply->image() );
+    mFrameGraph->setRenderCaptureEnabled( false );
     captureReply->deleteLater();
   } );
 }

@@ -102,7 +102,7 @@ bool QgsDataProvider::renderInPreview( const PreviewContext &context )
 
 QgsCoordinateTransformContext QgsDataProvider::transformContext() const
 {
-  QGIS_PROTECT_QOBJECT_THREAD_ACCESS
+//  QGIS_PROTECT_QOBJECT_THREAD_ACCESS
 
   const QMutexLocker locker( &mOptionsMutex );
   return mOptions.transformContext;
