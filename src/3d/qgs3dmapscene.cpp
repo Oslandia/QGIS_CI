@@ -120,13 +120,13 @@ Qgs3DMapScene::Qgs3DMapScene( Qgs3DMapSettings &map, QgsAbstract3DEngine *engine
   addCameraRotationCenterEntity( mCameraController );
   updateLights();
 
-  connect( &map, &Qgs3DMapSettings::extentChanged, this, &Qgs3DMapScene::createTerrain );
-  connect( &map, &Qgs3DMapSettings::terrainGeneratorChanged, this, &Qgs3DMapScene::createTerrain );
-  connect( &map, &Qgs3DMapSettings::terrainVerticalScaleChanged, this, &Qgs3DMapScene::createTerrain );
-  connect( &map, &Qgs3DMapSettings::mapTileResolutionChanged, this, &Qgs3DMapScene::createTerrain );
-  connect( &map, &Qgs3DMapSettings::maxTerrainScreenErrorChanged, this, &Qgs3DMapScene::createTerrain );
-  connect( &map, &Qgs3DMapSettings::maxTerrainGroundErrorChanged, this, &Qgs3DMapScene::createTerrain );
-  connect( &map, &Qgs3DMapSettings::terrainShadingChanged, this, &Qgs3DMapScene::createTerrain );
+  connect( &map, &Qgs3DMapSettings::extentChanged, this, &Qgs3DMapScene::updateTerrain );
+  connect( &map, &Qgs3DMapSettings::terrainGeneratorChanged, this, &Qgs3DMapScene::updateTerrain );
+  connect( &map, &Qgs3DMapSettings::terrainVerticalScaleChanged, this, &Qgs3DMapScene::updateTerrain );
+  connect( &map, &Qgs3DMapSettings::mapTileResolutionChanged, this, &Qgs3DMapScene::updateTerrain );
+  connect( &map, &Qgs3DMapSettings::maxTerrainScreenErrorChanged, this, &Qgs3DMapScene::updateTerrain );
+  connect( &map, &Qgs3DMapSettings::maxTerrainGroundErrorChanged, this, &Qgs3DMapScene::updateTerrain );
+  connect( &map, &Qgs3DMapSettings::terrainShadingChanged, this, &Qgs3DMapScene::updateTerrain );
   connect( &map, &Qgs3DMapSettings::lightSourcesChanged, this, &Qgs3DMapScene::updateLights );
   connect( &map, &Qgs3DMapSettings::showLightSourceOriginsChanged, this, &Qgs3DMapScene::updateLights );
   connect( &map, &Qgs3DMapSettings::fieldOfViewChanged, this, &Qgs3DMapScene::updateCameraLens );
@@ -593,7 +593,7 @@ void Qgs3DMapScene::onFrameTriggered( float dt )
   }
 }
 
-void Qgs3DMapScene::createTerrain()
+void Qgs3DMapScene::updateTerrain()
 {
   if ( mTerrain )
   {
@@ -606,7 +606,7 @@ void Qgs3DMapScene::createTerrain()
   if ( !mTerrainUpdateScheduled )
   {
     // defer re-creation of terrain: there may be multiple invocations of this slot, so create the new entity just once
-    QTimer::singleShot( 0, this, &Qgs3DMapScene::createTerrainDeferred );
+    QTimer::singleShot( 0, this, &Qgs3DMapScene::updateTerrainDeferred );
     mTerrainUpdateScheduled = true;
     setSceneState( Updating );
   }
@@ -616,7 +616,7 @@ void Qgs3DMapScene::createTerrain()
   }
 }
 
-void Qgs3DMapScene::createTerrainDeferred()
+void Qgs3DMapScene::updateTerrainDeferred()
 {
   bool hasTerrain = false;
   for ( const auto *layer : mLayers )
@@ -868,7 +868,7 @@ void Qgs3DMapScene::addLayerEntity( QgsMapLayer *layer )
 
   if ( !mTerrain && layer->type() == Qgis::LayerType::Raster )
   {
-    createTerrain();
+    updateTerrain();
   }
 }
 
@@ -908,7 +908,7 @@ void Qgs3DMapScene::removeLayerEntity( QgsMapLayer *layer )
 
   if ( mTerrain && layer->type() == Qgis::LayerType::Raster )
   {
-    createTerrain();
+    updateTerrain();
   }
 }
 
