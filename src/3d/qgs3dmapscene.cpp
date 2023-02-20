@@ -190,6 +190,7 @@ Qgs3DMapScene::Qgs3DMapScene( Qgs3DMapSettings &map, QgsAbstract3DEngine *engine
   onRenderersChanged();
 
   // listen to changes of layers in order to add/remove 3D renderer entities
+  mLayers = map.layers();
   connect( &map, &Qgs3DMapSettings::layersChanged, this, &Qgs3DMapScene::onLayersChanged );
 
 
@@ -719,7 +720,7 @@ void Qgs3DMapScene::onLayerRenderer3DChanged()
 
 void Qgs3DMapScene::onLayersChanged()
 {
-  QSet<QgsMapLayer *> layersBefore = qgis::listToSet( mLayerEntities.keys() );
+  QSet<QgsMapLayer *> layersBefore = qgis::listToSet( mLayers );
   QList<QgsMapLayer *> layersAdded;
   const QList<QgsMapLayer *> layers = mMap.layers();
   for ( QgsMapLayer *layer : layers )
@@ -733,6 +734,8 @@ void Qgs3DMapScene::onLayersChanged()
       layersBefore.remove( layer );
     }
   }
+
+  mLayers = mMap.layers();
 
   // what is left in layersBefore are layers that have been removed
   for ( QgsMapLayer *layer : std::as_const( layersBefore ) )

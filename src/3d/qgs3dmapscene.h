@@ -260,6 +260,9 @@ class _3D_EXPORT Qgs3DMapScene : public Qt3DCore::QEntity
     //! 3d axis visualization
     Qgs3DAxis *m3DAxis = nullptr;
 
+    //! Keep track of current layers. It has mLayerEntities and the layers associated with the terrain.
+    QList<QgsMapLayer *> mLayers;
+
 };
 
 #endif // QGS3DMAPSCENE_H
