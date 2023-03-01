@@ -711,7 +711,7 @@ void QgsChunkedEntity::onPickEvent( Qt3DRender::QPickEvent *event )
     // unfortunately we can't access which sub-entity triggered the pick event
     // so as a temporary workaround let's just ignore the entity with selection
     // and hope the event was the main entity (QTBUG-58206)
-    if ( geomRenderer->objectName() != QLatin1String( "main" ) )
+    if ( geomRenderer->property( Qgs3DTypes::PROP_NAME_3D_RENDERER_FLAG ) != Qgs3DTypes::Main3DRenderer )
       continue;
 
     if ( QgsTessellatedPolygonGeometry *g = qobject_cast<QgsTessellatedPolygonGeometry *>( geomRenderer->geometry() ) )
