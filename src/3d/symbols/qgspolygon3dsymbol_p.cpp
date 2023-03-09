@@ -68,7 +68,8 @@ class QgsPolygon3DSymbolHandler : public QgsFeature3DHandler
       QByteArray materialDataDefined;
     };
 
-    void processPolygon( QgsPolygon *polyClone, QgsFeatureId fid, float height, float extrusionHeight, const Qgs3DRenderContext &context, PolygonData &out );
+    void processPolygon( const QgsPolygon *polyClone, QgsFeatureId fid, float height, float extrusionHeight, const Qgs3DRenderContext &context, PolygonData &out );
+    void processClippedPolygon( QgsPolygon *polyClone, QgsFeatureId fid, float height, float extrusionHeight, const Qgs3DRenderContext &context, PolygonData &out );
     void processMaterialDatadefined( uint verticesCount, const QgsExpressionContext &context, PolygonData &out );
     void makeEntity( Qt3DCore::QEntity *parent, const Qgs3DRenderContext &context, PolygonData &out, bool selected );
     Qt3DRender::QMaterial *material( const QgsPolygon3DSymbol *symbol, bool isSelected, const Qgs3DRenderContext &context ) const;
@@ -83,11 +84,18 @@ class QgsPolygon3DSymbolHandler : public QgsFeature3DHandler
     PolygonData outSelected;  //!< Features that are selected
 
     QgsLineVertexData outEdges;  //!< When highlighting edges, this holds data for vertex/index buffer
+
+    QgsRectangle mNodeExtent;
 };
 
 
 bool QgsPolygon3DSymbolHandler::prepare( const Qgs3DRenderContext &context, QSet<QString> &attributeNames )
 {
+  if ( context.node() )
+    mNodeExtent = Qgs3DUtils::worldToMapExtent( context.node()->bbox(), context.map().origin() );
+  else
+    mNodeExtent = context.map().extent();
+
   outEdges.withAdjacency = true;
   outEdges.init( mSymbol->altitudeClamping(), mSymbol->altitudeBinding(), 0, &context.map() );
 
@@ -110,7 +118,7 @@ bool QgsPolygon3DSymbolHandler::prepare( const Qgs3DRenderContext &context, QSet
   return true;
 }
 
-void QgsPolygon3DSymbolHandler::processPolygon( QgsPolygon *polyClone, QgsFeatureId fid, float height, float extrusionHeight, const Qgs3DRenderContext &context, PolygonData &out )
+void QgsPolygon3DSymbolHandler::processClippedPolygon( QgsPolygon *polyClone, QgsFeatureId fid, float height, float extrusionHeight, const Qgs3DRenderContext &context, PolygonData &out )
 {
   const uint oldVerticesCount = out.tessellator->dataVerticesCount();
   if ( mSymbol->edgesEnabled() )
@@ -142,10 +150,70 @@ void QgsPolygon3DSymbolHandler::processPolygon( QgsPolygon *polyClone, QgsFeatur
   out.triangleIndexStartingIndices.append( startingTriangleIndex );
   out.triangleIndexFids.append( fid );
   out.tessellator->addPolygon( *polyClone, extrusionHeight );
-  delete polyClone;
 
   if ( mSymbol->materialSettings()->dataDefinedProperties().hasActiveProperties() )
     processMaterialDatadefined( out.tessellator->dataVerticesCount() - oldVerticesCount, context.expressionContext(), out );
+}
+
+void QgsPolygon3DSymbolHandler::processPolygon( const QgsPolygon *poly, QgsFeatureId fid, float height, float extrusionHeight, const Qgs3DRenderContext &context, PolygonData &out )
+{
+  QgsPolygon *polyClone = poly->clone();
+  QgsAbstractGeometry *geomToDelete;
+
+  if ( ! mNodeExtent.contains( polyClone->boundingBox() ) ) // clipping needed
+  {
+    QgsGeometry polyGeom( polyClone ); // will take ownership of polyClone data ptr and will delete data at the end
+    QgsGeometry *clippedGeom = new QgsGeometry( polyGeom.clipped( mNodeExtent ) ); // new geom, new data
+
+    // clipping can generate new geometries
+    geomToDelete = clippedGeom->get();
+    if ( QgsPolygon *poly2 = qgsgeometry_cast<QgsPolygon *>( clippedGeom->get() ) ) // will NOT take ownership of clippedGeom data ptr
+    {
+      processClippedPolygon( poly2, fid, height, extrusionHeight, context, out );
+    }
+    else if ( QgsMultiPolygon *multiPoly = qgsgeometry_cast<QgsMultiPolygon *>( clippedGeom->get() ) ) // will NOT take ownership of clippedGeom data ptr
+    {
+      for ( int i = 0; i < multiPoly->numGeometries(); ++i )
+      {
+        QgsPolygon *poly2 = static_cast< QgsPolygon *>( multiPoly->polygonN( i ) );
+        processClippedPolygon( poly2, fid, height, extrusionHeight, context, out );
+      }
+    }
+    else if ( QgsMultiPolygon *multiPoly = qgsgeometry_cast<QgsMultiPolygon *>( clippedGeom->get() ) ) // will NOT take ownership of clippedGeom data ptr
+    {
+      for ( int i = 0; i < multiPoly->numGeometries(); ++i )
+      {
+        QgsPolygon *poly2 = static_cast< QgsPolygon *>( multiPoly->polygonN( i ) );
+        processClippedPolygon( poly2, fid, height, extrusionHeight, context, out );
+      }
+    }
+    else if ( QgsGeometryCollection *gc = qgsgeometry_cast< QgsGeometryCollection *>( clippedGeom->get() ) ) // will NOT take ownership of clippedGeom data ptr
+    {
+      for ( int i = 0; i < gc->numGeometries(); ++i )
+      {
+        QgsAbstractGeometry *g2 = gc->geometryN( i );
+        if ( QgsWkbTypes::flatType( g2->wkbType() ) == Qgis::WkbType::Polygon )
+        {
+          QgsPolygon *poly2 = static_cast< QgsPolygon *>( g2 );
+          processClippedPolygon( poly2, fid, height, extrusionHeight, context, out );
+        }
+      }
+    }
+    else
+    {
+      // fallback to default process
+      QgsLogger().warning( QStringLiteral( "Geometry type '%1' is not clipped!" ).arg( clippedGeom->get()->wktTypeStr() ) );
+      processClippedPolygon( polyClone, fid, height, extrusionHeight, context, out );
+    }
+
+  }
+  else // NO clipping needed
+  {
+    geomToDelete = polyClone;
+    processClippedPolygon( polyClone, fid, height, extrusionHeight, context, out );
+  }
+
+  delete geomToDelete;
 }
 
 void QgsPolygon3DSymbolHandler::processMaterialDatadefined( uint verticesCount, const QgsExpressionContext &context, QgsPolygon3DSymbolHandler::PolygonData &out )
@@ -182,16 +250,15 @@ void QgsPolygon3DSymbolHandler::processFeature( const QgsFeature &f, const Qgs3D
   if ( hasDDExtrusion )
     extrusionHeight = ddp.valueAsDouble( QgsAbstract3DSymbol::PropertyExtrusionHeight, context.expressionContext(), extrusionHeight );
 
-  if ( const QgsPolygon *poly = qgsgeometry_cast< const QgsPolygon *>( g ) )
+  if ( QgsPolygon *poly = qgsgeometry_cast< QgsPolygon *>( g ) )
   {
-    QgsPolygon *polyClone = poly->clone();
-    processPolygon( polyClone, f.id(), height, extrusionHeight, context, out );
+    processPolygon( ( const QgsPolygon * )poly, f.id(), height, extrusionHeight, context, out );
   }
   else if ( const QgsMultiPolygon *mpoly = qgsgeometry_cast< const QgsMultiPolygon *>( g ) )
   {
     for ( int i = 0; i < mpoly->numGeometries(); ++i )
     {
-      QgsPolygon *polyClone = static_cast< const QgsPolygon *>( mpoly->polygonN( i ) )->clone();
+      const QgsPolygon *polyClone = static_cast< const QgsPolygon *>( mpoly->polygonN( i ) );
       processPolygon( polyClone, f.id(), height, extrusionHeight, context, out );
     }
   }
@@ -202,7 +269,7 @@ void QgsPolygon3DSymbolHandler::processFeature( const QgsFeature &f, const Qgs3D
       const QgsAbstractGeometry *g2 = gc->geometryN( i );
       if ( QgsWkbTypes::flatType( g2->wkbType() ) == Qgis::WkbType::Polygon )
       {
-        QgsPolygon *polyClone = static_cast< const QgsPolygon *>( g2 )->clone();
+        const QgsPolygon *polyClone = static_cast< const QgsPolygon *>( g2 );
         processPolygon( polyClone, f.id(), height, extrusionHeight, context, out );
       }
     }

@@ -33,6 +33,7 @@ class QgsFeature;
 
 
 #include "qgsexpressioncontext.h"
+#include "qgschunknode_p.h"
 
 class Qgs3DMapSettings;
 
@@ -48,9 +49,14 @@ class Qgs3DMapSettings;
 class Qgs3DRenderContext
 {
   public:
-    Qgs3DRenderContext( const Qgs3DMapSettings &map ) : mMap( map ) {}
+    Qgs3DRenderContext( const Qgs3DMapSettings &map, const QgsChunkNode *node = nullptr ) : mMap( map ), mNode( node ) {}
 
     const Qgs3DMapSettings &map() const { return mMap; }
+
+    /**
+     * Get the current chunk entity node if created from QgsChunkLoader
+     */
+    const QgsChunkNode *node() const { return mNode; }
 
     /**
      * Sets the expression context. This context is used for all expression evaluation
@@ -78,7 +84,8 @@ class Qgs3DRenderContext
     const Qgs3DMapSettings &mMap;
     //! Expression context
     QgsExpressionContext mExpressionContext;
-
+    //! Chunk entity node
+    const QgsChunkNode *mNode;
 };
 
 
