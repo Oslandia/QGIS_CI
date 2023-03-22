@@ -435,10 +435,16 @@ QString QgsQuadrilateral::toString( int pointPrecision ) const
 
 double QgsQuadrilateral::area() const
 {
-  return toPolygon()->area();
+  QgsPolygon *polygon = toPolygon();
+  double area = polygon->area();
+  delete polygon;
+  return area;
 }
 
 double QgsQuadrilateral::perimeter() const
 {
-  return toPolygon()->perimeter();
+  QgsPolygon *polygon = toPolygon();
+  double perimeter = polygon->perimeter();
+  delete polygon;
+  return perimeter;
 }
