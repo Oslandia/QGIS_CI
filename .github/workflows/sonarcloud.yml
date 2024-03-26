@@ -1,0 +1,82 @@
+name: SonarCloud
+
+on:
+  push:
+    branches:
+      - master
+      - develop
+      - features/*
+      - feature/*
+      - fix/*
+      - release/*
+
+jobs:
+  sonarcloud:
+    name: SonarCloud
+
+    runs-on: ubuntu-latest
+    if: "!contains(github.event.head_commit.message, '[skip ci]')"
+    container : 'qgis/qgis3-build-deps:latest'
+
+    env:
+      SONAR_SCANNER_VERSION: 5.0.1.3600 # Find the latest version in the "Linux" link on this page:
+      # https://docs.sonarsource.com/sonarcloud/advanced-setup/ci-based-analysis/sonarscanner-cli/
+      SONAR_SERVER_URL: "https://sonarcloud.io"
+      LANG: "en_US.UTF-8"
+
+    steps:
+
+      - uses: actions/checkout@v2
+        with:
+          fetch-depth: 0
+
+      - name: Cache SonarCloud packages and analysis
+        uses: actions/cache@v2
+        id: sonarcloud-cache
+        with:
+          path: ~/.sonar
+          key: ${{ runner.os }}-sonar
+          restore-keys: ${{ runner.os }}-sonar
+
+      - name: Download and setup sonar-scanner
+        shell: bash
+        env:
+          SONAR_SCANNER_DOWNLOAD_URL: https://binaries.sonarsource.com/Distribution/sonar-scanner-cli/sonar-scanner-cli-${{ env.SONAR_SCANNER_VERSION }}-linux.zip
+        if: steps.sonarcloud-cache.outputs.cache-hit != 'true'
+        run: |
+          mkdir -p $HOME/.sonar
+          curl -sSLo $HOME/.sonar/sonar-scanner.zip ${{ env.SONAR_SCANNER_DOWNLOAD_URL }}
+          unzip -o $HOME/.sonar/sonar-scanner.zip -d $HOME/.sonar/
+
+      - name: Download and setup build-wrapper
+        shell: bash
+        env:
+          BUILD_WRAPPER_DOWNLOAD_URL: ${{ env.SONAR_SERVER_URL }}/static/cpp/build-wrapper-linux-x86.zip
+        if: steps.sonarcloud-cache.outputs.cache-hit != 'true'
+        run: |
+          curl -sSLo $HOME/.sonar/build-wrapper-linux-x86.zip ${{ env.BUILD_WRAPPER_DOWNLOAD_URL }}
+          unzip -o $HOME/.sonar/build-wrapper-linux-x86.zip -d $HOME/.sonar/
+
+      - name: Set build-wrapper and sonar-scanner paths
+        run: |
+          echo "$HOME/.sonar/build-wrapper-linux-x86" >> $GITHUB_PATH
+          echo "$HOME/.sonar/sonar-scanner-${{ env.SONAR_SCANNER_VERSION }}-linux/bin" >> $GITHUB_PATH
+
+      - name: Configure
+        run: |
+          cmake -B _build -S . -DCMAKE_BUILD_TYPE=Debug -DWITH_DESKTOP=ON -DWITH_SERVER=OFF -DWITH_3D=ON -DWITH_BINDINGS=ON -DWITH_CUSTOM_WIDGETS=OFF -DBINDINGS_GLOBAL_INSTALL=OFF -DWITH_STAGED_PLUGINS=ON -DWITH_GRASS=OFF -DSUPPRESS_QT_WARNINGS=ON -DDISABLE_DEPRECATED=ON -DENABLE_TESTS=OFF -DWITH_QSPATIALITE=OFF -DWITH_APIDOC=OFF -DWITH_ASTYLE=OFF -DQT5_3DEXTRA_LIBRARY="/usr/lib/x86_64-linux-gnu/libQt53DExtras.so" -DQT5_3DEXTRA_INCLUDE_DIR="$GITHUB_WORKSPACE/external/qt3dextra-headers"  -DQt53DExtras_DIR="$GITHUB_WORKSPACE/external/qt3dextra-headers/cmake/Qt53DExtras" -DCMAKE_PREFIX_PATH="$GITHUB_WORKSPACE/external/qt3dextra-headers"
+
+      - name: Build
+        run: |
+          build-wrapper-linux-x86-64 --out-dir $GITHUB_WORKSPACE/_build/output cmake --build _build --config Debug -j4
+
+      - name: Run sonar-scanner
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+        run: |
+          locale-gen "${{env.LANG}}"
+          update-locale LC_ALL="${{env.LANG}}"
+          export LANG="${{env.LANG}}"
+          sonar-scanner --define sonar.host.url="${{ env.SONAR_SERVER_URL }}" --define sonar.cfamily.cache.path=$HOME/.sonar/cache
+
